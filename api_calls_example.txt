@@ -1,0 +1,5 @@
+# Example API calls for batch processing
+get_kline 1.600519 101 100 20250906
+get_kline 1.000858 101 100 20250906
+get_sectors 1
+get_stocks BK0433 1

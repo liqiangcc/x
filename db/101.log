@@ -1,0 +1,546 @@
+Processing ETF k-lines for klt=101
+Found 1317 ETFs to process.
+[1/1317] Data for 0.159787 is current (2025-10-10). Skipping.
+[2/1317] Data for 1.516750 is current (2025-10-10). Skipping.
+[3/1317] Data for 0.159745 is current (2025-10-10). Skipping.
+[4/1317] Data for 0.159207 is current (2025-10-10). Skipping.
+[5/1317] Data for 1.515220 is current (2025-10-10). Skipping.
+[6/1317] Data for 1.515150 is current (2025-10-10). Skipping.
+[7/1317] Data for 1.563150 is current (2025-10-10). Skipping.
+[8/1317] Data for 1.516760 is current (2025-10-10). Skipping.
+[9/1317] Data for 0.159913 is current (2025-10-10). Skipping.
+[10/1317] Data for 1.561060 is current (2025-10-10). Skipping.
+[11/1317] Data for 0.159945 is current (2025-10-10). Skipping.
+[12/1317] Data for 0.159309 is current (2025-10-10). Skipping.
+[13/1317] Data for 1.516670 is current (2025-10-10). Skipping.
+[14/1317] Data for 1.561570 is current (2025-10-10). Skipping.
+[15/1317] Data for 0.159867 is current (2025-10-10). Skipping.
+[16/1317] Data for 1.560020 is current (2025-10-10). Skipping.
+[17/1317] Data for 1.510720 is current (2025-10-10). Skipping.
+[18/1317] Data for 1.515450 is current (2025-10-10). Skipping.
+[19/1317] Data for 1.516980 is current (2025-10-10). Skipping.
+[20/1317] Data for 1.562060 is current (2025-10-10). Skipping.
+[21/1317] Data for 1.561700 is current (2025-10-10). Skipping.
+[22/1317] Data for 0.159588 is current (2025-10-10). Skipping.
+[23/1317] Data for 1.515890 is current (2025-10-10). Skipping.
+[24/1317] Data for 0.159502 is current (2025-10-10). Skipping.
+[25/1317] Data for 1.560810 is current (2025-10-10). Skipping.
+[26/1317] Data for 0.159549 is current (2025-10-10). Skipping.
+[27/1317] Data for 1.560520 is current (2025-10-10). Skipping.
+[28/1317] Data for 1.563700 is current (2025-10-10). Skipping.
+[29/1317] Data for 1.510880 is current (2025-10-10). Skipping.
+[30/1317] Data for 1.515180 is current (2025-10-10). Skipping.
+[31/1317] Data for 0.159616 is current (2025-10-10). Skipping.
+[32/1317] Data for 1.512530 is current (2025-10-10). Skipping.
+[33/1317] Data for 1.515080 is current (2025-10-10). Skipping.
+[34/1317] Data for 0.159589 is current (2025-10-10). Skipping.
+[35/1317] Data for 0.159827 is current (2025-10-10). Skipping.
+[36/1317] Data for 1.530880 is current (2025-10-10). Skipping.
+[37/1317] Data for 1.561360 is current (2025-10-10). Skipping.
+[38/1317] Data for 0.159228 is current (2025-10-10). Skipping.
+[39/1317] Data for 1.510030 is current (2025-10-10). Skipping.
+[40/1317] Data for 0.159581 is current (2025-10-10). Skipping.
+[41/1317] Data for 1.563020 is current (2025-10-10). Skipping.
+[42/1317] Data for 0.159697 is current (2025-10-10). Skipping.
+[43/1317] Data for 0.159698 is current (2025-10-10). Skipping.
+[44/1317] Data for 1.562390 is current (2025-10-10). Skipping.
+[45/1317] Data for 1.516910 is current (2025-10-10). Skipping.
+[46/1317] Data for 0.159587 is current (2025-10-10). Skipping.
+[47/1317] Data for 0.159515 is current (2025-10-10). Skipping.
+[48/1317] Data for 1.561170 is current (2025-10-10). Skipping.
+[49/1317] Data for 0.159355 is current (2025-10-10). Skipping.
+[50/1317] Data for 0.159332 is current (2025-10-10). Skipping.
+[51/1317] Data for 1.563180 is current (2025-10-10). Skipping.
+[52/1317] Data for 1.561580 is current (2025-10-10). Skipping.
+[53/1317] Data for 0.159275 is current (2025-10-10). Skipping.
+[54/1317] Data for 1.561760 is current (2025-10-10). Skipping.
+[55/1317] Data for 1.560890 is current (2025-10-10). Skipping.
+[56/1317] Data for 1.510200 is current (2025-10-10). Skipping.
+[57/1317] Data for 0.159307 is current (2025-10-10). Skipping.
+[58/1317] Data for 0.159525 is current (2025-10-10). Skipping.
+[59/1317] Data for 0.159993 is current (2025-10-10). Skipping.
+[60/1317] Data for 1.560080 is current (2025-10-10). Skipping.
+[61/1317] Data for 1.562350 is current (2025-10-10). Skipping.
+[62/1317] Data for 1.560620 is current (2025-10-10). Skipping.
+[63/1317] Data for 1.515100 is current (2025-10-10). Skipping.
+[64/1317] Data for 1.516530 is current (2025-10-10). Skipping.
+[65/1317] Data for 1.515990 is current (2025-10-10). Skipping.
+[66/1317] Data for 1.512890 is current (2025-10-10). Skipping.
+[67/1317] Data for 1.560150 is current (2025-10-10). Skipping.
+[68/1317] Data for 0.159647 is current (2025-10-10). Skipping.
+[69/1317] Data for 0.159736 is current (2025-10-10). Skipping.
+[70/1317] Data for 1.510230 is current (2025-10-10). Skipping.
+[71/1317] Data for 1.562330 is current (2025-10-10). Skipping.
+[72/1317] Data for 1.512070 is current (2025-10-10). Skipping.
+[73/1317] Data for 1.517180 is current (2025-10-10). Skipping.
+[74/1317] Data for 0.159547 is current (2025-10-10). Skipping.
+[75/1317] Data for 1.513750 is current (2025-10-10). Skipping.
+[76/1317] Data for 0.159930 is current (2025-10-10). Skipping.
+[77/1317] Data for 1.561510 is current (2025-10-10). Skipping.
+[78/1317] Data for 0.159933 is current (2025-10-10). Skipping.
+[79/1317] Data for 1.561560 is current (2025-10-10). Skipping.
+[80/1317] Data for 0.159672 is current (2025-10-10). Skipping.
+[81/1317] Data for 0.159931 is current (2025-10-10). Skipping.
+[82/1317] Data for 0.159336 is current (2025-10-10). Skipping.
+[83/1317] Data for 1.515210 is current (2025-10-10). Skipping.
+[84/1317] Data for 1.560700 is current (2025-10-10). Skipping.
+[85/1317] Data for 1.562900 is current (2025-10-10). Skipping.
+[86/1317] Data for 1.516810 is current (2025-10-10). Skipping.
+[87/1317] Data for 0.159512 is current (2025-10-10). Skipping.
+[88/1317] Data for 0.159692 is current (2025-10-10). Skipping.
+[89/1317] Data for 1.561960 is current (2025-10-10). Skipping.
+[90/1317] Data for 0.159719 is current (2025-10-10). Skipping.
+[91/1317] Data for 0.159940 is current (2025-10-10). Skipping.
+[92/1317] Data for 0.159391 is current (2025-10-10). Skipping.
+[93/1317] Data for 1.516310 is current (2025-10-10). Skipping.
+[94/1317] Data for 1.562320 is current (2025-10-10). Skipping.
+[95/1317] Data for 1.516730 is current (2025-10-10). Skipping.
+[96/1317] Data for 1.560070 is current (2025-10-10). Skipping.
+[97/1317] Data for 1.562550 is current (2025-10-10). Skipping.
+[98/1317] Data for 1.562960 is current (2025-10-10). Skipping.
+[99/1317] Data for 0.159635 is current (2025-10-10). Skipping.
+[100/1317] Data for 1.515170 is current (2025-10-10). Skipping.
+[101/1317] Data for 0.159659 is current (2025-10-10). Skipping.
+[102/1317] Data for 1.512700 is current (2025-10-10). Skipping.
+[103/1317] Data for 1.560330 is current (2025-10-10). Skipping.
+[104/1317] Data for 0.159666 is current (2025-10-10). Skipping.
+[105/1317] Data for 0.159848 is current (2025-10-10). Skipping.
+[106/1317] Data for 1.560570 is current (2025-10-10). Skipping.
+[107/1317] Data for 1.513100 is current (2025-10-10). Skipping.
+[108/1317] Data for 0.159662 is current (2025-10-10). Skipping.
+[109/1317] Data for 1.560190 is current (2025-10-10). Skipping.
+[110/1317] Data for 0.159825 is current (2025-10-10). Skipping.
+[111/1317] Data for 0.159887 is current (2025-10-10). Skipping.
+[112/1317] Data for 1.513690 is current (2025-10-10). Skipping.
+[113/1317] Data for 1.510650 is current (2025-10-10). Skipping.
+[114/1317] Data for 1.510090 is current (2025-10-10). Skipping.
+[115/1317] Data for 1.517090 is current (2025-10-10). Skipping.
+[116/1317] Data for 1.512640 is current (2025-10-10). Skipping.
+[117/1317] Data for 1.516210 is current (2025-10-10). Skipping.
+[118/1317] Data for 1.560580 is current (2025-10-10). Skipping.
+[119/1317] Data for 0.159865 is current (2025-10-10). Skipping.
+[120/1317] Data for 1.512730 is current (2025-10-10). Skipping.
+[121/1317] Data for 1.512820 is current (2025-10-10). Skipping.
+[122/1317] Data for 1.515290 is current (2025-10-10). Skipping.
+[123/1317] Data for 1.513190 is current (2025-10-10). Skipping.
+[124/1317] Data for 1.515020 is current (2025-10-10). Skipping.
+[125/1317] Data for 1.517900 is current (2025-10-10). Skipping.
+[126/1317] Data for 1.561790 is current (2025-10-10). Skipping.
+[127/1317] Data for 1.510630 is current (2025-10-10). Skipping.
+[128/1317] Data for 1.513820 is current (2025-10-10). Skipping.
+[129/1317] Data for 1.516200 is current (2025-10-10). Skipping.
+[130/1317] Data for 0.159296 is current (2025-10-10). Skipping.
+[131/1317] Data for 0.159301 is current (2025-10-10). Skipping.
+[132/1317] Data for 0.159553 is current (2025-10-10). Skipping.
+[133/1317] Data for 1.516550 is current (2025-10-10). Skipping.
+[134/1317] Data for 1.515110 is current (2025-10-10). Skipping.
+[135/1317] Data for 0.159331 is current (2025-10-10). Skipping.
+[136/1317] Data for 1.512800 is current (2025-10-10). Skipping.
+[137/1317] Data for 1.515060 is current (2025-10-10). Skipping.
+[138/1317] Data for 1.515850 is current (2025-10-10). Skipping.
+[139/1317] Data for 1.513290 is current (2025-10-10). Skipping.
+[140/1317] Data for 1.515300 is current (2025-10-10). Skipping.
+[141/1317] Data for 0.159611 is current (2025-10-10). Skipping.
+[142/1317] Data for 1.562870 is current (2025-10-10). Skipping.
+[143/1317] Data for 0.159689 is current (2025-10-10). Skipping.
+[144/1317] Data for 1.512200 is current (2025-10-10). Skipping.
+[145/1317] Data for 1.513530 is current (2025-10-10). Skipping.
+[146/1317] Data for 1.560090 is current (2025-10-10). Skipping.
+[147/1317] Data for 0.159731 is current (2025-10-10). Skipping.
+[148/1317] Data for 1.513300 is current (2025-10-10). Skipping.
+[149/1317] Data for 1.515630 is current (2025-10-10). Skipping.
+[150/1317] Data for 0.159841 is current (2025-10-10). Skipping.
+[151/1317] Data for 1.563830 is current (2025-10-10). Skipping.
+[152/1317] Data for 1.515010 is current (2025-10-10). Skipping.
+[153/1317] Data for 0.159232 is current (2025-10-10). Skipping.
+[154/1317] Data for 1.563780 is current (2025-10-10). Skipping.
+[155/1317] Data for 0.159842 is current (2025-10-10). Skipping.
+[156/1317] Data for 1.560680 is current (2025-10-10). Skipping.
+[157/1317] Data for 1.516900 is current (2025-10-10). Skipping.
+[158/1317] Data for 1.512900 is current (2025-10-10). Skipping.
+[159/1317] Data for 0.159277 is current (2025-10-10). Skipping.
+[160/1317] Data for 1.561320 is current (2025-10-10). Skipping.
+[161/1317] Data for 1.515710 is current (2025-10-10). Skipping.
+[162/1317] Data for 0.159302 is current (2025-10-10). Skipping.
+[163/1317] Data for 0.159726 is current (2025-10-10). Skipping.
+[164/1317] Data for 1.513500 is current (2025-10-10). Skipping.
+[165/1317] Data for 0.159617 is current (2025-10-10). Skipping.
+[166/1317] Data for 1.520990 is current (2025-10-10). Skipping.
+[167/1317] Data for 1.561680 is current (2025-10-10). Skipping.
+[168/1317] Data for 1.563690 is current (2025-10-10). Skipping.
+[169/1317] Data for 0.159843 is current (2025-10-10). Skipping.
+[170/1317] Data for 0.159707 is current (2025-10-10). Skipping.
+[171/1317] Data for 1.512600 is current (2025-10-10). Skipping.
+[172/1317] Data for 0.159669 is current (2025-10-10). Skipping.
+[173/1317] Data for 1.513830 is current (2025-10-10). Skipping.
+[174/1317] Data for 1.560120 is current (2025-10-10). Skipping.
+[175/1317] Data for 1.516460 is current (2025-10-10). Skipping.
+[176/1317] Data for 1.562850 is current (2025-10-10). Skipping.
+[177/1317] Data for 0.159632 is current (2025-10-10). Skipping.
+[178/1317] Data for 0.159501 is current (2025-10-10). Skipping.
+[179/1317] Data for 0.159696 is current (2025-10-10). Skipping.
+[180/1317] Data for 1.512570 is current (2025-10-10). Skipping.
+[181/1317] Data for 1.512880 is current (2025-10-10). Skipping.
+[182/1317] Data for 0.159928 is current (2025-10-10). Skipping.
+[183/1317] Data for 1.562530 is current (2025-10-10). Skipping.
+[184/1317] Data for 0.159941 is current (2025-10-10). Skipping.
+[185/1317] Data for 0.159245 is current (2025-10-10). Skipping.
+[186/1317] Data for 0.159268 is current (2025-10-10). Skipping.
+[187/1317] Data for 0.159220 is current (2025-10-10). Skipping.
+[188/1317] Data for 1.515560 is current (2025-10-10). Skipping.
+[189/1317] Data for 1.516950 is current (2025-10-10). Skipping.
+[190/1317] Data for 1.563390 is current (2025-10-10). Skipping.
+[191/1317] Data for 1.512000 is current (2025-10-10). Skipping.
+[192/1317] Data for 0.159625 is current (2025-10-10). Skipping.
+[193/1317] Data for 1.560030 is current (2025-10-10). Skipping.
+[194/1317] Data for 1.513870 is current (2025-10-10). Skipping.
+[195/1317] Data for 0.159263 is current (2025-10-10). Skipping.
+[196/1317] Data for 0.159281 is current (2025-10-10). Skipping.
+[197/1317] Data for 1.520620 is current (2025-10-10). Skipping.
+[198/1317] Data for 0.159972 is current (2025-10-10). Skipping.
+[199/1317] Data for 0.159229 is current (2025-10-10). Skipping.
+[200/1317] Data for 0.159236 is current (2025-10-10). Skipping.
+[201/1317] Data for 0.159619 is current (2025-10-10). Skipping.
+[202/1317] Data for 1.561870 is current (2025-10-10). Skipping.
+[203/1317] Data for 1.563580 is current (2025-10-10). Skipping.
+[204/1317] Data for 1.563760 is current (2025-10-10). Skipping.
+[205/1317] Data for 1.563770 is current (2025-10-10). Skipping.
+[206/1317] Data for 0.159235 is current (2025-10-10). Skipping.
+[207/1317] Data for 1.516970 is current (2025-10-10). Skipping.
+[208/1317] Data for 0.159396 is current (2025-10-10). Skipping.
+[209/1317] Data for 1.551900 is current (2025-10-10). Skipping.
+[210/1317] Data for 1.513140 is current (2025-10-10). Skipping.
+[211/1317] Data for 0.159397 is current (2025-10-10). Skipping.
+[212/1317] Data for 1.513630 is current (2025-10-10). Skipping.
+[213/1317] Data for 0.159110 is current (2025-10-10). Skipping.
+[214/1317] Data for 1.551560 is current (2025-10-10). Skipping.
+[215/1317] Data for 0.159600 is current (2025-10-10). Skipping.
+[216/1317] Data for 0.159116 is current (2025-10-10). Skipping.
+[217/1317] Data for 0.159700 is current (2025-10-10). Skipping.
+[218/1317] Data for 0.159400 is current (2025-10-10). Skipping.
+[219/1317] Data for 0.159395 is current (2025-10-10). Skipping.
+[220/1317] Data for 0.159200 is current (2025-10-10). Skipping.
+[221/1317] Data for 1.511110 is current (2025-10-10). Skipping.
+[222/1317] Data for 0.159398 is current (2025-10-10). Skipping.
+[223/1317] Data for 1.511190 is current (2025-10-10). Skipping.
+[224/1317] Data for 1.551550 is current (2025-10-10). Skipping.
+[225/1317] Data for 1.511360 is current (2025-10-10). Skipping.
+[226/1317] Data for 1.511880 is current (2025-10-10). Skipping.
+[227/1317] Data for 1.551000 is current (2025-10-10). Skipping.
+[228/1317] Data for 1.551300 is current (2025-10-10). Skipping.
+[229/1317] Data for 1.511020 is current (2025-10-10). Skipping.
+[230/1317] Data for 1.511990 is current (2025-10-10). Skipping.
+[231/1317] Data for 0.159111 is current (2025-10-10). Skipping.
+[232/1317] Data for 1.511660 is current (2025-10-10). Skipping.
+[233/1317] Data for 1.551500 is current (2025-10-10). Skipping.
+[234/1317] Data for 1.511200 is current (2025-10-10). Skipping.
+[235/1317] Data for 1.511850 is current (2025-10-10). Skipping.
+[236/1317] Data for 0.159112 is current (2025-10-10). Skipping.
+[237/1317] Data for 1.511120 is current (2025-10-10). Skipping.
+[238/1317] Data for 1.511270 is current (2025-10-10). Skipping.
+[239/1317] Data for 1.551520 is current (2025-10-10). Skipping.
+[240/1317] Data for 1.511700 is current (2025-10-10). Skipping.
+[241/1317] Data for 1.511670 is current (2025-10-10). Skipping.
+[242/1317] Data for 1.511820 is current (2025-10-10). Skipping.
+[243/1317] Data for 1.511950 is current (2025-10-10). Skipping.
+[244/1317] Data for 1.511690 is current (2025-10-10). Skipping.
+[245/1317] Data for 1.511810 is current (2025-10-10). Skipping.
+[246/1317] Data for 1.511900 is current (2025-10-10). Skipping.
+[247/1317] Data for 1.511910 is current (2025-10-10). Skipping.
+[248/1317] Data for 1.511930 is current (2025-10-10). Skipping.
+[249/1317] Data for 1.511970 is current (2025-10-10). Skipping.
+[250/1317] Data for 1.511650 is current (2025-10-10). Skipping.
+[251/1317] Data for 1.511800 is current (2025-10-10). Skipping.
+[252/1317] Data for 1.511920 is current (2025-10-10). Skipping.
+[253/1317] Data for 1.511960 is current (2025-10-10). Skipping.
+[254/1317] Data for 0.159650 is current (2025-10-10). Skipping.
+[255/1317] Data for 1.511160 is current (2025-10-10). Skipping.
+[256/1317] Data for 1.511620 is current (2025-10-10). Skipping.
+[257/1317] Data for 1.511770 is current (2025-10-10). Skipping.
+[258/1317] Data for 0.159001 is current (2025-10-10). Skipping.
+[259/1317] Data for 0.159003 is current (2025-10-10). Skipping.
+[260/1317] Fetching k-lines for 0.159005...
+  -> Imported 2609 new k-line records for 0.159005.
+[261/1317] Fetching k-lines for 1.511070...
+  -> Imported 171 new k-line records for 1.511070.
+[262/1317] Fetching k-lines for 1.511600...
+  -> Imported 2189 new k-line records for 1.511600.
+[263/1317] Fetching k-lines for 0.159233...
+  -> Imported 87 new k-line records for 0.159233.
+[264/1317] Fetching k-lines for 0.159266...
+  -> Imported 45 new k-line records for 0.159266.
+[265/1317] Fetching k-lines for 0.159513...
+  -> Imported 532 new k-line records for 0.159513.
+[266/1317] Fetching k-lines for 0.159569...
+  -> Imported 272 new k-line records for 0.159569.
+[267/1317] Fetching k-lines for 0.159577...
+  -> Imported 395 new k-line records for 0.159577.
+[268/1317] Fetching k-lines for 0.159766...
+  -> Imported 1020 new k-line records for 0.159766.
+[269/1317] Fetching k-lines for 0.159816...
+  -> Imported 1226 new k-line records for 0.159816.
+[270/1317] Fetching k-lines for 0.159862...
+  -> Imported 950 new k-line records for 0.159862.
+[271/1317] Fetching k-lines for 1.511030...
+  -> Imported 1544 new k-line records for 1.511030.
+[272/1317] Fetching k-lines for 1.511860...
+  -> Imported 2628 new k-line records for 1.511860.
+[273/1317] Fetching k-lines for 1.513110...
+  -> Imported 620 new k-line records for 1.513110.
+[274/1317] Fetching k-lines for 1.513850...
+  -> Imported 458 new k-line records for 1.513850.
+[275/1317] Fetching k-lines for 1.513950...
+  -> Imported 592 new k-line records for 1.513950.
+[276/1317] Fetching k-lines for 1.515760...
+  -> Imported 1213 new k-line records for 1.515760.
+[277/1317] Fetching k-lines for 1.516560...
+  -> Imported 981 new k-line records for 1.516560.
+[278/1317] Fetching k-lines for 1.520660...
+  -> Imported 303 new k-line records for 1.520660.
+[279/1317] Fetching k-lines for 1.520830...
+  -> Imported 298 new k-line records for 1.520830.
+[280/1317] Fetching k-lines for 1.520900...
+  -> Imported 303 new k-line records for 1.520900.
+[281/1317] Fetching k-lines for 1.563200...
+  -> Imported 480 new k-line records for 1.563200.
+[282/1317] Fetching k-lines for 1.511830...
+  -> Imported 2449 new k-line records for 1.511830.
+[283/1317] Fetching k-lines for 1.511980...
+  -> Imported 2337 new k-line records for 1.511980.
+[284/1317] Fetching k-lines for 0.159651...
+  -> Imported 702 new k-line records for 0.159651.
+[285/1317] Fetching k-lines for 1.551580...
+  -> Imported 7 new k-line records for 1.551580.
+[286/1317] Fetching k-lines for 1.551030...
+  -> Imported 56 new k-line records for 1.551030.
+[287/1317] Fetching k-lines for 1.511580...
+  -> Imported 676 new k-line records for 1.511580.
+[288/1317] Fetching k-lines for 1.551800...
+  -> Imported 7 new k-line records for 1.551800.
+[289/1317] Fetching k-lines for 1.551510...
+  -> Imported 7 new k-line records for 1.551510.
+[290/1317] Fetching k-lines for 1.511010...
+  -> Imported 3048 new k-line records for 1.511010.
+[291/1317] Fetching k-lines for 1.511220...
+  -> Imported 2622 new k-line records for 1.511220.
+[292/1317] Fetching k-lines for 0.159115...
+  -> Imported 7 new k-line records for 0.159115.
+[293/1317] Fetching k-lines for 0.159649...
+  -> Imported 719 new k-line records for 0.159649.
+[294/1317] Fetching k-lines for 1.511150...
+  -> Imported 7 new k-line records for 1.511150.
+[295/1317] Fetching k-lines for 1.511520...
+  -> Imported 718 new k-line records for 1.511520.
+[296/1317] Fetching k-lines for 0.159660...
+  -> Imported 601 new k-line records for 0.159660.
+[297/1317] Data for 0.159113 is current (2025-10-10). Skipping.
+[298/1317] Fetching k-lines for 1.551060...
+  -> Imported 7 new k-line records for 1.551060.
+[299/1317] Fetching k-lines for 1.511260...
+  -> Imported 1970 new k-line records for 1.511260.
+[300/1317] Fetching k-lines for 1.513910...
+  -> Imported 389 new k-line records for 1.513910.
+[301/1317] Fetching k-lines for 0.159333...
+  -> Imported 264 new k-line records for 0.159333.
+[302/1317] Fetching k-lines for 0.159529...
+  -> Imported 400 new k-line records for 0.159529.
+[303/1317] Fetching k-lines for 1.512750...
+  -> Imported 1519 new k-line records for 1.512750.
+[304/1317] Fetching k-lines for 1.511060...
+  -> Imported 1405 new k-line records for 1.511060.
+[305/1317] Fetching k-lines for 0.159225...
+  -> Imported 117 new k-line records for 0.159225.
+[306/1317] Fetching k-lines for 1.561080...
+  -> Imported 108 new k-line records for 1.561080.
+[307/1317] Fetching k-lines for 1.561260...
+  -> Imported 524 new k-line records for 1.561260.
+[308/1317] Fetching k-lines for 1.563630...
+  -> Imported 68 new k-line records for 1.563630.
+[309/1317] Fetching k-lines for 1.563990...
+  -> Imported 112 new k-line records for 1.563990.
+[310/1317] Fetching k-lines for 0.159201...
+  -> Imported 151 new k-line records for 0.159201.
+[311/1317] Fetching k-lines for 1.563680...
+  -> Imported 100 new k-line records for 1.563680.
+[312/1317] Fetching k-lines for 0.159329...
+  -> Imported 295 new k-line records for 0.159329.
+[313/1317] Fetching k-lines for 0.159670...
+  -> Imported 588 new k-line records for 0.159670.
+[314/1317] Fetching k-lines for 1.511100...
+  -> Imported 432 new k-line records for 1.511100.
+[315/1317] Fetching k-lines for 0.159708...
+  -> Imported 1035 new k-line records for 0.159708.
+[316/1317] Fetching k-lines for 1.562660...
+  -> Imported 498 new k-line records for 1.562660.
+[317/1317] Fetching k-lines for 1.511180...
+  -> Imported 1240 new k-line records for 1.511180.
+[318/1317] Fetching k-lines for 0.159536...
+  -> Imported 493 new k-line records for 0.159536.
+[319/1317] Fetching k-lines for 1.561370...
+  -> Imported 493 new k-line records for 1.561370.
+[320/1317] Fetching k-lines for 0.159552...
+  -> Imported 310 new k-line records for 0.159552.
+[321/1317] Fetching k-lines for 0.159768...
+  -> Imported 885 new k-line records for 0.159768.
+[322/1317] Fetching k-lines for 0.159222...
+  -> Imported 117 new k-line records for 0.159222.
+[323/1317] Fetching k-lines for 1.512690...
+  -> Imported 1561 new k-line records for 1.512690.
+[324/1317] Data for 0.159399 is current (2025-10-10). Skipping.
+[325/1317] Fetching k-lines for 1.515650...
+  -> Imported 1434 new k-line records for 1.515650.
+[326/1317] Fetching k-lines for 0.159905...
+  -> Imported 3580 new k-line records for 0.159905.
+[327/1317] Fetching k-lines for 0.159265...
+  -> Imported 67 new k-line records for 0.159265.
+[328/1317] Fetching k-lines for 1.513970...
+  -> Imported 597 new k-line records for 1.513970.
+[329/1317] Fetching k-lines for 0.159798...
+  -> Imported 830 new k-line records for 0.159798.
+[330/1317] Fetching k-lines for 0.159985...
+  -> Imported 1416 new k-line records for 0.159985.
+[331/1317] Fetching k-lines for 1.516570...
+  -> Imported 1045 new k-line records for 1.516570.
+[332/1317] Fetching k-lines for 0.159221...
+  -> Imported 102 new k-line records for 0.159221.
+[333/1317] Fetching k-lines for 1.520550...
+  -> Imported 169 new k-line records for 1.520550.
+[334/1317] Fetching k-lines for 0.159223...
+  -> Imported 66 new k-line records for 0.159223.
+[335/1317] Fetching k-lines for 1.520520...
+  -> Imported 228 new k-line records for 1.520520.
+[336/1317] Fetching k-lines for 0.159520...
+  -> Imported 471 new k-line records for 0.159520.
+[337/1317] Fetching k-lines for 1.562510...
+  -> Imported 913 new k-line records for 1.562510.
+[338/1317] Fetching k-lines for 0.159655...
+  -> Imported 718 new k-line records for 0.159655.
+[339/1317] Fetching k-lines for 0.159685...
+  -> Imported 608 new k-line records for 0.159685.
+[340/1317] Fetching k-lines for 0.159691...
+  -> Imported 597 new k-line records for 0.159691.
+[341/1317] Fetching k-lines for 0.159519...
+  -> Imported 508 new k-line records for 0.159519.
+[342/1317] Fetching k-lines for 1.513810...
+  -> Imported 507 new k-line records for 1.513810.
+[343/1317] Fetching k-lines for 1.510160...
+  -> Imported 3631 new k-line records for 1.510160.
+[344/1317] Fetching k-lines for 1.561280...
+  -> Imported 492 new k-line records for 1.561280.
+[345/1317] Fetching k-lines for 1.560220...
+  -> Imported 496 new k-line records for 1.560220.
+[346/1317] Fetching k-lines for 1.563900...
+  -> Imported 106 new k-line records for 1.563900.
+[347/1317] Fetching k-lines for 0.159326...
+  -> Imported 260 new k-line records for 0.159326.
+[348/1317] Fetching k-lines for 0.159545...
+  -> Imported 361 new k-line records for 0.159545.
+[349/1317] Fetching k-lines for 1.512040...
+  -> Imported 1663 new k-line records for 1.512040.
+[350/1317] Fetching k-lines for 0.159535...
+  -> Imported 492 new k-line records for 0.159535.
+[351/1317] Fetching k-lines for 1.563060...
+  -> Imported 98 new k-line records for 1.563060.
+[352/1317] Fetching k-lines for 1.515680...
+  -> Imported 1405 new k-line records for 1.515680.
+[353/1317] Fetching k-lines for 1.515900...
+  -> Imported 1407 new k-line records for 1.515900.
+[354/1317] Fetching k-lines for 0.159612...
+  -> Imported 821 new k-line records for 0.159612.
+[355/1317] Fetching k-lines for 1.513650...
+  -> Imported 609 new k-line records for 1.513650.
+[356/1317] Fetching k-lines for 1.512710...
+  -> Imported 1482 new k-line records for 1.512710.
+[357/1317] Fetching k-lines for 1.510270...
+  -> Imported 3408 new k-line records for 1.510270.
+[358/1317] Fetching k-lines for 1.562810...
+  -> Imported 141 new k-line records for 1.562810.
+[359/1317] Fetching k-lines for 1.513920...
+  -> Imported 424 new k-line records for 1.513920.
+[360/1317] Fetching k-lines for 1.515600...
+  -> Imported 1404 new k-line records for 1.515600.
+[361/1317] Fetching k-lines for 0.159555...
+  -> Imported 441 new k-line records for 0.159555.
+[362/1317] Fetching k-lines for 0.159699...
+  -> Imported 514 new k-line records for 0.159699.
+[363/1317] Fetching k-lines for 0.159510...
+  -> Imported 519 new k-line records for 0.159510.
+[364/1317] Fetching k-lines for 0.159981...
+  -> Imported 1386 new k-line records for 0.159981.
+[365/1317] Fetching k-lines for 0.159623...
+  -> Imported 744 new k-line records for 0.159623.
+[366/1317] Fetching k-lines for 1.513030...
+  -> Imported 2693 new k-line records for 1.513030.
+[367/1317] Fetching k-lines for 1.520580...
+  -> Imported 156 new k-line records for 1.520580.
+[368/1317] Fetching k-lines for 1.510060...
+  -> Imported 3876 new k-line records for 1.510060.
+[369/1317] Fetching k-lines for 0.159241...
+  -> Imported 90 new k-line records for 0.159241.
+[370/1317] Fetching k-lines for 1.520890...
+  -> Imported 253 new k-line records for 1.520890.
+[371/1317] Data for 0.159561 is current (2025-10-10). Skipping.
+[372/1317] Data for 1.512130 is current (2025-10-10). Skipping.
+[373/1317] Fetching k-lines for 1.512260...
+  -> Imported 1634 new k-line records for 1.512260.
+[374/1317] Fetching k-lines for 0.159276...
+  -> Imported 49 new k-line records for 0.159276.
+[375/1317] Fetching k-lines for 0.159521...
+  -> Imported 502 new k-line records for 0.159521.
+[376/1317] Fetching k-lines for 0.159974...
+  -> Imported 1402 new k-line records for 0.159974.
+[377/1317] Fetching k-lines for 1.511130...
+  -> Imported 371 new k-line records for 1.511130.
+[378/1317] Fetching k-lines for 1.511090...
+  -> Imported 563 new k-line records for 1.511090.
+[379/1317] Fetching k-lines for 1.513400...
+  -> Imported 404 new k-line records for 1.513400.
+[380/1317] Fetching k-lines for 0.159227...
+  -> Imported 99 new k-line records for 0.159227.
+[381/1317] Fetching k-lines for 0.159677...
+  -> Imported 688 new k-line records for 0.159677.
+[382/1317] Fetching k-lines for 0.159680...
+  -> Imported 692 new k-line records for 0.159680.
+[383/1317] Fetching k-lines for 0.159556...
+  -> Imported 421 new k-line records for 0.159556.
+[384/1317] Fetching k-lines for 1.562080...
+  -> Imported 119 new k-line records for 1.562080.
+[385/1317] Fetching k-lines for 1.516220...
+  -> Imported 1112 new k-line records for 1.516220.
+[386/1317] Fetching k-lines for 0.159873...
+  -> Imported 1099 new k-line records for 0.159873.
+[387/1317] Fetching k-lines for 1.513080...
+  -> Imported 1290 new k-line records for 1.513080.
+[388/1317] Data for 1.511380 is current (2025-10-10). Skipping.
+[389/1317] Fetching k-lines for 1.510980...
+  -> Imported 448 new k-line records for 1.510980.
+[390/1317] Fetching k-lines for 0.159657...
+  -> Imported 625 new k-line records for 0.159657.
+[391/1317] Fetching k-lines for 0.159936...
+  -> Imported 2679 new k-line records for 0.159936.
+[392/1317] Fetching k-lines for 0.159980...
+  -> Imported 1403 new k-line records for 0.159980.
+[393/1317] Fetching k-lines for 1.513170...
+  -> Imported 357 new k-line records for 1.513170.
+[394/1317] Fetching k-lines for 0.159208...
+  -> Imported 103 new k-line records for 0.159208.
+[395/1317] Fetching k-lines for 0.159335...
+  -> Imported 262 new k-line records for 0.159335.
+[396/1317] Fetching k-lines for 0.159257...
+  -> Imported 49 new k-line records for 0.159257.
+[397/1317] Fetching k-lines for 1.563300...
+  -> Imported 498 new k-line records for 1.563300.
+[398/1317] Fetching k-lines for 1.516790...
+[399/1317] Fetching k-lines for 0.159267...
+[400/1317] Fetching k-lines for 0.159532...
+[401/1317] Fetching k-lines for 1.512950...
+[402/1317] Fetching k-lines for 1.510010...
+[403/1317] Fetching k-lines for 0.159870...
+[404/1317] Fetching k-lines for 1.561780...
+[405/1317] Fetching k-lines for 0.159797...
+[406/1317] Fetching k-lines for 0.159891...
+[407/1317] Fetching k-lines for 0.159898...
+[408/1317] Fetching k-lines for 1.512810...
+[409/1317] Fetching k-lines for 0.159255...
+[410/1317] Fetching k-lines for 0.159678...
+[411/1317] Fetching k-lines for 0.159378...

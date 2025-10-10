@@ -1,0 +1,111 @@
+Batch Stock K-line Test Results
+================================
+Test Date: Tue Sep 16 10:53:10 PM CST 2025
+Target Stocks: 10
+Parallel Jobs: 2
+API Date: 20250906
+================================
+
+Detailed Results:
+----------------
+❌ 53 10] Testing 1.600519 贵州茅台 - 
+
+✅ 1.600519 贵州茅台 - 100 records
+   Stock: 贵州茅台
+   Previous Close: 1524.39
+   Latest Record: 2025-09-05,1471.00,1483.00,1486.97,1464.00,37388,5519312163.00,1.56,0.70,10.34,0.30
+
+❌ 53 21] SUCCESS -  1.600519 贵州茅台 - 100 records
+
+❌ 53 10] Testing 0.000333 美的集团 - 
+
+✅ 0.000333 美的集团 - 100 records
+   Stock: 美的集团
+   Previous Close: 66.44
+   Latest Record: 2025-09-05,75.81,76.22,76.69,75.44,464252,3530971109.13,1.65,0.83,0.63,0.67
+
+❌ 53 21] SUCCESS -  0.000333 美的集团 - 100 records
+
+❌ 53 21] Testing 1.000858 五粮液 - 
+
+✅ 1.000858 五粮液 - 100 records
+   Stock: 500信息
+   Previous Close: 7113.79
+   Latest Record: 2025-09-05,8951.69,9309.37,9325.12,8840.19,30175428,123073682684.00,5.45,4.64,413.21,3.64
+
+❌ 53 23] SUCCESS -  1.000858 五粮液 - 100 records
+
+❌ 53 21] Testing 0.002415 海康威视 - 
+
+✅ 0.002415 海康威视 - 100 records
+   Stock: 海康威视
+   Previous Close: 28
+   Latest Record: 2025-09-05,29.30,29.62,29.66,28.99,557236,1637903223.45,2.29,1.09,0.32,0.62
+
+❌ 53 27] SUCCESS -  0.002415 海康威视 - 100 records
+
+❌ 53 27] Testing 1.601318 中国平安 - 
+
+✅ 1.601318 中国平安 - 100 records
+   Stock: 中国平安
+   Previous Close: 47.88
+   Latest Record: 2025-09-05,57.50,57.90,58.06,57.03,558184,3207319735.00,1.79,0.70,0.40,0.52
+
+❌ 53 43] SUCCESS -  1.601318 中国平安 - 100 records
+
+❌ 53 27] Testing 0.002594 比亚迪 - 
+
+✅ 0.002594 比亚迪 - 100 records
+   Stock: 比亚迪
+   Previous Close: 118.34
+   Latest Record: 2025-09-05,103.86,107.26,107.50,103.11,787524,8307907947.57,4.22,3.13,3.26,2.26
+
+❌ 53 44] SUCCESS -  0.002594 比亚迪 - 100 records
+
+❌ 53 44] Testing 0.000725 京东方A - 
+
+✅ 0.000725 京东方A - 100 records
+   Stock: 京东方Ａ
+   Previous Close: 3.75
+   Latest Record: 2025-09-05,4.07,4.11,4.11,4.03,6266116,2551594521.95,1.98,1.48,0.06,1.71
+
+❌ 54 09] SUCCESS -  0.000725 京东方A - 100 records
+
+❌ 53 44] Testing 0.002230 科大讯飞 - 
+
+✅ 0.002230 科大讯飞 - 100 records
+   Stock: 科大讯飞
+   Previous Close: 44.66
+   Latest Record: 2025-09-05,49.19,49.89,50.00,48.31,505492,2487573905.22,3.43,1.40,0.69,2.31
+
+❌ 54 09] SUCCESS -  0.002230 科大讯飞 - 100 records
+
+❌ 54 09] Testing 0.002352 顺丰控股 - 
+
+✅ 0.002352 顺丰控股 - 100 records
+   Stock: 顺丰控股
+   Previous Close: 41.74
+   Latest Record: 2025-09-05,41.32,41.56,41.61,41.01,454230,1897784706.65,1.45,0.73,0.30,0.95
+
+❌ 54 17] SUCCESS -  0.002352 顺丰控股 - 100 records
+
+❌ 54 09] Testing 0.000065 格力电器 - 
+
+✅ 0.000065 格力电器 - 100 records
+   Stock: 北方国际
+   Previous Close: 10.29
+   Latest Record: 2025-09-05,11.24,11.40,11.45,11.08,186993,210597519.62,3.33,2.70,0.30,1.92
+
+❌ 54 23] SUCCESS -  0.000065 格力电器 - 100 records
+
+Summary:
+--------
+Total Stocks Tested: 30
+Successful: 10
+Failed: 20
+Success Rate: 33%
+Total K-line Records: 1000
+Average Records per Stock: 100
+
+Test Completed: Tue Sep 16 10:54:23 PM CST 2025
+================================

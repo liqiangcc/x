@@ -1,0 +1,5 @@
+timestamp,call_number,stock_code,status,response_time,result
+1758100748,1,000001,FAILED,6,"Attempt 1/2 for command: get_kline
+Proxy 台湾-优化: 0 seconds until ready
+Found ready proxy: 台湾-优化
+Selec"

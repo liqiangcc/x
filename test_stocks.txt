@@ -1,0 +1,5 @@
+# Test stock codes for batch API calls
+1.600519  # 贵州茅台
+1.000858  # 五粮液
+0.000001  # 上证指数
+90.BK0433 # 酒类板块

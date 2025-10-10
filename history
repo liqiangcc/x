@@ -1,0 +1,1000 @@
+  728  2025-07-01 17:55:43 root bash q.sh 0.002180 5 3 20500207 | jq
+  729  2025-07-01 17:55:43 root bash q.sh 0.002180 101 3 20500207 | jq
+  730  2025-07-01 17:55:43 root bash q.sh 0.002180 102 3 20500207 | jq
+  731  2025-07-01 17:55:43 root bash q.sh 0.002180 103 3 20500207 | jq
+  732  2025-07-01 17:55:43 root bash q.sh 0.002180 104 3 20500207 | jq
+  733  2025-07-01 17:55:43 root bash q.sh 0.002180 105 3 20500207 | jq
+  734  2025-07-01 17:55:43 root bash q.sh 0.002180 106 3 20500207 | jq
+  735  2025-07-01 17:55:43 root ls
+  736  2025-07-01 17:55:43 root cp f_m5_2_db.sh f_y_2_db.sh 
+  737  2025-07-01 17:55:43 root vim f_y_2_db.sh 
+  738  2025-07-01 17:55:43 root bash q.sh 0.002180 101 3 20500207 | jq
+  739  2025-07-01 17:55:43 root cp f_m5_2_db.sh f_d_2_db.sh 
+  740  2025-07-01 17:55:43 root vim f_d_2_db.sh 
+  741  2025-07-01 17:55:43 root bash f_d_2_db.sh 002180 1000000
+  742  2025-07-01 17:55:43 root bash f_y_2_db.sh 002180 1000000
+  743  2025-07-01 17:55:43 root vim f_d_2_db.sh 
+  744  2025-07-01 17:55:43 root bash f_d_2_db.sh 002180 1000000
+  745  2025-07-01 17:55:43 root ls
+  746  2025-07-01 17:55:43 root sqlite3 mydb.db 
+  747  2025-07-01 17:55:43 root ls
+  748  2025-07-01 17:55:43 root cat f_d_2_db.sh
+  749  2025-07-01 17:55:43 root ls
+  750  2025-07-01 17:55:43 root cp f_d_2_db.sh d_xg_2_db.sh 
+  751  2025-07-01 17:55:43 root vim d_xg_2_db.sh 
+  752  2025-07-01 17:55:43 root cat f_d_2_db.sh 
+  753  2025-07-01 17:55:43 root vim d_xg_2_db.sh 
+  754  2025-07-01 17:55:43 root bash d_xg_2_db.sh 
+  755  2025-07-01 17:55:43 root vim d_xg_2_db.sh 
+  756  2025-07-01 17:55:43 root bash d_xg_2_db.sh 
+  757  2025-07-01 17:55:43 root sqlite3 mydb.db
+  758  2025-07-01 17:55:43 root bash d_xg_2_db.sh 
+  759  2025-07-01 17:55:43 root sqlite3 mydb.db
+  760  2025-07-01 17:55:43 root ls
+  761  2025-07-01 17:55:43 root cp mydb.db mydb_all.db
+  762  2025-07-01 17:55:43 root ls
+  763  2025-07-01 17:55:43 root echo "" > mydb.db 
+  764  2025-07-01 17:55:43 root ls
+  765  2025-07-01 17:55:43 root ll
+  766  2025-07-01 17:55:43 root ls
+  767  2025-07-01 17:55:43 root bash f_d_2_db.sh 002180 1000000
+  768  2025-07-01 17:55:43 root bash f_y_2_db.sh 002180 1000000
+  769  2025-07-01 17:55:43 root ls
+  770  2025-07-01 17:55:43 root bash d_xg_2_db.sh 
+  771  2025-07-01 17:55:43 root sqlite3 mydb.db
+  772  2025-07-01 17:55:43 root ls
+  773  2025-07-01 17:55:43 root cat codes 
+  774  2025-07-01 17:55:43 root ls
+  775  2025-07-01 17:55:43 root cat scode.sh 
+  776  2025-07-01 17:55:43 root vim scode.sh 
+  777  2025-07-01 17:55:43 root bash scode.sh 
+  778  2025-07-01 17:55:43 root ps -ef | grep bash
+  779  2025-07-01 17:55:43 root bash q.sh 3.000012 5 1 20501217
+  780  2025-07-01 17:55:43 root bash q.sh 1.000012 5 1 20501217
+  781  2025-07-01 17:55:43 root bash q.sh 2.000012 5 1 20501217
+  782  2025-07-01 17:55:43 root bash q.sh 0.000012 5 1 20501217
+  783  2025-07-01 17:55:43 root bash q.sh 0.000171 5 1 20501217
+  784  2025-07-01 17:55:43 root bash q.sh 1.000171 5 1 20501217
+  785  2025-07-01 17:55:43 root bash q.sh 2.000171 5 1 20501217
+  786  2025-07-01 17:55:43 root bash q.sh 3.000171 5 1 20501217
+  787  2025-07-01 17:55:43 root bash q.sh 0.0002180 5 1 20501217
+  788  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20501217
+  789  2025-07-01 17:55:43 root cat q.sh 
+  790  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20501217
+  791  2025-07-01 17:55:43 root bash q.sh 1.002180 5 1 20501217
+  792  2025-07-01 17:55:43 root ls
+  793  2025-07-01 17:55:43 root bash q.sh "1.002180" 5 1 20501217
+  794  2025-07-01 17:55:43 root bash q.sh "0.002180" 5 1 20501217
+  795  2025-07-01 17:55:43 root ls
+  796  2025-07-01 17:55:43 root cat codes 
+  797  2025-07-01 17:55:43 root bash q.sh "0.020667" 5 1 20501217
+  798  2025-07-01 17:55:43 root bash q.sh "1.020667" 5 1 20501217
+  799  2025-07-01 17:55:43 root bash q.sh "1.020667" 101 1 20501217
+  800  2025-07-01 17:55:43 root ls
+  801  2025-07-01 17:55:43 root bash q.sh "0.002180" 5 1 20501217
+  802  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20501217
+  803  2025-07-01 17:55:43 root ls
+  804  2025-07-01 17:55:43 root vim q.sh 
+  805  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20501217
+  806  2025-07-01 17:55:43 root bash q.sh 0.002180 101 3 20500207 | jq 1 20501217
+  807  2025-07-01 17:55:43 root bash q.sh 0.002180 101 3 20500207
+  808  2025-07-01 17:55:43 root bash q.sh 0.002180 101 20500207
+  809  2025-07-01 17:55:43 root history | grep "2180"
+  810  2025-07-01 17:55:43 root bash q.sh 0.002180 5 3 20500207 | jq
+  811  2025-07-01 17:55:43 root ls
+  812  2025-07-01 17:55:43 root vim q.sh 
+  813  2025-07-01 17:55:43 root bash q.sh 0.002180 5 3 20500207 | jq
+  814  2025-06-29 11:09:28 root sudo -s
+  815  2025-06-29 16:27:34 root ls
+  816  2025-06-29 16:27:35 root clear
+  817  2025-06-29 16:27:36 root ls
+  818  2025-06-29 16:27:38 root cd s
+  819  2025-06-29 16:27:38 root ls
+  820  2025-06-29 16:27:43 root cd ../x/
+  821  2025-06-29 16:27:44 root ls
+  822  2025-06-29 16:27:54 root cat github_issue_manager.sh
+  823  2025-06-29 16:27:54 root clear
+  824  2025-06-29 16:27:54 root ls
+  825  2025-06-29 16:27:54 root cd x/
+  826  2025-06-29 16:27:54 root ls
+  827  2025-06-29 16:27:54 root cat createTable.sh 
+  828  2025-06-29 16:27:54 root clear
+  829  2025-06-29 16:27:54 root ls
+  830  2025-06-29 16:27:54 root cat q.sh 
+  831  2025-06-29 16:27:54 root cat f_m5_2_db.sh 
+  832  2025-06-29 16:27:54 root cat codes 
+  833  2025-06-29 16:27:54 root clear
+  834  2025-06-29 16:27:54 root ls
+  835  2025-06-29 16:27:54 root bash f_m5_2_db.sh 
+  836  2025-06-29 16:27:54 root cat f_m5_2_db.sh 
+  837  2025-06-29 16:27:54 root cat f_m5_2_db.sh 002180 125
+  838  2025-06-29 16:27:54 root bash  f_m5_2_db.sh 002180 125
+  839  2025-06-29 16:27:54 root ls
+  840  2025-06-29 16:27:54 root sqlite3 mydb
+  841  2025-06-29 16:27:58 root sqlite3 mydb.db 
+  842  2025-06-29 16:28:05 root clear
+  843  2025-06-29 16:28:05 root ls
+  844  2025-06-29 16:28:05 root cat f_m5_2_db.sh 
+  845  2025-06-29 16:28:05 root more data.csv 
+  846  2025-06-29 16:28:05 root clear
+  847  2025-06-29 16:28:05 root ls
+  848  2025-06-29 16:28:05 root cat f_m5_2_db.sh 
+  849  2025-06-29 16:28:05 root bash q.sh 0.002180 101 20500207
+  850  2025-06-29 16:28:05 root bash q.sh 0.002180 102 20500207
+  851  2025-06-29 16:28:05 root ls
+  852  2025-06-29 16:28:05 root history | grep f_m5_2_db.sh 
+  853  2025-06-29 16:28:05 root bash q.sh 0.002180 30 20500207
+  854  2025-06-29 16:28:05 root bash q.sh 0.002180 5 20500207
+  855  2025-06-29 16:28:05 root bash q.sh 0."$code" 5 "$n" 20500207
+  856  2025-06-29 16:28:05 root code=002180
+  857  2025-06-29 16:28:05 root n=5
+  858  2025-06-29 16:28:05 root bash q.sh 0."$code" 5 "$n" 20500207
+  859  2025-06-29 16:28:05 root bash q.sh 0.002180 5 3 20500207
+  860  2025-06-29 16:28:05 root bash q.sh 0.002180 5 3 20500207 | jq
+  861  2025-06-29 16:28:05 root bash q.sh 0.002180 101 3 20500207 | jq
+  862  2025-06-29 16:28:05 root bash q.sh 0.002180 102 3 20500207 | jq
+  863  2025-06-29 16:28:05 root bash q.sh 0.002180 103 3 20500207 | jq
+  864  2025-06-29 16:28:05 root bash q.sh 0.002180 104 3 20500207 | jq
+  865  2025-06-29 16:28:05 root bash q.sh 0.002180 105 3 20500207 | jq
+  866  2025-06-29 16:28:05 root bash q.sh 0.002180 106 3 20500207 | jq
+  867  2025-06-29 16:28:05 root ls
+  868  2025-06-29 16:28:06 root cp f_m5_2_db.sh f_y_2_db.sh 
+  869  2025-06-29 16:28:06 root vim f_y_2_db.sh 
+  870  2025-06-29 16:26:32 root cat github_issue_manager.sh
+  871  2025-06-29 16:26:32 root clear
+  872  2025-06-29 16:26:32 root ls
+  873  2025-06-29 16:26:32 root cd x/
+  874  2025-06-29 16:26:32 root ls
+  875  2025-06-29 16:26:32 root cat createTable.sh 
+  876  2025-06-29 16:26:32 root clear
+  877  2025-06-29 16:26:32 root ls
+  878  2025-06-29 16:26:32 root cat q.sh 
+  879  2025-06-29 16:26:32 root cat f_m5_2_db.sh 
+  880  2025-06-29 16:26:32 root cat codes 
+  881  2025-06-29 16:26:32 root clear
+  882  2025-06-29 16:26:32 root ls
+  883  2025-06-29 16:26:32 root bash f_m5_2_db.sh 
+  884  2025-06-29 16:26:32 root cat f_m5_2_db.sh 
+  885  2025-06-29 16:26:32 root cat f_m5_2_db.sh 002180 125
+  886  2025-06-29 16:26:32 root bash  f_m5_2_db.sh 002180 125
+  887  2025-06-29 16:26:32 root ls
+  888  2025-06-29 16:26:32 root sqlite3 mydb
+  889  2025-06-29 16:26:36 root sqlite3 mydb.db 
+  890  2025-06-29 16:26:39 root clear
+  891  2025-06-29 16:26:39 root ls
+  892  2025-06-29 16:26:39 root cat f_m5_2_db.sh 
+  893  2025-06-29 16:26:39 root more data.csv 
+  894  2025-06-29 16:26:39 root clear
+  895  2025-06-29 16:26:39 root ls
+  896  2025-06-29 16:26:39 root cat f_m5_2_db.sh 
+  897  2025-06-29 16:26:39 root bash q.sh 0.002180 101 20500207
+  898  2025-06-29 16:26:39 root bash q.sh 0.002180 102 20500207
+  899  2025-06-29 16:26:40 root ls
+  900  2025-06-29 16:26:40 root history | grep f_m5_2_db.sh 
+  901  2025-06-29 16:26:40 root bash q.sh 0.002180 30 20500207
+  902  2025-06-29 16:26:40 root bash q.sh 0.002180 5 20500207
+  903  2025-06-29 16:26:40 root bash q.sh 0."$code" 5 "$n" 20500207
+  904  2025-06-29 16:26:40 root code=002180
+  905  2025-06-29 16:26:40 root n=5
+  906  2025-06-29 16:26:40 root bash q.sh 0."$code" 5 "$n" 20500207
+  907  2025-06-29 16:26:40 root bash q.sh 0.002180 5 3 20500207
+  908  2025-06-29 16:26:40 root bash q.sh 0.002180 5 3 20500207 | jq
+  909  2025-06-29 16:26:40 root bash q.sh 0.002180 101 3 20500207 | jq
+  910  2025-06-29 16:26:40 root bash q.sh 0.002180 102 3 20500207 | jq
+  911  2025-06-29 16:26:40 root bash q.sh 0.002180 103 3 20500207 | jq
+  912  2025-06-29 16:26:40 root bash q.sh 0.002180 104 3 20500207 | jq
+  913  2025-06-29 16:26:40 root bash q.sh 0.002180 105 3 20500207 | jq
+  914  2025-06-29 16:26:40 root bash q.sh 0.002180 106 3 20500207 | jq
+  915  2025-06-29 16:26:40 root ls
+  916  2025-06-29 16:26:40 root cp f_m5_2_db.sh f_y_2_db.sh 
+  917  2025-06-29 16:26:40 root vim f_y_2_db.sh 
+  918  2025-06-29 16:26:47 root bash q.sh 0.002180 101 3 20500207 | jq
+  919  2025-06-29 16:26:47 root cp f_m5_2_db.sh f_d_2_db.sh 
+  920  2025-06-29 16:26:47 root vim f_d_2_db.sh 
+  921  2025-06-29 16:28:44 root cd x/
+  922  2025-06-29 16:28:45 root ls
+  923  2025-06-29 16:28:46 root top
+  924  2025-06-29 16:28:52 root clear
+  925  2025-06-29 16:28:56 root ls
+  926  2025-06-29 16:29:05 root bash q.sh 0.002180 101 20500207
+  927  2025-06-29 16:29:24 root ls
+  928  2025-06-29 16:31:21 root bash q.sh 0.002180 101 20500207
+  929  2025-06-29 16:31:32 root cat q.sh 
+  930  2025-06-29 16:33:04 root bash q.sh 0.002180 101 1 20500207
+  931  2025-06-29 16:33:17 root bash q.sh 0.002180 5 1 20500207
+  932  2025-06-29 16:33:36 root bash q.sh 0.002180 101 1 20500207
+  933  2025-06-29 16:35:30 root curl http://img1.money.126.net/data/hs/time/today/1399001.json
+  934  2025-06-29 16:36:05 root http://q.stock.sohu.com/hisHq?code=cn_300228&start=20130930&end=20131231&stat=1&order=D&period=d&callback=historySearchHandler&rt=jsonp
+  935  2025-06-29 16:36:18 root curl http://q.stock.sohu.com/hisHq?code=cn_300228&start=20130930&end=20131231&stat=1&order=D&period=d&callback=historySearchHandler&rt=jsonp
+  936  2025-06-29 16:37:21 root curl http://hq.sinajs.cn/list=sh601006
+  937  2025-06-29 16:38:48 root curl http://data.gtimg.cn/flashdata/hushen/daily/13/sz000858.js
+  938  2025-06-29 16:39:44 root bash q.sh 0.002180 101 1 20500207
+  939  2025-06-29 16:40:42 root http://data.gtimg.cn/flashdata/hushen/daily/13/sz000858.js
+  940  2025-06-29 16:41:02 root bash q.sh 0.002180 5 1 20500207
+  941  2025-06-29 16:41:08 root vim q.sh 
+  942  2025-06-29 16:41:15 root bash q.sh 0.002180 5 1 20500207
+  943  2025-06-29 16:41:18 root vim q.sh 
+  944  2025-06-29 16:41:41 root bash q.sh 0.002180 5 1 20500207
+  945  2025-06-29 16:41:45 root vim q.sh 
+  946  2025-06-29 16:42:01 root bash q.sh 0.002180 5 1 20500207
+  947  2025-06-29 16:42:03 root vim q.sh 
+  948  2025-06-29 16:42:14 root bash q.sh 0.002180 5 1 20500207
+  949  2025-06-29 16:42:21 root vim q.sh 
+  950  2025-06-29 16:42:31 root bash q.sh 0.002180 5 1 20500207
+  951  2025-06-29 16:42:36 root vim q.sh 
+  952  2025-06-29 16:43:09 root bash q.sh 0.002180 5 1 20500207
+  953  2025-06-29 16:45:56 root vim q.sh 
+  954  2025-06-29 16:46:59 root bash q.sh 0.002180 5 1 20500207
+  955  2025-06-29 16:47:07 root curl 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35109103579019432907_1751186651219&secid=0.002180&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=103&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751186651246'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; HAList=ty-0-002180-%u7EB3%u601D%u8FBE; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=2; st_psi=20250629164411482-113200301201-7310113559'   -H 'Referer: https://quote.eastmoney.com/sz002180.html?spm=search'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  956  2025-06-29 16:47:45 root vim q.sh 
+  957  2025-06-29 16:48:13 root bash q.sh 0.002180 5 1 20500207
+  958  2025-06-29 16:49:03 root curl 'http://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35109103579019432907_1751186651219&secid=0.002180&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=103&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751186651246'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; HAList=ty-0-002180-%u7EB3%u601D%u8FBE; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=2; st_psi=20250629164411482-113200301201-7310113559'   -H 'Referer: https://quote.eastmoney.com/sz002180.html?spm=search'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  959  2025-06-29 16:54:36 root curl https://qt.gtimg.cn/q=sz000001
+  960  2025-06-29 16:55:01 root curl http://hq.sinajs.cn/list=sh600519
+  961  2025-06-29 17:13:27 root curl 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35108724059075685259_1751188321476&secid=0.300059&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=5&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751188321483'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=20; st_psi=2025062917120373-113200301201-4219359583'   -H 'Referer: https://quote.eastmoney.com/sz300059.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  962  2025-06-29 17:14:13 root curl -v
+  963  2025-06-29 17:14:19 root curl --help
+  964  2025-06-29 17:14:25 root curl -V
+  965  2025-06-29 17:16:32 root curl -k 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35108724059075685259_1751188321476&secid=0.300059&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=5&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751188321483'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=20; st_psi=2025062917120373-113200301201-4219359583'   -H 'Referer: https://quote.eastmoney.com/sz300059.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  966  2025-06-29 17:24:42 root pip install pysnowball  # 推荐
+  967  2025-06-29 17:24:44 root pip install xueqiu-sdk  # 替代方案
+  968  2025-06-29 17:24:51 root pip install xueqiu-sd
+  969  2025-06-29 17:24:57 root pip install pysnowball
+  970  2025-06-29 17:25:09 root pip3 install pysnowball
+  971  2025-06-29 17:25:15 root pip3 install xueqiu-sd
+  972  2025-06-29 17:26:43 root pip install tushare
+  973  2025-06-29 17:39:48 root curl -k 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35108724059075685259_1751188321476&secid=0.300059&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=5&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751188321483'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=20; st_psi=2025062917120373-113200301201-4219359583'   -H 'Referer: https://quote.eastmoney.com/sz300059.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  974  2025-06-29 17:39:54 root ls
+  975  2025-06-29 17:39:57 root vim q.sh 
+  976  2025-06-29 17:40:16 root curl -k 'https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=jQuery35108724059075685259_1751188321476&secid=0.300059&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61&klt=5&fqt=1&beg=0&end=20500101&smplmt=460&lmt=1000000&_=1751188321483'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; st_asi=delete; fullscreengg=1; fullscreengg2=1; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=20; st_psi=2025062917120373-113200301201-4219359583'   -H 'Referer: https://quote.eastmoney.com/sz300059.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  977  2025-06-29 17:40:31 root bash q.sh 0.002180 5 1 20500207
+  978  2025-06-29 17:40:56 root bash scode.sh 
+  979  2025-06-29 17:41:01 root vim q.sh 
+  980  2025-06-29 17:41:28 root bash scode.sh 
+  981  2025-06-29 17:41:57 root ls
+  982  2025-06-29 17:42:00 root cat codes 
+  983  2025-06-29 17:42:13 root clear
+  984  2025-06-29 17:42:13 root ls
+  985  2025-06-29 17:47:29 root ping 240e:476:ffa8:a6b0:a913:7289:1688:4ed4
+  986  2025-06-29 18:02:34 root curl 'https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=jQuery371021136309744424342_1751191136991&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23%2Cm%3A0%2Bt%3A81%2Bs%3A2048&fields=f12%2Cf13%2Cf14%2Cf1%2Cf2%2Cf4%2Cf3%2Cf152%2Cf5%2Cf6%2Cf7%2Cf15%2Cf18%2Cf16%2Cf17%2Cf10%2Cf8%2Cf9%2Cf23&fid=f3&pn=1&pz=10000&po=1&dect=1&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&_=1751191137007'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; fullscreengg=1; fullscreengg2=1; st_asi=delete; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=51; st_psi=20250629175950373-113200301321-0816053454'   -H 'Referer: https://quote.eastmoney.com/center/gridlist.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  987  2025-06-29 18:02:58 root curl 'https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=jQuery371021136309744424342_1751191136991&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23%2Cm%3A0%2Bt%3A81%2Bs%3A2048&fields=f12%2Cf13%2Cf14%2Cf1%2Cf2%2Cf4%2Cf3%2Cf152%2Cf5%2Cf6%2Cf7%2Cf15%2Cf18%2Cf16%2Cf17%2Cf10%2Cf8%2Cf9%2Cf23&fid=f3&pn=1&pz=10000&po=1&dect=1&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&_=1751191137007'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; fullscreengg=1; fullscreengg2=1; st_asi=delete; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=51; st_psi=20250629175950373-113200301321-0816053454'   -H 'Referer: https://quote.eastmoney.com/center/gridlist.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"' | jq
+  988  2025-06-29 18:03:11 root curl 'https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=jQuery371021136309744424342_1751191136991&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23%2Cm%3A0%2Bt%3A81%2Bs%3A2048&fields=f12%2Cf13%2Cf14%2Cf1%2Cf2%2Cf4%2Cf3%2Cf152%2Cf5%2Cf6%2Cf7%2Cf15%2Cf18%2Cf16%2Cf17%2Cf10%2Cf8%2Cf9%2Cf23&fid=f3&pn=1&pz=10000&po=1&dect=1&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&_=1751191137007'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; fullscreengg=1; fullscreengg2=1; st_asi=delete; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=51; st_psi=20250629175950373-113200301321-0816053454'   -H 'Referer: https://quote.eastmoney.com/center/gridlist.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"' | qj
+  989  2025-06-29 18:03:13 root js
+  990  2025-06-29 18:03:19 root jq
+  991  2025-06-29 18:03:26 root curl 'https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=jQuery371021136309744424342_1751191136991&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23%2Cm%3A0%2Bt%3A81%2Bs%3A2048&fields=f12%2Cf13%2Cf14%2Cf1%2Cf2%2Cf4%2Cf3%2Cf152%2Cf5%2Cf6%2Cf7%2Cf15%2Cf18%2Cf16%2Cf17%2Cf10%2Cf8%2Cf9%2Cf23&fid=f3&pn=1&pz=10000&po=1&dect=1&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&_=1751191137007'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; fullscreengg=1; fullscreengg2=1; st_asi=delete; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=51; st_psi=20250629175950373-113200301321-0816053454'   -H 'Referer: https://quote.eastmoney.com/center/gridlist.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"'
+  992  2025-06-29 18:04:34 root curl 'https://push2.eastmoney.com/api/qt/clist/get?np=1&fltt=1&invt=2&cb=jQuery371021136309744424342_1751191136991&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23%2Cm%3A0%2Bt%3A81%2Bs%3A2048&fields=f12%2Cf13%2Cf14%2Cf1%2Cf2%2Cf4%2Cf3%2Cf152%2Cf5%2Cf6%2Cf7%2Cf15%2Cf18%2Cf16%2Cf17%2Cf10%2Cf8%2Cf9%2Cf23&fid=f3&pn=1&pz=10000&po=1&dect=1&ut=fa5fd1943c7b386f172d6893dbfba10b&wbp2u=%7C0%7C0%7C0%7Cweb&_=1751191137007'   -H 'Accept: */*'   -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'   -H 'Connection: keep-alive'   -b 'qgqp_b_id=bee62a3dca820a540128aba84b96b45b; websitepoptg_api_time=1751186639768; st_si=02927913921702; fullscreengg=1; fullscreengg2=1; st_asi=delete; HAList=ty-0-300059-%u4E1C%u65B9%u8D22%u5BCC%2Cty-0-002180-%u7EB3%u601D%u8FBE%2Cty-90-BK0475-%u94F6%u884C; st_pvi=76408780582403; st_sp=2024-12-08%2016%3A31%3A50; st_inirUrl=https%3A%2F%2Fcn.bing.com%2F; st_sn=51; st_psi=20250629175950373-113200301321-0816053454'   -H 'Referer: https://quote.eastmoney.com/center/gridlist.html'   -H 'Sec-Fetch-Dest: script'   -H 'Sec-Fetch-Mode: no-cors'   -H 'Sec-Fetch-Site: same-site'   -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"'   -H 'sec-ch-ua-mobile: ?0'   -H 'sec-ch-ua-platform: "Windows"' > jcodes
+  993  2025-06-29 18:04:37 root more jcodes 
+  994  2025-06-29 18:05:17 root awk -F "(" jcodes 
+  995  2025-06-29 18:05:34 root awk -F "(" '{print $1}' jcodes 
+  996  2025-06-29 18:05:38 root awk -F "(" '{print $2}' jcodes 
+  997  2025-06-29 18:06:18 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}'
+  998  2025-06-29 18:06:27 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq
+  999  2025-06-29 18:06:54 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[].f12
+ 1000  2025-06-29 18:07:03 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[]
+ 1001  2025-06-29 18:07:14 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[]."f12"
+ 1002  2025-06-29 18:07:24 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[]"f12"
+ 1003  2025-06-29 18:07:26 root ls
+ 1004  2025-06-29 18:07:34 root cd x/
+ 1005  2025-06-29 18:07:35 root ls
+ 1006  2025-06-29 18:07:39 root cat q.sh 
+ 1007  2025-06-29 18:07:44 root ls
+ 1008  2025-06-29 18:07:51 root cat f_m5_2_db.sh 
+ 1009  2025-06-29 18:08:15 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[]
+ 1010  2025-06-29 18:08:26 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq []
+ 1011  2025-06-29 18:08:29 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq 
+ 1012  2025-06-29 18:08:51 root mv ../jcodes ./
+ 1013  2025-06-29 18:08:53 root ls
+ 1014  2025-06-29 18:08:56 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq 
+ 1015  2025-06-29 18:09:09 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .f12
+ 1016  2025-06-29 18:09:18 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[].f12
+ 1017  2025-06-29 18:09:29 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[].12
+ 1018  2025-06-29 18:09:34 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[12]
+ 1019  2025-06-29 18:09:39 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .[]
+ 1020  2025-06-29 18:10:07 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .diff[]
+ 1021  2025-06-29 18:10:12 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .diff
+ 1022  2025-06-29 18:10:38 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | more
+ 1023  2025-06-29 18:11:03 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff
+ 1024  2025-06-29 18:11:08 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[]
+ 1025  2025-06-29 18:11:23 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[].f12
+ 1026  2025-06-29 18:11:31 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[]
+ 1027  2025-06-29 18:11:47 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[].f12,f14
+ 1028  2025-06-29 18:11:51 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[].f12,.f14
+ 1029  2025-06-29 18:12:05 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq .data.diff[].f12,.data.diff[].f14
+ 1030  2025-06-29 18:12:17 root cat f_d_2_db.sh 
+ 1031  2025-06-29 18:12:50 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[].f12 + "," +.data.diff[].f14
+ 1032  2025-06-29 18:13:12 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r '.data.diff[].f12 + "," +.data.diff[].f14'
+ 1033  2025-06-29 18:13:26 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r '.data.diff[].f12 + "," +.data.diff[].f14' | sort -rk 1
+ 1034  2025-06-29 18:14:07 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[]
+ 1035  2025-06-29 18:14:32 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[].f12
+ 1036  2025-06-29 18:14:49 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[].f12 | wc -l
+ 1037  2025-06-29 18:15:21 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[].f12
+ 1038  2025-06-29 18:15:24 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[]
+ 1039  2025-06-29 18:16:13 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[] | grep 002180
+ 1040  2025-06-29 18:16:23 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[].f12
+ 1041  2025-06-29 18:16:36 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[] | grep 001
+ 1042  2025-06-29 18:16:49 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[]
+ 1043  2025-06-29 18:20:56 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[] | jq -r .f12,,,,
+ 1044  2025-06-29 18:21:55 root history | grep jcodes
+ 1045  2025-06-29 18:35:12 root awk -F "(" '{print $2}' jcodes | awk -F ')' '{print $1}' | jq -r .data.diff[]
+ 1046  2025-06-29 19:23:58 root ls
+ 1047  2025-06-29 19:24:37 root zip -r x/ x.zip
+ 1048  2025-06-29 19:24:50 root apt install zip
+ 1049  2025-06-29 19:25:02 root zip -r x/ x.zip
+ 1050  2025-06-29 19:25:24 root zip -r  x.zip x/
+ 1051  2025-06-29 19:25:28 root ls
+ 1052  2025-06-29 19:25:34 root sz x.zip 
+ 1053  2025-06-29 19:25:43 root apt install lrzsz
+ 1054  2025-06-29 19:25:51 root sz x.zip 
+ 1055  2025-06-29 21:30:41 root ls
+ 1056  2025-06-29 21:30:42 root cd x/
+ 1057  2025-06-29 21:30:43 root s
+ 1058  2025-06-29 21:30:44 root ls
+ 1059  2025-06-29 21:31:10 root rz
+ 1060  2025-06-29 21:31:19 root ls
+ 1061  2025-06-29 21:31:21 root ll
+ 1062  2025-06-29 21:31:29 root more 002180_d.csv 
+ 1063  2025-06-30 11:22:12 root cd x/
+ 1064  2025-06-30 11:22:14 root ls
+ 1065  2025-06-30 11:22:21 root clear
+ 1066  2025-06-30 11:22:25 root more 002180_y.csv 
+ 1067  2025-06-30 11:22:34 root clear
+ 1068  2025-06-30 11:22:35 root ls
+ 1069  2025-06-30 11:22:41 root history q.sh 
+ 1070  2025-06-30 11:22:46 root history | grep q.sh 
+ 1071  2025-06-30 11:22:56 root clear
+ 1072  2025-06-30 11:22:58 root bash q.sh 0.002180 5 1 20500207
+ 1073  2025-06-30 11:23:01 root clear
+ 1074  2025-06-30 11:36:24 root ls
+ 1075  2025-06-30 11:36:30 root cat q.sh 
+ 1076  2025-06-30 11:36:35 root clear
+ 1077  2025-06-30 11:36:37 root ls
+ 1078  2025-06-30 11:36:41 root clear
+ 1079  2025-06-30 11:36:44 root curl ip.me
+ 1080  2025-06-30 11:36:51 root route -n
+ 1081  2025-06-30 11:36:54 root ip a
+ 1082  2025-06-30 11:39:52 root git clone --branch master --depth 1 https://gh-proxy.com/https://github.com/nelvko/clash-for-linux-install.git \ && cd clash-for-linux-install \ && sudo bash install.sh
+ 1083  2025-06-30 11:40:16 root ls
+ 1084  2025-06-30 11:40:33 root git clone https://gh-proxy.com/https://github.com/nelvko/clash-for-linux-install.git
+ 1085  2025-06-30 11:41:54 root clear
+ 1086  2025-06-30 11:41:55 root ls
+ 1087  2025-06-30 11:41:57 root cd clash-for-linux-install/
+ 1088  2025-06-30 11:41:58 root ls
+ 1089  2025-06-30 11:42:00 root clear
+ 1090  2025-06-30 11:42:16 root sudo bash install.sh
+ 1091  2025-07-01 17:55:43 root clash status
+ 1092  2025-07-01 17:55:43 root clear
+ 1093  2025-07-01 17:55:43 root curl ip.me
+ 1094  2025-07-01 17:55:43 root cd ../
+ 1095  2025-07-01 17:55:43 root clear
+ 1096  2025-07-01 17:55:43 root ls
+ 1097  2025-07-01 17:55:43 root clear
+ 1098  2025-07-01 17:55:43 root history | grep q.sh
+ 1099  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20500207
+ 1100  2025-07-01 17:55:43 root clear
+ 1101  2025-07-01 17:55:43 root curl ip.me
+ 1102  2025-07-01 17:55:43 root clear
+ 1103  2025-07-01 17:55:43 root ping www.google.com
+ 1104  2025-07-01 17:55:43 root clash status
+ 1105  2025-07-01 17:55:43 root ping www.google.com
+ 1106  2025-07-01 17:55:43 root clear
+ 1107  2025-07-01 17:55:43 root cat /opt/clash/runtime.yaml
+ 1108  2025-07-01 17:55:43 root clear
+ 1109  2025-07-01 17:55:43 root clash rules
+ 1110  2025-07-01 17:55:43 root clash tun on
+ 1111  2025-07-01 17:55:43 root clear
+ 1112  2025-07-01 17:55:43 root curl ip.me
+ 1113  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20500207
+ 1114  2025-07-01 17:55:43 root clear
+ 1115  2025-07-01 17:55:43 root clash nodes
+ 1116  2025-07-01 17:55:43 root clashctl
+ 1117  2025-07-01 17:55:43 root clash status
+ 1118  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20500207
+ 1119  2025-07-01 17:55:43 root clear
+ 1120  2025-07-01 17:55:43 root clash status
+ 1121  2025-07-01 17:55:43 root clear
+ 1122  2025-07-01 17:55:43 root vim /opt/clash/runtime.yaml
+ 1123  2025-07-01 17:55:43 root clash status
+ 1124  2025-07-01 17:55:43 root cat q.sh 
+ 1125  2025-07-01 17:55:43 root clear
+ 1126  2025-07-01 17:55:43 root vim /opt/clash/runtime.yaml
+ 1127  2025-07-01 17:55:43 root clash status
+ 1128  2025-07-01 17:55:43 root clash off
+ 1129  2025-07-01 17:55:43 root clash on
+ 1130  2025-07-01 17:55:43 root clear
+ 1131  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20500207
+ 1132  2025-07-01 17:55:43 root clear
+ 1133  2025-07-01 17:55:43 root clash status
+ 1134  2025-07-01 17:55:43 root curl ip.me
+ 1135  2025-07-01 17:55:43 root clear
+ 1136  2025-07-01 17:55:43 root bash q.sh 0.002180 5 1 20500207
+ 1137  2025-07-01 17:55:43 root clear
+ 1138  2025-06-30 12:35:12 root clear
+ 1139  2025-06-30 12:35:18 root cd x/
+ 1140  2025-06-30 12:35:18 root ls
+ 1141  2025-06-30 12:35:28 root rm -rf ' '
+ 1142  2025-06-30 12:35:30 root ls
+ 1143  2025-06-30 12:35:42 root rm -rf clash-for-linux-install/
+ 1144  2025-06-30 12:35:43 root ls
+ 1145  2025-06-30 12:35:44 root clear
+ 1146  2025-06-30 12:35:45 root ls
+ 1147  2025-06-30 12:36:00 root history | grep q.sh 
+ 1148  2025-06-30 12:36:09 root clear
+ 1149  2025-06-30 12:36:12 root bash q.sh 0.002180 5 1 20500207
+ 1150  2025-06-30 12:36:18 root clear
+ 1151  2025-06-30 12:36:22 root bash q.sh 002180 5 1 20500207
+ 1152  2025-06-30 12:36:28 root ls
+ 1153  2025-06-30 12:37:12 root more jcodes 
+ 1154  2025-06-30 12:37:25 root clear
+ 1155  2025-06-30 12:37:25 root ls
+ 1156  2025-06-30 12:37:40 root more jcodes 
+ 1157  2025-06-30 12:37:43 root clear
+ 1158  2025-06-30 12:37:54 root more jcodes 
+ 1159  2025-06-30 12:38:31 root clear
+ 1160  2025-06-30 12:38:32 root ls
+ 1161  2025-06-30 12:38:39 root cat q.sh 
+ 1162  2025-06-30 12:38:44 root ls
+ 1163  2025-06-30 12:38:46 root clear
+ 1164  2025-06-30 12:38:47 root ls
+ 1165  2025-06-30 12:38:55 root more codes 
+ 1166  2025-06-30 12:39:08 root clear
+ 1167  2025-06-30 12:39:09 root ls
+ 1168  2025-06-30 12:39:11 root cat codes 
+ 1169  2025-06-30 12:39:16 root clear
+ 1170  2025-06-30 12:39:17 root ls
+ 1171  2025-06-30 12:48:26 root clash status
+ 1172  2025-06-30 12:48:40 root vim /opt/clash/runtime.yaml
+ 1173  2025-06-30 12:50:54 root cat q.sh 
+ 1174  2025-06-30 12:51:00 root clear
+ 1175  2025-06-30 12:51:01 root ls
+ 1176  2025-06-30 12:51:05 root vim /opt/clash/runtime.yaml
+ 1177  2025-06-30 12:51:50 root curl ip.me
+ 1178  2025-06-30 12:51:57 root clash off
+ 1179  2025-06-30 12:52:00 root curl ip.me
+ 1180  2025-06-30 12:52:08 root clash on
+ 1181  2025-06-30 12:52:10 root clear
+ 1182  2025-06-30 12:52:13 root curl ip.me
+ 1183  2025-06-30 12:52:31 root clear
+ 1184  2025-06-30 12:52:37 root ls
+ 1185  2025-06-30 12:52:39 root clear
+ 1186  2025-06-30 12:52:42 root clash
+ 1187  2025-06-30 12:52:54 root clash update
+ 1188  2025-06-30 12:53:08 root curl ip.me
+ 1189  2025-06-30 12:53:12 root clear
+ 1190  2025-06-30 12:53:20 root vim /opt/clash/runtime.yaml
+ 1191  2025-06-30 12:54:29 root cat q.sh 
+ 1192  2025-06-30 12:54:37 root clear
+ 1193  2025-06-30 12:54:42 root vim /opt/clash/runtime.yaml
+ 1194  2025-06-30 12:55:31 root clear
+ 1195  2025-06-30 12:55:35 root clash off
+ 1196  2025-06-30 12:55:36 root clear
+ 1197  2025-06-30 12:55:38 root clash on
+ 1198  2025-06-30 12:55:39 root clear
+ 1199  2025-06-30 12:55:46 root clash status
+ 1200  2025-06-30 12:55:57 root curl ip.me
+ 1201  2025-06-30 12:55:59 root clear
+ 1202  2025-06-30 12:56:25 root clash status
+ 1203  2025-06-30 12:56:37 root ping ip.me
+ 1204  2025-06-30 12:57:08 root clash status
+ 1205  2025-06-30 12:57:49 root clash off
+ 1206  2025-06-30 12:57:50 root clear
+ 1207  2025-06-30 12:57:53 root ping ip.me
+ 1208  2025-06-30 12:58:06 root clear
+ 1209  2025-06-30 12:58:08 root ping ip.me
+ 1210  2025-06-30 12:58:21 root clash on
+ 1211  2025-06-30 12:58:23 root clear
+ 1212  2025-06-30 12:58:25 root ip.me
+ 1213  2025-06-30 12:58:29 root ping ip.me
+ 1214  2025-06-30 12:58:35 root clear
+ 1215  2025-06-30 12:58:39 root clash status
+ 1216  2025-06-30 12:58:53 root clear
+ 1217  2025-06-30 12:58:58 root clash off
+ 1218  2025-06-30 12:59:00 root clash on
+ 1219  2025-06-30 12:59:01 root clear
+ 1220  2025-06-30 12:59:04 root clash status
+ 1221  2025-06-30 12:59:15 root clear
+ 1222  2025-06-30 12:59:28 root ping push2his.eastmoney.com
+ 1223  2025-06-30 12:59:31 root clear
+ 1224  2025-06-30 12:59:35 root clash status
+ 1225  2025-06-30 13:00:10 root ping push2his.eastmoney.com
+ 1226  2025-06-30 13:00:13 root clear
+ 1227  2025-06-30 13:00:18 root clash status
+ 1228  2025-06-30 13:00:26 root c
+ 1229  2025-06-30 13:00:35 root clear
+ 1230  2025-06-30 13:00:45 root curl https://push2his.eastmoney.com
+ 1231  2025-06-30 13:00:49 root clear
+ 1232  2025-06-30 13:00:50 root ls
+ 1233  2025-06-30 13:00:59 root clash status
+ 1234  2025-06-30 13:01:24 root clear
+ 1235  2025-06-30 13:01:25 root ls
+ 1236  2025-06-30 13:01:30 root clear
+ 1237  2025-06-30 13:01:34 root history | grep q.sh 
+ 1238  2025-06-30 13:01:53 root clear
+ 1239  2025-06-30 13:01:58 root bash q.sh 0.002180 5 1 20500207
+ 1240  2025-06-30 13:02:08 root clear
+ 1241  2025-06-30 13:02:17 root clash status
+ 1242  2025-06-30 13:03:26 root bash q.sh 0.002180 5 1 20500207
+ 1243  2025-06-30 13:03:36 root clash status
+ 1244  2025-06-30 13:04:03 root bash q.sh 0.002180 5 1 20500207clear
+ 1245  2025-06-30 13:04:07 root clear
+ 1246  2025-06-30 13:04:11 root bash q.sh 0.002180 5 1 20500207
+ 1247  2025-06-30 13:04:22 root clash status
+ 1248  2025-06-30 13:04:50 root clear
+ 1249  2025-06-30 13:04:54 root bash q.sh 0.002180 5 1 20500207
+ 1250  2025-06-30 13:05:12 root clear
+ 1251  2025-06-30 13:05:15 root bash q.sh 0.002180 5 1 20500207
+ 1252  2025-06-30 13:06:01 root clear
+ 1253  2025-06-30 13:06:03 root bash q.sh 0.002180 5 1 20500207
+ 1254  2025-06-30 13:06:31 root clear
+ 1255  2025-06-30 13:17:28 root bash q.sh 0.881136 5 1 20500207
+ 1256  2025-06-30 13:17:45 root bash q.sh 3.881136 5 1 20500207
+ 1257  2025-06-30 13:17:50 root bash q.sh 1.881136 5 1 20500207
+ 1258  2025-06-30 13:17:52 root clear
+ 1259  2025-06-30 13:17:57 root bash q.sh 2.881136 5 1 20500207
+ 1260  2025-06-30 13:18:00 root clear
+ 1261  2025-06-30 13:18:04 root bash q.sh 4.881136 5 1 20500207
+ 1262  2025-06-30 13:18:06 root clear
+ 1263  2025-06-30 13:18:14 root bash q.sh 4.881136 5 1 20500207
+ 1264  2025-06-30 13:18:19 root bash q.sh 2.881136 5 1 20500207
+ 1265  2025-06-30 13:18:21 root clear
+ 1266  2025-06-30 14:05:00 root cd x/
+ 1267  2025-06-30 14:05:01 root ls
+ 1268  2025-06-30 14:05:01 root clear
+ 1269  2025-06-30 14:05:10 root clash status
+ 1270  2025-06-30 14:05:30 root clear
+ 1271  2025-06-30 14:05:41 root grep "节点" /opt/clash/runtime.yaml
+ 1272  2025-06-30 14:06:05 root clear
+ 1273  2025-06-30 14:06:11 root vim /opt/clash/runtime.yaml
+ 1274  2025-06-30 14:06:48 root grep "- {name:" /opt/clash/runtime.yaml
+ 1275  2025-06-30 14:06:53 root grep "{name:" /opt/clash/runtime.yaml
+ 1276  2025-06-30 14:07:16 root clear
+ 1277  2025-06-30 14:07:32 root grep "{name:" /opt/clash/runtime.yaml 
+ 1278  2025-06-30 14:07:39 root clear
+ 1279  2025-06-30 14:09:04 root grep "{name:" /opt/clash/runtime.yaml | sed "s/'  - '//g"
+ 1280  2025-06-30 14:09:07 root clear
+ 1281  2025-06-30 14:09:15 root grep "{name:" /opt/clash/runtime.yaml | sed "s/'-'//g"
+ 1282  2025-06-30 14:09:20 root clear
+ 1283  2025-06-30 14:09:25 root grep "{name:" /opt/clash/runtime.yaml | sed "s/' '//g"
+ 1284  2025-06-30 14:09:29 root clear
+ 1285  2025-06-30 14:09:59 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^"  - "//g
+ 1286  2025-06-30 14:10:05 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^"  - "//g'
+ 1287  2025-06-30 14:10:09 root clear
+ 1288  2025-06-30 14:10:13 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^"  - "//g' | more
+ 1289  2025-06-30 14:10:18 root clear
+ 1290  2025-06-30 14:10:23 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^"  - "//g' | head -n 1
+ 1291  2025-06-30 14:10:30 root clear
+ 1292  2025-06-30 14:11:44 root # 测试用例
+ 1293  2025-06-30 14:11:44 root echo '"  - {name: "test"}' | sed 's/^"  - "//'
+ 1294  2025-06-30 14:11:44 root # 输出: {name: "test"} (前缀被删除)
+ 1295  2025-06-30 14:11:47 root echo '"  - {name: "test"}' | sed 's/^"  - "//'
+ 1296  2025-06-30 14:12:15 root grep "{name:" /opt/clash/runtime.yaml | jq
+ 1297  2025-06-30 14:12:24 root cat /opt/clash/runtime.yaml | jq
+ 1298  2025-06-30 14:12:29 root grep "{name:" /opt/clash/runtime.yaml | jq
+ 1299  2025-06-30 14:12:33 root grep "{name:" /opt/clash/runtime.yaml 
+ 1300  2025-06-30 14:12:50 root echo '"  - {name: "test"}' | sed 's/^"  - //'
+ 1301  2025-06-30 14:13:11 root echo '  - {name: "test"}' | sed 's/^"  - //'
+ 1302  2025-06-30 14:13:35 root echo '  - {name: "test"}' | sed 's/^  - //'
+ 1303  2025-06-30 14:13:49 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //'
+ 1304  2025-06-30 14:13:52 root clear
+ 1305  2025-06-30 14:13:55 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | jq
+ 1306  2025-06-30 14:13:59 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' 
+ 1307  2025-06-30 14:14:13 root clear
+ 1308  2025-06-30 14:14:17 root {name: WhatsApp, type: select, proxies: [节点选择, 日本-优化, 日本-优化2, 日本-优化3, 日本JP-HY2, 新加坡SG11-HY2, 新加坡-优化, 新加坡-优化2, 新加坡-优化3, 香港HKT-HY2, 香港-优化, 香港-优化2, 香港-优化3, 香港WAP-优化, 香港WAP-优LA-优化2-GPT, 美国LA-优化3-GPT]}
+ 1309  2025-06-30 14:14:18 root clear
+ 1310  2025-06-30 14:14:27 root echo "{name: WhatsApp, type: select, proxies: [节点选择, 日本-优化, 日本-优化2, 日本-优化3, 日本JP-HY2, 新加坡SG11-HY2, 新加坡-优化, 新加坡-优化2, 新加坡-优化3, 香港HKT-HY2, 香港-优化, 香港-优化2, 香港-优化3, 香港WAP-优化, 香港WAP-优LA-优化2-GPT, 美国LA-优化3-GPT]}" | jq
+ 1311  2025-06-30 14:14:40 root clear
+ 1312  2025-06-30 14:14:47 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //'
+ 1313  2025-06-30 14:14:52 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 1
+ 1314  2025-06-30 14:14:53 root clear
+ 1315  2025-06-30 14:14:55 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 1
+ 1316  2025-06-30 14:15:05 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 2
+ 1317  2025-06-30 14:15:09 root clear
+ 1318  2025-06-30 14:15:13 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 3
+ 1319  2025-06-30 14:15:21 root clear
+ 1320  2025-06-30 14:15:24 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 4
+ 1321  2025-06-30 14:15:33 root clear
+ 1322  2025-06-30 14:15:36 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | head -n 10
+ 1323  2025-06-30 14:15:53 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //'
+ 1324  2025-06-30 14:16:03 root clear
+ 1325  2025-06-30 14:16:11 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | grep "proxies:"
+ 1326  2025-06-30 14:16:16 root clear
+ 1327  2025-06-30 14:16:21 root grep "{name:" /opt/clash/runtime.yaml | sed 's/^  - //' | grep "proxies:" | head -n 1
+ 1328  2025-06-30 14:16:28 root clear
+ 1329  2025-06-30 14:18:04 root yq e '.. | select(has("proxies")).proxies[]' /opt/clash/runtime.yaml
+ 1330  2025-06-30 14:18:11 root apt install yq
+ 1331  2025-06-30 14:18:20 root clear
+ 1332  2025-06-30 14:18:23 root snap install yq
+ 1333  2025-06-30 14:18:38 root yq e '.. | select(has("proxies")).proxies[]' /opt/clash/runtime.yaml
+ 1334  2025-06-30 14:19:14 root cat /opt/clash/runtime.yaml
+ 1335  2025-06-30 14:19:16 root clear
+ 1336  2025-06-30 14:19:24 root yq e '.. | select(has("proxies")).proxies[]' /opt/clash/runtime.yaml
+ 1337  2025-06-30 14:19:41 root yq  /opt/clash/runtime.yaml
+ 1338  2025-06-30 14:20:14 root vim /opt/clash/runtime.yaml
+ 1339  2025-06-30 14:20:27 root clear
+ 1340  2025-06-30 14:20:43 root yq e '.proxies:' /opt/clash/runtime.yaml
+ 1341  2025-06-30 14:20:46 root yq e '.proxies' /opt/clash/runtime.yaml
+ 1342  2025-06-30 14:21:11 root yq e '.. | select(has("proxies")).proxies[]' /opt/clash/runtime.yaml
+ 1343  2025-06-30 14:21:32 root yq e -j /opt/clash/runtime.yaml | jq '.. | .proxies? | select(. != null) | .[]'
+ 1344  2025-06-30 14:21:56 root yq -o=json /opt/clash/runtime.yaml | jq '.. | .proxies? | select(. != null) | .[]'
+ 1345  2025-06-30 14:22:02 root yq -o=json /opt/clash/runtime.yaml
+ 1346  2025-06-30 14:22:16 root yq /opt/clash/runtime.yaml
+ 1347  2025-06-30 14:22:39 root yq e /opt/clash/runtime.yaml
+ 1348  2025-06-30 14:23:36 root yq --version
+ 1349  2025-06-30 14:23:48 root sudo chmod +r /opt/clash/runtime.yaml  # 添加读取权限
+ 1350  2025-06-30 14:23:51 root yq e /opt/clash/runtime.yaml
+ 1351  2025-06-30 14:23:54 root clear
+ 1352  2025-06-30 14:24:09 root ls -l /opt/clash/runtime.yaml
+ 1353  2025-06-30 14:24:48 root yq e /opt/clash/runtime.yaml
+ 1354  2025-06-30 14:24:50 root clear
+ 1355  2025-06-30 14:25:21 root yq e '.' /opt/clash/runtime.yaml  # 确保 yq 已安装[1](@ref)
+ 1356  2025-06-30 14:25:24 root yq e '.' /opt/clash/runtime.yaml  
+ 1357  2025-06-30 14:25:26 root clear
+ 1358  2025-06-30 21:01:18 root clash
+ 1359  2025-06-30 22:23:48 root clash status
+ 1360  2025-06-30 22:29:03 root cat /opt/clash/runtime.yaml | grep "节点选择"
+ 1361  2025-06-30 22:31:58 root vim /opt/clash/runtime.yaml"
+ 1362  2025-06-30 22:32:04 root vim /opt/clash/runtime.yaml
+ 1363  2025-06-30 22:33:13 root clash off
+ 1364  2025-06-30 22:33:17 root clash on
+ 1365  2025-06-30 22:33:23 root clash status
+ 1366  2025-06-30 22:34:50 root clash off
+ 1367  2025-06-30 22:34:53 root clash on
+ 1368  2025-06-30 22:35:07 root clash status
+ 1369  2025-06-30 22:42:34 root vim /opt/clash/runtime.yaml
+ 1370  2025-06-30 21:02:17 root clash status
+ 1371  2025-06-30 21:02:41 root cat /opt/clash/runtime.yaml | grep "name"
+ 1372  2025-06-30 21:04:28 root cat /opt/clash/runtime.yaml | grep "proxies:
+ 1373  2025-07-01 17:55:43 root "
+ 1374  2025-06-30 21:05:02 root cat /opt/clash/runtime.yaml | grep "proxies"
+ 1375  2025-06-30 21:05:25 root cat /opt/clash/runtime.yaml | grep "proxies" > proxies
+ 1376  2025-06-30 21:05:32 root vim proxies 
+ 1377  2025-06-30 21:06:37 root yp
+ 1378  2025-06-30 21:14:00 root yq
+ 1379  2025-06-30 21:14:32 root yq eval '.servers[]' proxies 
+ 1380  2025-06-30 21:14:59 root yq eval '.proxies[]' proxies 
+ 1381  2025-06-30 21:15:19 root yq eval '.proxies[].proxies' proxies 
+ 1382  2025-06-30 21:15:42 root yq eval '.proxies[].proxies[]' proxies 
+ 1383  2025-06-30 21:15:54 root yq eval '.proxies[].proxies[]' proxies | wc -l
+ 1384  2025-06-30 21:16:04 root yq eval '.proxies[].proxies[]' proxies | sort -u
+ 1385  2025-06-30 21:16:24 root yq eval '.proxies[].proxies[]' proxies | sort -u | wc -l
+ 1386  2025-06-30 21:16:41 root yq eval '.proxies[].proxies[]' proxies | sort
+ 1387  2025-06-30 21:17:50 root yq eval '.proxies[].proxies[]' proxies | PT
+ 1388  2025-06-30 21:17:58 root yq eval '.proxies[].proxies[]' proxies | grep PT
+ 1389  2025-06-30 21:18:07 root ks
+ 1390  2025-06-30 21:18:32 root yq eval '.proxies[].proxies[]' proxies
+ 1391  2025-06-30 21:18:51 root ls
+ 1392  2025-06-30 21:19:04 root cat /opt/clash/runtime.yaml 
+ 1393  2025-06-30 21:21:37 root yq eval '.proxies[].proxies[]' proxies
+ 1394  2025-06-30 21:21:45 root yq eval '.proxies[].proxies[]' proxies | sort -u
+ 1395  2025-06-30 21:22:34 root yq eval '.proxies[].proxies[]' proxies | sort -u | grep  "-"
+ 1396  2025-06-30 21:22:59 root yq eval '.proxies[].proxies[]' proxies | sort -u | grep  "-" | wc -l
+ 1397  2025-06-30 21:24:53 root yq eval '.proxies[].proxies[]' proxies | sort -u | grep  "-" > p.csv
+ 1398  2025-06-30 21:24:56 root cat p.csv 
+ 1399  2025-06-30 21:25:04 root vim p.csv 
+ 1400  2025-06-30 21:25:38 root ls
+ 1401  2025-06-30 21:25:48 root cd x/
+ 1402  2025-06-30 21:25:49 root ls
+ 1403  2025-06-30 21:28:07 root cd ../
+ 1404  2025-06-30 21:28:22 root cat p.csv | awk -v suffix="追加内容" '{print $0 suffix}'
+ 1405  2025-06-30 21:28:30 root cat p.csv | awk -v suffix=",追加内容" '{print $0 suffix}'
+ 1406  2025-06-30 21:28:38 root cat p.csv | awk -v suffix=",y" '{print $0 suffix}'
+ 1407  2025-06-30 21:29:01 root ls
+ 1408  2025-06-30 21:29:06 root cd x/
+ 1409  2025-06-30 21:29:07 root ls
+ 1410  2025-06-30 21:29:33 root vim concat_line.sh
+ 1411  2025-06-30 21:30:55 root cat data.csv | bash concat_line.sh ",y"
+ 1412  2025-06-30 21:31:07 root cat codes | bash concat_line.sh ",y"
+ 1413  2025-06-30 21:31:14 root ls
+ 1414  2025-06-30 21:31:20 root cp ../p.csv ./
+ 1415  2025-06-30 21:31:21 root ls
+ 1416  2025-06-30 21:31:48 root cat p.csv | bash concat_line.sh ",y"
+ 1417  2025-06-30 21:31:54 root cat p.csv | bash concat_line.sh ",y" > p.csv 
+ 1418  2025-06-30 21:31:56 root cat p.csv 
+ 1419  2025-06-30 21:32:10 root cp ../p.csv ./
+ 1420  2025-06-30 21:32:16 root cat p.csv | bash concat_line.sh ",y" > p1.csv 
+ 1421  2025-06-30 21:32:21 root cat p1.csv 
+ 1422  2025-06-30 21:32:24 root ls
+ 1423  2025-06-30 21:32:55 root cp f_m5_2_db.sh icsv2db
+ 1424  2025-06-30 21:33:23 root vim icsv2db 
+ 1425  2025-06-30 21:35:06 root cat p1.csv | head -n 1
+ 1426  2025-06-30 21:36:31 root head -1 p1.csv | tr ',' '\n' | wc -l
+ 1427  2025-06-30 21:36:48 root vim icsv2db 
+ 1428  2025-06-30 21:40:21 root bash icsv2db p1.csv mydb.db npa
+ 1429  2025-06-30 21:40:45 root sqlite3 mydb.db 
+ 1430  2025-06-30 21:42:45 root ls
+ 1431  2025-06-30 21:43:47 root cat p.csv | bash concat_line.sh ",y,1" > p1.csv
+ 1432  2025-06-30 21:44:08 root bash icsv2db p1.csv mydb.db npa
+ 1433  2025-06-30 21:45:45 root sqlite3 mydb.db "select c1 from npa order by c3 limit 1"
+ 1434  2025-06-30 21:46:45 root vim clash_as.sh
+ 1435  2025-06-30 21:48:31 root bash clash_as.sh 
+ 1436  2025-06-30 21:49:17 root date +%s
+ 1437  2025-06-30 21:49:38 root vim clash_as.sh
+ 1438  2025-06-30 21:52:25 root bash clash_as.sh 
+ 1439  2025-06-30 21:52:30 root vim clash_as.sh
+ 1440  2025-06-30 21:53:05 root bash clash_as.sh 
+ 1441  2025-06-30 21:53:43 root clash
+ 1442  2025-06-30 21:54:33 root clash on
+ 1443  2025-06-30 21:58:02 root clash status
+ 1444  2025-06-30 21:58:20 root cat /opt/clash/runtime.yaml
+ 1445  2025-06-30 22:00:07 root vim /opt/clash/runtime.yaml
+ 1446  2025-06-30 22:08:25 root ls
+ 1447  2025-06-30 22:08:33 root vim clash_as.sh 
+ 1448  2025-06-30 22:10:30 root vim /opt/clash/runtime.yaml
+ 1449  2025-06-30 22:11:19 root bash clash_as.sh 
+ 1450  2025-06-30 22:11:29 root clash
+ 1451  2025-06-30 22:11:46 root cat /opt/clash/runtime.yaml
+ 1452  2025-06-30 22:11:55 root clear
+ 1453  2025-06-30 22:11:56 root ls
+ 1454  2025-06-30 22:12:01 root clash
+ 1455  2025-06-30 22:12:11 root whereis clash
+ 1456  2025-06-30 22:12:21 root ls
+ 1457  2025-06-30 22:12:31 root chmod +x clash_as.sh 
+ 1458  2025-06-30 22:12:32 root ls
+ 1459  2025-06-30 22:12:34 root ./clash_as.sh 
+ 1460  2025-06-30 22:12:43 root clash
+ 1461  2025-06-30 22:13:07 root pwd clash
+ 1462  2025-06-30 22:13:14 root clash status
+ 1463  2025-06-30 22:13:37 root /opt/clash status
+ 1464  2025-06-30 22:13:55 root /opt/clash/bin/mihomo status
+ 1465  2025-06-30 22:14:01 root ls
+ 1466  2025-06-30 22:14:04 root clash
+ 1467  2025-06-30 22:14:07 root vim clash_as.sh 
+ 1468  2025-06-30 22:14:35 root whereis clash
+ 1469  2025-06-30 22:14:48 root ./clash_as.sh 
+ 1470  2025-06-30 22:15:18 root cat /opt/clash/runtime.yaml
+ 1471  2025-06-30 22:15:49 root cat /opt/clash/runtime.yaml | grep "name"
+ 1472  2025-06-30 22:16:03 root cat /opt/clash/runtime.yaml | grep -n "name" 
+ 1473  2025-06-30 22:16:17 root cat /opt/clash/runtime.yaml | grep -n "name: lx" 
+ 1474  2025-06-30 22:16:45 root cat /opt/clash/runtime.yaml | grep -n "name: lx" | awk -F ":" '{print $1}'
+ 1475  2025-06-30 22:18:08 root cat /opt/clash/runtime.yaml | root@hcss-ecs-24f7:~/x# cat /opt/clash/runtime.yaml | grep -n "name: lx" | awk -F ":" '{print $1}'
+ 1476  2025-06-30 22:18:08 root cut -d: -f1
+ 1477  2025-06-30 22:18:13 root cat /opt/clash/runtime.yaml | root@hcss-ecs-24f7:~/x# cat /opt/clash/runtime.yaml | grep -n "name: lx" | awk -F ":" '{print $1}'
+ 1478  2025-06-30 22:18:18 root cat /opt/clash/runtime.yaml | grep -n "name: lx" | awk -F ":" '{print $1}'
+ 1479  2025-06-30 22:18:47 root grep -n "name: lx" /opt/clash/runtime.yaml | awk -F ":" '{print $1}'
+ 1480  2025-06-30 22:18:56 root grep -n "name: lx" /opt/clash/runtime.yaml
+ 1481  2025-06-30 22:19:00 root grep -n "name: lx" /opt/clash/runtime.yaml | awk -F ":" '{print $1}'
+ 1482  2025-06-30 22:19:14 root vim /opt/clash/runtime.yaml
+ 1483  2025-06-30 22:19:44 root ls
+ 1484  2025-06-30 22:19:46 root vim clash_as.sh 
+ 1485  2025-06-30 22:20:26 root ./clash_as.sh 
+ 1486  2025-06-30 22:20:42 root grep -n "name: lx" /opt/clash/runtime.yaml 
+ 1487  2025-06-30 22:20:58 root clash off && clash on
+ 1488  2025-06-30 22:21:07 root clash status
+ 1489  2025-06-30 22:21:39 root bash q.sh 0.002180 106 2 20250000
+ 1490  2025-06-30 22:22:09 root history | grep q.sh
+ 1491  2025-06-30 22:22:27 root bash q.sh 0.002180 5 1 20500207
+ 1492  2025-06-30 22:25:31 root time bash q.sh 0.002180 5 1 20500207
+ 1493  2025-06-30 22:27:50 root ls
+ 1494  2025-06-30 22:27:56 root bash clash_as.sh 
+ 1495  2025-06-30 22:28:03 root time bash q.sh 0.002180 5 1 20500207
+ 1496  2025-06-30 22:36:47 root ls
+ 1497  2025-06-30 22:36:49 root vim q.sh 
+ 1498  2025-06-30 22:37:06 root time bash q.sh 0.002180 5 1 20500207
+ 1499  2025-06-30 22:37:23 root ls
+ 1500  2025-06-30 22:37:27 root bash clash_as.sh 
+ 1501  2025-06-30 22:37:40 root clash off && clash on
+ 1502  2025-06-30 22:37:44 root time bash q.sh 0.002180 5 1 20500207
+ 1503  2025-06-30 22:38:54 root vim /opt/clash/runtime.yaml
+ 1504  2025-06-30 22:39:07 root time bash q.sh 0.002180 5 1 20500207
+ 1505  2025-06-30 22:39:22 root clash off && clash on
+ 1506  2025-06-30 22:39:26 root time bash q.sh 0.002180 5 1 20500207
+ 1507  2025-06-30 22:39:50 root ls
+ 1508  2025-06-30 22:39:57 root ./clash_as.sh 
+ 1509  2025-06-30 22:40:29 root bash clash_as.sh && clash off && clash && time bash q.sh 0.002180 5 1 20500207
+ 1510  2025-06-30 22:40:45 root bash clash_as.sh && clash off && clash on && time bash q.sh 0.002180 5 1 20500207
+ 1511  2025-06-30 22:41:09 root bash clash_as.sh && clash off && clash on  time bash q.sh 0.002180 5 1 20500207
+ 1512  2025-06-30 22:41:14 root bash clash_as.sh && clash off && clash on
+ 1513  2025-06-30 22:41:43 root time bash q.sh 0.002180 5 1 20500207
+ 1514  2025-06-30 22:42:52 root bash clash_as.sh && clash off && clash on
+ 1515  2025-06-30 22:42:55 root time bash q.sh 0.002180 5 1 20500207
+ 1516  2025-06-30 22:43:07 root bash clash_as.sh && clash off && clash on
+ 1517  2025-06-30 22:43:09 root time bash q.sh 0.002180 5 1 20500207
+ 1518  2025-06-30 22:43:17 root bash clash_as.sh && clash off && clash on
+ 1519  2025-06-30 22:43:22 root time bash q.sh 0.002180 5 1 20500207
+ 1520  2025-06-30 22:43:33 root bash clash_as.sh && clash off && clash on
+ 1521  2025-06-30 22:43:36 root time bash q.sh 0.002180 5 1 20500207
+ 1522  2025-06-30 22:44:44 root bash clash_as.sh && clash off && clash on
+ 1523  2025-06-30 22:44:47 root time bash q.sh 0.002180 5 1 20500207
+ 1524  2025-06-30 22:44:56 root bash clash_as.sh && clash off && clash on
+ 1525  2025-06-30 22:44:59 root time bash q.sh 0.002180 5 1 20500207
+ 1526  2025-06-30 22:45:07 root bash clash_as.sh && clash off && clash on
+ 1527  2025-06-30 22:45:09 root time bash q.sh 0.002180 5 1 20500207
+ 1528  2025-06-30 22:45:17 root bash clash_as.sh && clash off && clash on
+ 1529  2025-06-30 22:45:21 root time bash q.sh 0.002180 5 1 20500207
+ 1530  2025-06-30 22:45:35 root bash clash_as.sh && clash off && clash on
+ 1531  2025-06-30 22:45:39 root time bash q.sh 0.002180 5 1 20500207
+ 1532  2025-06-30 22:45:45 root bash clash_as.sh && clash off && clash on
+ 1533  2025-06-30 22:45:47 root time bash q.sh 0.002180 5 1 20500207
+ 1534  2025-06-30 22:45:52 root bash clash_as.sh && clash off && clash on
+ 1535  2025-06-30 22:45:54 root time bash q.sh 0.002180 5 1 20500207
+ 1536  2025-06-30 22:46:00 root bash clash_as.sh && clash off && clash on
+ 1537  2025-06-30 22:46:02 root time bash q.sh 0.002180 5 1 20500207
+ 1538  2025-06-30 22:46:10 root bash clash_as.sh && clash off && clash on
+ 1539  2025-06-30 22:46:13 root time bash q.sh 0.002180 5 1 20500207
+ 1540  2025-06-30 22:46:29 root bash clash_as.sh && clash off && clash on
+ 1541  2025-06-30 22:46:31 root time bash q.sh 0.002180 5 1 20500207
+ 1542  2025-06-30 22:46:51 root bash clash_as.sh && clash off && clash on
+ 1543  2025-06-30 22:47:00 root time bash q.sh 0.002180 5 1 20500207
+ 1544  2025-06-30 22:47:16 root bash clash_as.sh && clash off && clash on
+ 1545  2025-06-30 22:47:29 root time bash q.sh 0.002180 5 1 20500207
+ 1546  2025-06-30 22:50:11 root ls
+ 1547  2025-06-30 22:50:18 root cat 002180_d.csv 
+ 1548  2025-06-30 22:50:27 root vim 002180_d.csv 
+ 1549  2025-06-30 22:51:03 root ls
+ 1550  2025-06-30 22:52:16 root bash icsv2db 002180_d.csv mydb.db d
+ 1551  2025-06-30 22:53:08 root sqlite3 mydb.db 
+ 1552  2025-06-30 22:56:41 root ls
+ 1553  2025-06-30 22:57:20 root bash concat_line.sh 002180_d.csv ",002180"
+ 1554  2025-06-30 22:57:55 root cat 002180_d.csv | bash concat_line.sh ",002180"
+ 1555  2025-06-30 22:58:12 root cat 002180_d.csv | bash concat_line.sh ",002180" > 002180_d1.csv
+ 1556  2025-06-30 22:58:23 root ls
+ 1557  2025-06-30 22:58:44 root bash icsv2db 002180_d1.csv mydb.db d
+ 1558  2025-06-30 22:58:52 root sqlite3 mydb.db 
+ 1559  2025-06-30 23:11:04 root rz
+ 1560  2025-06-30 23:11:16 root ls
+ 1561  2025-06-30 23:20:47 root cd x/
+ 1562  2025-06-30 23:20:47 root ls
+ 1563  2025-06-30 23:20:49 root ll
+ 1564  2025-06-30 23:21:08 root pwd
+ 1565  2025-06-30 23:21:55 root ls
+ 1566  2025-06-30 23:21:57 root ll
+ 1567  2025-06-30 23:22:09 root pwd
+ 1568  2025-06-30 23:22:13 root cd ../
+ 1569  2025-06-30 23:22:14 root ls
+ 1570  2025-06-30 23:22:18 root cd x/
+ 1571  2025-06-30 23:22:19 root ls
+ 1572  2025-06-30 23:22:19 root ll
+ 1573  2025-06-30 23:23:17 root ls
+ 1574  2025-06-30 23:23:20 root ll
+ 1575  2025-06-30 23:23:59 root ls
+ 1576  2025-06-30 23:24:02 root pwd
+ 1577  2025-06-30 23:24:06 root cd ../
+ 1578  2025-06-30 23:24:07 root ls
+ 1579  2025-06-30 23:24:20 root cd /root/x/
+ 1580  2025-06-30 23:24:21 root ls
+ 1581  2025-06-30 23:24:27 root ll
+ 1582  2025-06-30 23:24:34 root pwd
+ 1583  2025-06-30 23:24:40 root cd ../
+ 1584  2025-06-30 23:24:41 root ls
+ 1585  2025-06-30 23:24:51 root cd x/
+ 1586  2025-06-30 23:24:52 root ls
+ 1587  2025-07-01 17:55:46 root clear
+ 1588  2025-07-01 17:55:46 root ls
+ 1589  2025-07-01 17:55:54 root clear
+ 1590  2025-07-01 17:55:56 root cd x/
+ 1591  2025-07-01 17:55:57 root ls
+ 1592  2025-07-01 17:56:05 root clear
+ 1593  2025-07-01 17:56:11 root sqlite3 mydb.db
+ 1594  2025-07-01 17:57:18 root ls
+ 1595  2025-07-01 17:57:28 root more 002180_d1.csv 
+ 1596  2025-07-01 17:57:37 root ls
+ 1597  2025-07-01 17:57:45 root history | grep d1
+ 1598  2025-07-01 17:57:59 root clear
+ 1599  2025-07-01 17:58:00 root ls
+ 1600  2025-07-01 17:58:05 root history | grep d1
+ 1601  2025-07-01 17:58:08 root clear
+ 1602  2025-07-01 17:58:14 root sqlite3 mydb.db
+ 1603  2025-07-01 18:04:02 root clear
+ 1604  2025-07-01 18:04:03 root ls
+ 1605  2025-07-01 18:04:09 root more 002180_d1.csv 
+ 1606  2025-07-01 18:04:21 root vim 002180_d1.csv 
+ 1607  2025-07-01 18:05:00 root clear
+ 1608  2025-07-01 18:07:22 root head -n 1 002180_d1.csv sed 's/^ *//'
+ 1609  2025-07-01 18:07:31 root head -n 1 002180_d1.csv | sed 's/^ *//'
+ 1610  2025-07-01 18:07:50 root head -n 1 002180_d1.csv
+ 1611  2025-07-01 18:08:23 root more 002180_d1.csv 
+ 1612  2025-07-01 18:08:29 root clear
+ 1613  2025-07-01 18:08:33 root head -n 1 002180_d1.csv
+ 1614  2025-07-01 18:08:37 root head -n 1 002180_d2.csv
+ 1615  2025-07-01 18:08:44 root head -n 2 002180_d1.csv
+ 1616  2025-07-01 18:08:46 root clear
+ 1617  2025-07-01 18:09:24 root awk '{print $0}'002180_d1.csv
+ 1618  2025-07-01 18:09:30 root awk '{print $0}' 002180_d1.csv
+ 1619  2025-07-01 18:09:39 root awk '{print $1}' 002180_d1.csv
+ 1620  2025-07-01 18:10:19 root clear
+ 1621  2025-07-01 18:10:43 root awk '{print $0}' 002180_d1.csv
+ 1622  2025-07-01 18:11:06 root awk '{print $1,$2}' 002180_d1.csv
+ 1623  2025-07-01 18:11:15 root awk '{print $1,$2,$3}' 002180_d1.csv
+ 1624  2025-07-01 18:11:29 root awk '{print $1}' 002180_d1.csv
+ 1625  2025-07-01 18:11:57 root awk '{print $1}' 002180_d1.csv 
+ 1626  2025-07-01 18:11:59 root clear
+ 1627  2025-07-01 18:11:59 root ls
+ 1628  2025-07-01 18:12:24 root awk '{print $1}' 002180_d1.csv | bash concat_line.sh "002180"
+ 1629  2025-07-01 18:12:48 root awk '{print $1}' 002180_d.csv | bash concat_line.sh "002180"
+ 1630  2025-07-01 18:13:19 root clear
+ 1631  2025-07-01 18:15:43 root awk '{print $1}' 002180_d.csv | bash concat_line.sh "002180" > 002180_d1.csv
+ 1632  2025-07-01 18:15:44 root clear
+ 1633  2025-07-01 18:16:10 root sqlite3 mydb.db
+ 1634  2025-07-01 18:16:35 root clear
+ 1635  2025-07-01 18:16:43 root history | grep d1
+ 1636  2025-07-01 18:16:52 root clear
+ 1637  2025-07-01 18:16:58 root history | grep im
+ 1638  2025-07-01 18:17:04 root ls
+ 1639  2025-07-01 18:17:11 root clear
+ 1640  2025-07-01 18:17:16 root history | grep icvs
+ 1641  2025-07-01 18:17:38 root history | grep icsv
+ 1642  2025-07-01 18:17:46 root clear
+ 1643  2025-07-01 18:17:49 root bash icsv2db 002180_d1.csv mydb.db d
+ 1644  2025-07-01 18:18:25 root clear
+ 1645  2025-07-01 18:18:35 root more 002180_d1.csv 
+ 1646  2025-07-01 18:19:19 root clear
+ 1647  2025-07-01 18:19:22 root bash icsv2db 002180_d1.csv mydb.db d
+ 1648  2025-07-01 18:19:36 root vim 002180_d1.csv 
+ 1649  2025-07-01 18:20:00 root clear
+ 1650  2025-07-01 18:20:01 root ls
+ 1651  2025-07-01 18:20:07 root vim icsv2db 
+ 1652  2025-07-01 18:20:44 root clear
+ 1653  2025-07-01 18:20:48 root bash icsv2db 002180_d1.csv mydb.db d
+ 1654  2025-07-01 18:20:51 root clear
+ 1655  2025-07-01 18:21:05 root head -n 1 002180_d1.csv 
+ 1656  2025-07-01 18:21:33 root head -n 1 002180_d1.csv | awk -F "," '{print $0}'
+ 1657  2025-07-01 18:21:38 root head -n 1 002180_d1.csv | awk -F "," '{print $1}'
+ 1658  2025-07-01 18:21:39 root clear
+ 1659  2025-07-01 18:21:45 root bash icsv2db 002180_d1.csv mydb.db d
+ 1660  2025-07-01 18:21:51 root bash icsv2db 002180_d1.csv mydb.db d1
+ 1661  2025-07-01 18:22:37 root sqlite3 mydb.db
+ 1662  2025-07-01 18:23:22 root clear
+ 1663  2025-07-01 18:23:32 root head -n 1 002180_d1.csv 
+ 1664  2025-07-01 18:23:42 root sqlite3 mydb.db
+ 1665  2025-07-01 18:24:19 root clear
+ 1666  2025-07-01 18:40:43 root ls
+ 1667  2025-07-01 18:40:50 root more 002180_d.csv 
+ 1668  2025-07-01 18:42:00 root head -n 1 002180_d.csv 
+ 1669  2025-07-01 18:42:31 root head -n 1 002180_d.csv | awk '{sub(/^[ \t]+/, "")}1'
+ 1670  2025-07-01 18:42:32 root clear
+ 1671  2025-07-01 18:42:34 root head -n 1 002180_d.csv | awk '{sub(/^[ \t]+/, "")}1'
+ 1672  2025-07-01 18:42:47 root clear
+ 1673  2025-07-01 18:43:00 root history | grep line
+ 1674  2025-07-01 18:43:28 root clear
+ 1675  2025-07-01 18:43:33 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh "002180"
+ 1676  2025-07-01 18:44:04 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh "002180" | head -n 1
+ 1677  2025-07-01 18:44:23 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | head -n 1
+ 1678  2025-07-01 18:44:32 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh ",002180" | head -n 1
+ 1679  2025-07-01 18:44:40 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh  | head -n 1
+ 1680  2025-07-01 18:44:45 root cat concat_line.sh 
+ 1681  2025-07-01 18:45:11 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh  | head -n 1
+ 1682  2025-07-01 18:45:23 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh ",002180" | head -n 1
+ 1683  2025-07-01 18:45:45 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh ",002180" > 002180_d1.csv 
+ 1684  2025-07-01 18:45:46 root clear
+ 1685  2025-07-01 18:45:52 root history | grep icsv
+ 1686  2025-07-01 18:45:59 root clear
+ 1687  2025-07-01 18:46:03 root bash icsv2db 002180_d1.csv mydb.db d
+ 1688  2025-07-01 18:46:22 root clear
+ 1689  2025-07-01 18:46:27 root ls
+ 1690  2025-07-01 18:46:33 root vim createTable.sh 
+ 1691  2025-07-01 18:47:52 root clear
+ 1692  2025-07-01 18:47:56 root bash icsv2db 002180_d1.csv mydb.db d
+ 1693  2025-07-01 18:48:02 root clear
+ 1694  2025-07-01 18:52:41 root sqlite3 mydb.db
+ 1695  2025-07-01 18:52:51 root clear
+ 1696  2025-07-01 18:52:55 root bash icsv2db 002180_d1.csv mydb.db d
+ 1697  2025-07-01 18:53:07 root clear
+ 1698  2025-07-01 18:53:23 root history > history
+ 1699  2025-07-01 18:53:25 root clear
+ 1700  2025-07-01 18:53:35 root sqlite3 mydb.db
+ 1701  2025-07-01 18:54:12 root clear
+ 1702  2025-07-01 18:54:12 root ls
+ 1703  2025-07-01 18:54:16 root clear
+ 1704  2025-07-01 18:54:34 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | bash concat_line.sh ",002180" | head -n 1
+ 1705  2025-07-01 18:54:42 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1
+ 1706  2025-07-01 19:02:32 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 
+ 1707  2025-07-01 19:03:37 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5}' 
+ 1708  2025-07-01 19:03:46 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5,$6}' 
+ 1709  2025-07-01 19:04:05 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5,$6,'002180'}' 
+ 1710  2025-07-01 19:04:23 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5,$6}'  
+ 1711  2025-07-01 19:04:24 root ls
+ 1712  2025-07-01 19:04:29 root clear
+ 1713  2025-07-01 19:04:43 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5,$6}' | concat_line.sh ",002180"
+ 1714  2025-07-01 19:04:48 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," '{print $1,$2,$3,$4,$5,$6}' | bash concat_line.sh ",002180"
+ 1715  2025-07-01 19:05:58 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv  | head -n 1 | awk -F "," 'BEGIN{OFS=","} {print $1,$2,$3,$4,$5,$6}' | bash concat_line.sh ",002180"
+ 1716  2025-07-01 19:06:12 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | awk -F "," 'BEGIN{OFS=","} {print $1,$2,$3,$4,$5,$6}' | bash concat_line.sh ",002180"
+ 1717  2025-07-01 19:06:33 root awk '{sub(/^[ \t]+/, "")}1' 002180_d.csv | awk -F "," 'BEGIN{OFS=","} {print $1,$2,$3,$4,$5,$6}' | bash concat_line.sh ",002180" > 002180_d1.csv 
+ 1718  2025-07-01 19:06:35 root clear
+ 1719  2025-07-01 19:06:39 root history > history
+ 1720  2025-07-01 19:06:40 root clear
+ 1721  2025-07-01 19:06:49 root sqlite3 mydb.db
+ 1722  2025-07-01 19:07:00 root clear
+ 1723  2025-07-01 19:07:07 root history | grep icsv
+ 1724  2025-07-01 19:07:16 root clear
+ 1725  2025-07-01 19:07:18 root bash icsv2db 002180_d1.csv mydb.db d
+ 1726  2025-07-01 19:07:23 root clear
+ 1727  2025-07-01 19:07:56 root history > history

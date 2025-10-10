@@ -1,0 +1,42 @@
+Quick Stock K-line Test
+========================
+Start time: Tue Sep 16 10:50:40 PM CST 2025
+
+[22:50:40] Testing 1.600519 贵州茅台
+Testing 1.600519 贵州茅台
+[22:51:04] SUCCESS: 贵州茅台, 100 records
+SUCCESS: 贵州茅台, 100 records
+First record: 2025-04-15,1524.40,1530.40,1537.40,1517.40,21489,3339942729.00,1.31,0.39,6.01,0.17
+
+
+[22:51:04] Testing 0.000333 美的集团
+Testing 0.000333 美的集团
+[22:51:19] FAILED: API call timeout or error
+FAILED: API call timeout or error
+Error: Failed to execute 'get_kline' after 2 attempts.
+
+
+[22:51:19] Testing 1.000858 五粮液
+Testing 1.000858 五粮液
+[22:51:45] SUCCESS: 500信息, 100 records
+SUCCESS: 500信息, 100 records
+First record: 2025-04-15,7095.33,7056.68,7105.79,6983.15,15642899,42567020988.00,1.72,-0.80,-57.11,1.89
+
+
+[22:51:45] Testing 0.002415 海康威视
+Testing 0.002415 海康威视
+[22:51:51] SUCCESS: 海康威视, 100 records
+SUCCESS: 海康威视, 100 records
+First record: 2025-04-15,28.00,27.88,28.05,27.61,239012,679860098.52,1.57,-0.43,-0.12,0.26
+
+
+[22:51:51] Testing 1.601318 中国平安
+Testing 1.601318 中国平安
+[22:52:09] SUCCESS: 中国平安, 100 records
+SUCCESS: 中国平安, 100 records
+First record: 2025-04-15,47.88,48.23,48.37,47.66,407762,2021902572.00,1.48,0.73,0.35,0.38
+
+
+========================
+End time: Tue Sep 16 10:52:09 PM CST 2025
+[22:52:09] Quick test completed. Results saved to quick_test_results.txt

@@ -1,0 +1,13 @@
+timestamp,call_number,stock_code,status,response_time,result
+1758090820,1,000001,FAILED,16,"Attempt 1/2 for command: get_kline
+Proxy 新加坡-优化3: 0 seconds until ready
+Found ready proxy: 新加坡-优化3
+S"
+1758090876,2,000002,FAILED,36,"Attempt 1/2 for command: get_kline
+Proxy 日本-优化: 0 seconds until ready
+Found ready proxy: 日本-优化
+Selec"
+1758090915,3,000004,FAILED,19,"Attempt 1/2 for command: get_kline
+Proxy 日本-优化3: 0 seconds until ready
+Found ready proxy: 日本-优化3
+Sel"
