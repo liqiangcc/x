@@ -76,10 +76,18 @@ CREATE TABLE IF NOT EXISTS klines (
 
 -- 5. ETF基金信息表 (etf_info)
 -- 用于存储ETF基金的基本信息和实时行情。
+DROP TABLE IF EXISTS etf_info;
 CREATE TABLE IF NOT EXISTS etf_info (
     SECURITY_CODE TEXT PRIMARY KEY,
     MARKET TEXT,
     SECURITY_NAME_ABBR TEXT,
+    name TEXT,
+    scale REAL,
+    establishment_date TEXT,
+    fund_type TEXT,
+    fund_manager TEXT,
+    management_company TEXT,
+    fund_rating TEXT,
     NEW_PRICE REAL,
     CHANGE_RATE REAL,
     CHANGE REAL,

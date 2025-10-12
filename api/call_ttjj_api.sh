@@ -32,6 +32,7 @@ print_usage() {
     echo "  $0 [-v] get_kline <secid> <klt> <lmt> <end_date>" >&2
     echo "  $0 [-v] get_sector_stocks" >&2
     echo "  $0 [-v] get_etfs" >&2
+    echo "  $0 [-v] get_etf_details <etf_code>" >&2
     echo >&2
     echo "Options:" >&2
     echo "  -v    Verbose mode (shows progress logs)" >&2
@@ -58,6 +59,9 @@ print_usage() {
     echo >&2
     echo "  # Get all ETFs" >&2
     echo "  $0 get_etfs" >&2
+    echo >&2
+    echo "  # Get details for a specific ETF" >&2
+    echo "  $0 get_etf_details 520510" >&2
     echo >&2
     echo "Parameter details for get_kline:" >&2
     echo "  <secid>:    Full security code in '<market_id>.<stock_code>' format. Works for stocks, sectors, and indices." >&2
@@ -383,6 +387,22 @@ case "$COMMAND" in
         # Return combined result with original structure
         # Manually construct the JSON to avoid "Argument list too long" error with jq
         echo "{\"result\":{\"data\":${COMBINED_DATA}, \"count\":$(echo "$COMBINED_DATA" | jq 'length')}}"
+        exit 0
+        ;;
+    get_etf_details)
+        ETF_CODE=$1
+        if [ -z "$ETF_CODE" ]; then
+            echo "Error: ETF code is required for get_etf_details" >&2
+            print_usage
+            exit 1
+        fi
+        log "Fetching details for ETF $ETF_CODE using python script..."
+        
+        # Get the directory of the current script
+        SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+        
+        python3 "$SCRIPT_DIR/parse_etf_details.py" "$ETF_CODE"
+        
         exit 0
         ;;
     # Handles fetching k-line data for a stock.

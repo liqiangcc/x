@@ -4,7 +4,7 @@ import json
 import sys
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def main():
     """Main function to fetch and save data."""
@@ -99,23 +99,16 @@ def process_etf_info(db_file, api_script):
 
         # Prepare data for import
         data_to_import = etf_data['result']['data']
-        for record in data_to_import:
-            if 'SECUCODE' in record and '.' in record['SECUCODE']:
-                code, market = record['SECUCODE'].split('.', 1)
-                record['SECURITY_CODE'] = code
-                record['MARKET'] = market
-            else:
-                # Fallback if SECUCODE is not in 'code.market' format
-                record['MARKET'] = record.get('MARKET') # Use existing if available
-                if 'SECURITY_CODE' not in record:
-                    # Use SECUCODE as SECURITY_CODE if it's not the composite one.
-                    record['SECURITY_CODE'] = record.get('SECUCODE')
+        total_records = len(data_to_import)
+        print(f"Found {total_records} ETFs to process.", flush=True)
 
         sql = """
         INSERT INTO etf_info (
-            SECURITY_CODE, MARKET, SECURITY_NAME_ABBR, NEW_PRICE, CHANGE_RATE, CHANGE, VOLUME, DEAL_AMOUNT, INDEX_NAME
+            SECURITY_CODE, MARKET, SECURITY_NAME_ABBR, NEW_PRICE, CHANGE_RATE, CHANGE, VOLUME, DEAL_AMOUNT, INDEX_NAME,
+            name, scale, establishment_date, fund_type, fund_manager, management_company, fund_rating
         ) VALUES (
-            :SECURITY_CODE, :MARKET, :SECURITY_NAME_ABBR, :NEW_PRICE, :CHANGE_RATE, :CHANGE, :VOLUME, :DEAL_AMOUNT, :INDEX_NAME
+            :SECURITY_CODE, :MARKET, :SECURITY_NAME_ABBR, :NEW_PRICE, :CHANGE_RATE, :CHANGE, :VOLUME, :DEAL_AMOUNT, :INDEX_NAME,
+            :name, :scale, :establishment_date, :fund_type, :fund_manager, :management_company, :fund_rating
         ) ON CONFLICT(SECURITY_CODE) DO UPDATE SET
             MARKET = excluded.MARKET,
             SECURITY_NAME_ABBR = excluded.SECURITY_NAME_ABBR,
@@ -125,13 +118,72 @@ def process_etf_info(db_file, api_script):
             VOLUME = excluded.VOLUME,
             DEAL_AMOUNT = excluded.DEAL_AMOUNT,
             INDEX_NAME = excluded.INDEX_NAME,
+            name = excluded.name,
+            scale = excluded.scale,
+            establishment_date = excluded.establishment_date,
+            fund_type = excluded.fund_type,
+            fund_manager = excluded.fund_manager,
+            management_company = excluded.management_company,
+            fund_rating = excluded.fund_rating,
             update_time = CURRENT_TIMESTAMP;
         """
-        
-        cursor.executemany(sql, data_to_import)
-        conn.commit()
-        
-        print(f"Successfully imported/updated {cursor.rowcount} records into 'etf_info' table.", flush=True)
+
+        imported_count = 0
+        for i, record in enumerate(data_to_import):
+            # --- Basic Info ---
+            if 'SECUCODE' in record and '.' in record['SECUCODE']:
+                code, market = record['SECUCODE'].split('.', 1)
+                record['SECURITY_CODE'] = code
+                record['MARKET'] = market
+            else:
+                record['MARKET'] = record.get('MARKET')
+                if 'SECURITY_CODE' not in record:
+                    record['SECURITY_CODE'] = record.get('SECUCODE')
+
+            security_code = record.get('SECURITY_CODE')
+            if not security_code:
+                print(f"Warning: Skipping record due to missing SECURITY_CODE. Record: {record}", file=sys.stderr)
+                continue
+
+            # --- Fetch Details ---
+            print(f"[{i+1}/{total_records}] Fetching details for {security_code}...", flush=True)
+            try:
+                details_result = subprocess.run(
+                    ["bash", api_script, "get_etf_details", security_code],
+                    capture_output=True, text=True, check=True, encoding='utf-8'
+                )
+                details_data = json.loads(details_result.stdout)
+                
+                # Merge details into the record
+                record['name'] = details_data.get('name')
+                record['scale'] = details_data.get('scale')
+                record['establishment_date'] = details_data.get('establishment_date')
+                record['fund_type'] = details_data.get('type')
+                record['fund_manager'] = details_data.get('fund_manager')
+                record['management_company'] = details_data.get('management_company')
+                record['fund_rating'] = details_data.get('fund_rating')
+
+                #time.sleep(1) # Be nice to the API
+
+            except subprocess.CalledProcessError as e:
+                print(f"Warning: Failed to fetch details for {security_code}. Stderr: {e.stderr}", file=sys.stderr)
+            except json.JSONDecodeError as e:
+                print(f"Warning: Failed to decode JSON for {security_code}. Output: {details_result.stdout}", file=sys.stderr)
+
+            # --- Insert record ---
+            try:
+                cursor.execute(sql, record)
+                imported_count += 1
+            except sqlite3.Error as e:
+                print(f"Database error for record {record.get('SECURITY_CODE')}: {e}", file=sys.stderr)
+
+            # --- Commit in batches ---
+            if (i + 1) % 100 == 0:
+                conn.commit()
+                print(f"--- Committed batch of 100 records ({i+1}/{total_records}) ---", flush=True)
+
+        conn.commit() # Commit any remaining records
+        print(f"Successfully imported/updated {imported_count} of {total_records} records into 'etf_info' table.", flush=True)
 
     except FileNotFoundError:
         print(f"Error: API script '{api_script}' not found.", file=sys.stderr)
@@ -180,6 +232,38 @@ def process_etf_klines(db_file, api_script, klt):
 
         print(f"Found {len(etfs)} ETFs to process.", flush=True)
 
+        # --- Pre-fetch latest market timestamp ---
+        latest_api_timestamp = ""
+        if etfs:
+            print("Fetching latest market timestamp from a sample ETF...", flush=True)
+            try:
+                sample_etf = etfs[0]
+                security_code = sample_etf['SECURITY_CODE']
+                market = sample_etf['MARKET']
+                market_id_map = {'SH': '1', 'SZ': '0'}
+
+                if market in market_id_map:
+                    market_id = market_id_map[market]
+                    secid = f"{market_id}.{security_code}"
+                    
+                    result = subprocess.run(
+                        ["bash", api_script, "get_kline", secid, klt, "10000", datetime.now().strftime('%Y%m%d')],
+                        capture_output=True, text=True, check=True, encoding='utf-8'
+                    )
+                    kline_data = json.loads(result.stdout)
+
+                    if kline_data and kline_data.get('data') and kline_data['data'].get('klines'):
+                        latest_api_timestamp = kline_data['data']['klines'][-1].split(',')[0]
+                        print(f"Latest market timestamp found: {latest_api_timestamp}", flush=True)
+                    else:
+                        print("Warning: Could not determine latest market timestamp from sample. Will fetch for each ETF if needed.", flush=True)
+                else:
+                    print("Warning: Sample ETF has unknown market. Skipping pre-fetch check.", file=sys.stderr)
+
+            except (subprocess.CalledProcessError, json.JSONDecodeError, IndexError) as e:
+                print(f"Warning: Could not determine latest market timestamp due to an error: {e}. Will fetch for each ETF if needed.", file=sys.stderr)
+        # --- End of pre-fetch ---
+
         # 2. Loop through ETFs and fetch k-lines
         total_klines_imported = 0
         for i, etf in enumerate(etfs):
@@ -207,10 +291,9 @@ def process_etf_klines(db_file, api_script, klt):
                 row = cursor.fetchone()
                 latest_db_timestamp = row[0] if row and row[0] else ""
 
-                # Optimization: only fetch if data is not from today
-                today_str = datetime.now().strftime('%Y-%m-%d')
-                if latest_db_timestamp >= today_str:
-                    print(f"[{i+1}/{len(etfs)}] Data for {secid} is current ({latest_db_timestamp}). Skipping.", flush=True)
+                # Check against the pre-fetched market timestamp
+                if latest_api_timestamp and latest_db_timestamp >= latest_api_timestamp:
+                    print(f"[{i+1}/{len(etfs)}] Data for {secid} is up to date ({latest_db_timestamp}). Skipping.", flush=True)
                     continue
 
                 print(f"[{i+1}/{len(etfs)}] Fetching k-lines for {secid}...", flush=True)
@@ -226,7 +309,7 @@ def process_etf_klines(db_file, api_script, klt):
 
                 if not kline_data or 'data' not in kline_data or not kline_data['data'] or 'klines' not in kline_data['data'] or not kline_data['data']['klines']:
                     print(f"Warning: No k-line data received for {secid}.", flush=True)
-                    time.sleep(10) # Still sleep to be nice to the API
+                    #time.sleep(1) # Still sleep to be nice to the API
                     continue
 
                 klines_to_import = []
@@ -287,7 +370,7 @@ def process_etf_klines(db_file, api_script, klt):
                 print(f"An unexpected error occurred for {secid}: {e}", file=sys.stderr)
 
             # Be nice to the API server
-            time.sleep(10) 
+            time.sleep(20) 
 
         print(f"\nFinished processing all ETFs. Total new k-lines imported: {total_klines_imported}", flush=True)
 
