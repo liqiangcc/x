@@ -338,7 +338,7 @@ def process_etf_klines(db_file, api_script, klt):
                 
                 if not klines_to_import:
                     print(f"  -> K-line data for {secid} is already up to date. Skipping.", flush=True)
-                    time.sleep(1) # Short sleep before next
+                    #time.sleep(1) # Short sleep before next
                     continue
 
                 sql = """
@@ -370,7 +370,7 @@ def process_etf_klines(db_file, api_script, klt):
                 print(f"An unexpected error occurred for {secid}: {e}", file=sys.stderr)
 
             # Be nice to the API server
-            time.sleep(20) 
+            #time.sleep(20) 
 
         print(f"\nFinished processing all ETFs. Total new k-lines imported: {total_klines_imported}", flush=True)
 
