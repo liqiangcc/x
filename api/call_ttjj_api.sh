@@ -412,8 +412,8 @@ case "$COMMAND" in
         LMT=$3
         END=$4
         LOC=1738771200000
-        URL="http://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${SECID}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=${KLT}&fqt=1&end=${END}&lmt=${LMT}&_=${LOC}"
-        REFERER="http://quote.eastmoney.com/"
+        URL="https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${SECID}&ut=fa5fd1943c7b386f172d6893dbfba10b&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=${KLT}&fqt=1&end=${END}&lmt=${LMT}&_=${LOC}"
+        REFERER="https://quote.eastmoney.com/"
         ;;
     # Handles unknown commands.
     *)
