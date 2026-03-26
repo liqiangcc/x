@@ -1,0 +1,33 @@
+{
+  "requested_date": "20260326",
+  "range_days": 1,
+  "engine": "curl",
+  "stats": {
+    "success": 0,
+    "failed": 4,
+    "skipped_dates": 0
+  },
+  "dates": {
+    "20260326": {
+      "status": "completed",
+      "pools": {
+        "dt": {
+          "status": "failed",
+          "error": "Command failed: node /root/x/fetch/fetch_pool.js dt 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+        },
+        "qs": {
+          "status": "failed",
+          "error": "Command failed: node /root/x/fetch/fetch_pool.js qs 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+        },
+        "zb": {
+          "status": "failed",
+          "error": "Command failed: node /root/x/fetch/fetch_pool.js zb 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+        },
+        "zt": {
+          "status": "failed",
+          "error": "Command failed: node /root/x/fetch/fetch_pool.js zt 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "rc": 0,
+  "source_engine": "aws",
+  "source_region": "ap-northeast-1",
+  "meta": {
+    "pk": "0.920036",
+    "klt": 106,
+    "table": "kline",
+    "fetched": 1,
+    "saved": 0,
+    "mode": "DryRun",
+    "errors": []
+  },
+  "data": {
+    "code": "920036",
+    "market": 0,
+    "klines": [
+      "2026-03-25,48.8,50.46,67.5,40,798231,4220530364.21,127.79,134.48,28.94,611.14"
+    ]
+  }
+}
