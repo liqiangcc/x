@@ -49,7 +49,7 @@
 - Expected files: `tasks/TASK-20260522-0924-user-manual.md`
 - Validation: `rg --files api fetch process proxy utils db config | sort` -> passed
 - Changed files: `tasks/TASK-20260522-0924-user-manual.md`
-- Commit: `pending`
+- Commit: `807cf9f`
 - Notes: 已阅读 `README.md`、`PROXY_README.md` 和 `AGENTS.md`。`README.md` 当前覆盖脚本目录、代理/API、数据库、数据获取、Pool -> Codes -> Kline、kline 校验和数据处理；`PROXY_README.md` 覆盖 Clash/mihomo 代理轮换前提、`/opt/clash/runtime.yaml`、`lx` 代理组、`jq` 依赖和 HUP 重载；`AGENTS.md` 明确生成数据边界和小范围验证习惯。后续手册应保留并重组 `api/call_ttjj_api.sh`、`api/call_api_with_proxy.sh`、`fetch/pull_pool_task.js`、`utils/parse_pool_json.js`、`fetch/query_pool_klines.js`、`fetch/fetch_kline.js`、`fetch/check_kline_empty.js`、`db/init_db.sh`、`db/load_data_to_db.sh`、`db/sql.sh`、`process/statistics.sh`、`process/format_table.sh`、`proxy/proxy_manager.sh`、`proxy/test_and_rotate_proxy.sh` 等入口；避免在文档提交里混入 `data/pool/`、`data/kline/` 生成输出。
 
 ##### `TASK-20260522-0924-user-manual-T01-S02` 设计使用手册大纲
