@@ -101,7 +101,7 @@
 - Expected files: `README.md`
 - Validation: `node utils/parse_pool_json.js data/pool/20260325 --codes-only --output /tmp/task-user-manual-20260325-codes.json` -> passed
 - Changed files: `README.md`, `tasks/TASK-20260522-0924-user-manual.md`
-- Commit: `pending`
+- Commit: `41cf526`
 - Notes: 已将 Pool -> Codes -> Kline 整理为快速开始、脚本职责和常用命令三部分，默认示例使用相对路径和 `--limit 10` 小范围验证，并说明 `--force`、`--period daily/yearly`、`--engine auto`、`--config` 与 `config/kline.json`。计划中的验证命令 `node utils/parse_pool_json.js data/pool/20260325 --codes-only` 会写入 `data/pool/20260325/codes.json`，该生成文件在执行前已有未提交变更；为避免覆盖用户/既有数据变更，改用等价 `--output /tmp/task-user-manual-20260325-codes.json` 验证解析逻辑。
 
 ##### `TASK-20260522-0924-user-manual-T02-S03` 整理代理与 API 调用章节
