@@ -59,6 +59,66 @@
 - `data/kline/daily/<code>.json` - 个股日线。
 - `data/kline/yearly/<code>.json` - 个股年线。
 
+## 快速开始：Pool -> Codes -> Kline
+
+下面是最小可执行路径。先用小范围命令确认环境、代理和输出结构正常，再扩大日期范围或移除 `--limit`。
+
+```bash
+# 1. 拉取最近一个交易日的 pool 数据
+node fetch/pull_pool_task.js --days 0 --output-dir data/pool
+
+# 2. 从某一天的 pool 数据里生成去重股票代码
+node utils/parse_pool_json.js data/pool/20260325 --codes-only
+
+# 3. 先拉取少量日线做验证
+node fetch/query_pool_klines.js data/pool/20260325 --period daily --limit 10
+
+# 4. 检查日线 JSON 是否为空或结构异常
+node fetch/check_kline_empty.js data/kline --period daily
+```
+
+如果小范围验证通过，再按需要拉取完整日线或年线：
+
+```bash
+node fetch/query_pool_klines.js data/pool/20260325 --period daily
+node fetch/query_pool_klines.js data/pool/20260325 --period yearly
+```
+
+### 工作流脚本职责
+
+- `fetch/pull_pool_task.js` 拉取 pool 原始数据，默认输出到 `data/pool/<YYYYMMDD>/`，包含 `dt.json`、`qs.json`、`zb.json`、`zt.json` 等文件。
+- `utils/parse_pool_json.js` 解析 pool JSON；目录输入配合 `--codes-only` 时会写入 `data/pool/<YYYYMMDD>/codes.json`。
+- `fetch/query_pool_klines.js` 读取 `codes.json` 并批量调用 `fetch_kline.js`，默认写入 `data/kline/<period>/<code>.json`。
+- `fetch/fetch_kline.js` 获取单只股票 kline，默认 `--engine auto`，优先 AWS 多 region 轮换，失败再回退本机。
+- `fetch/check_kline_empty.js` 巡检 `data/kline` 下的 JSON 文件，发现空文件、无效 JSON、缺少 `data.klines` 或 kline 数组为空时退出码为 `1`。
+
+### Pool 和 Kline 常用命令
+
+```bash
+# 拉取指定交易日的 pool 数据
+node fetch/pull_pool_task.js 20260325 --output-dir data/pool
+
+# 拉取最近 21 个交易日的 pool 数据
+node fetch/pull_pool_task.js --range-days 21 --output-dir data/pool
+
+# 输出指定字段，方便人工检查
+node utils/parse_pool_json.js data/pool/20260325 --flat --fields code,name,pool_type
+
+# 强制重拉已存在的 kline 文件
+node fetch/query_pool_klines.js data/pool/20260325 --period yearly --force
+
+# 单只股票直接拉 kline
+node fetch/fetch_kline.js 000035 --period daily
+node fetch/fetch_kline.js 600137 --period yearly
+
+# 显式指定引擎或配置文件
+node fetch/fetch_kline.js 000035 --period daily --engine aws
+node fetch/fetch_kline.js 000035 --period daily --config config/kline.json
+node fetch/query_pool_klines.js data/pool/20260325 --period daily --engine auto
+```
+
+Kline 默认读取 `config/kline.json`，其中包含 `aws_regions` 和 `lambda_name`。命令行传 `--aws-region`、`--lambda-name` 或 `--config` 时会覆盖默认配置。`query_pool_klines.js` 默认跳过已存在的 `<code>.json`，只有传 `--force` 才会重拉。
+
 ## 使用方法
 
 ### 代理管理
@@ -145,77 +205,6 @@ export DEBUG_MODE=true DISABLE_PROXY_ROTATION=true
 # 获取并存储数据
 /root/x/fetch/fetch_and_store.sh
 ```
-
-### Pool -> Codes -> Kline 工作流
-```bash
-# 1. 拉取最近 21 个交易日的 pool 数据
-node /root/x/fetch/pull_pool_task.js --range-days 21 --output-dir data/pool
-
-# 2. 从某一天的 pool 数据里提取去重后的股票代码
-node /root/x/utils/parse_pool_json.js /root/x/data/pool/20260325 --codes-only
-
-# 3. 根据 codes.json 批量拉取日线
-node /root/x/fetch/query_pool_klines.js /root/x/data/pool/20260325 --period daily
-
-# 4. 根据 codes.json 批量拉取年线
-node /root/x/fetch/query_pool_klines.js /root/x/data/pool/20260325 --period yearly
-```
-
-默认输出目录：
-- `data/pool/<YYYYMMDD>/` - 每个交易日的 `dt.json`、`qs.json`、`zb.json`、`zt.json` 和 `codes.json`
-- `data/pool/summary.json` - 多日拉取任务汇总
-- `data/kline/daily/<code>.json` - 个股日线
-- `data/kline/yearly/<code>.json` - 个股年线
-
-Kline 默认配置文件：
-- `config/kline.json` - 默认 `aws_regions` 列表和 `lambda_name`
-- `fetch_kline.js`、`query_pool_klines.js` 默认先读取这个配置文件
-- 命令行传 `--aws-region`、`--lambda-name`、`--config` 时会覆盖默认配置
-
-常用命令：
-```bash
-# 拉取最近一个交易日的 pool 数据
-node /root/x/fetch/pull_pool_task.js --days 0 --output-dir data/pool
-
-# 拉取指定交易日的 pool 数据
-node /root/x/fetch/pull_pool_task.js 20260325 --output-dir data/pool
-
-# 只提取 code 列表，默认写入 data/pool/<date>/codes.json
-node /root/x/utils/parse_pool_json.js /root/x/data/pool/20260325 --codes-only
-
-# 输出指定字段，方便查询
-node /root/x/utils/parse_pool_json.js /root/x/data/pool/20260325 --flat --fields code,name,pool_type
-
-# 只拉一部分股票做测试
-node /root/x/fetch/query_pool_klines.js /root/x/data/pool/20260325 --period daily --limit 10
-
-# 强制重拉已存在的 kline 文件
-node /root/x/fetch/query_pool_klines.js /root/x/data/pool/20260325 --period yearly --force
-
-# 单只股票直接拉 kline，默认 auto: 优先 AWS，多 region 轮换，失败再回退本机
-node /root/x/fetch/fetch_kline.js 000035 --period daily
-node /root/x/fetch/fetch_kline.js 600137 --period yearly
-
-# 检查 kline 文件是否为空、无效 JSON、缺少 data.klines 或 klines 为空
-node /root/x/fetch/check_kline_empty.js
-node /root/x/fetch/check_kline_empty.js /root/x/data/kline --period daily
-node /root/x/fetch/check_kline_empty.js /root/x/data/kline --period yearly
-node /root/x/fetch/check_kline_empty.js /root/x/data/kline --json
-
-# 显式指定引擎或配置文件
-node /root/x/fetch/fetch_kline.js 000035 --period daily --engine aws
-node /root/x/fetch/fetch_kline.js 000035 --period daily --config /root/x/config/kline.json
-node /root/x/fetch/query_pool_klines.js /root/x/data/pool/20260325 --period daily --engine auto
-```
-
-说明：
-- `pull_pool_task.js` 默认优先使用 `curl` 引擎，失败时会自动回退到另一种引擎。
-- 多日拉取按最近交易日向前倒序执行，遇到更早的整天空池边界会停止继续向前拉取。
-- `parse_pool_json.js` 在目录输入下支持直接生成 `codes.json`，适合后续批量拉取 k 线。
-- `fetch_kline.js` 是底层单只 kline 获取脚本，默认 `engine=auto`，负责 `local/aws` 切换、AWS region 轮换、读取 `config/kline.json` 和统一输出格式。
-- `query_pool_klines.js` 默认写入 `data/kline`，内部调用 `fetch_kline.js`；默认也使用 `engine=auto`，已存在的 `<code>.json` 会自动跳过，除非传 `--force`。
-- `check_kline_empty.js` 用于巡检 `data/kline` 下的 JSON 文件，识别空文件、无效 JSON、缺少 `data.klines`、`klines` 不是数组或空数组；发现问题时退出码为 `1`，方便接入批处理。
-- AWS region 列表当前已经实测通过，`config/kline.json` 里的所有 region 都可调用 `kline` Lambda。
 
 ### 数据处理
 ```bash

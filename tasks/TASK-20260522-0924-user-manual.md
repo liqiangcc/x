@@ -92,16 +92,17 @@
 
 ##### `TASK-20260522-0924-user-manual-T02-S02` 补齐快速开始和 Pool 到 Kline 工作流
 
-- Status: `pending`
+- Status: `done`
 - Goal: 给出从拉取 pool、生成 codes、批量拉取 kline、检查 kline 的最小可执行路径。
 - Steps:
   - 将现有 Pool -> Codes -> Kline 命令整理为快速开始，默认使用小范围命令或 `--limit 10`。
   - 解释 `pull_pool_task.js`、`parse_pool_json.js`、`query_pool_klines.js`、`fetch_kline.js`、`check_kline_empty.js` 的职责边界。
   - 标注默认输出目录和 `--force`、`--period daily/yearly`、`--engine auto`、`--config` 等常用选项。
 - Expected files: `README.md`
-- Validation: `node utils/parse_pool_json.js data/pool/20260325 --codes-only`
+- Validation: `node utils/parse_pool_json.js data/pool/20260325 --codes-only --output /tmp/task-user-manual-20260325-codes.json` -> passed
+- Changed files: `README.md`, `tasks/TASK-20260522-0924-user-manual.md`
 - Commit: `pending`
-- Notes: 
+- Notes: 已将 Pool -> Codes -> Kline 整理为快速开始、脚本职责和常用命令三部分，默认示例使用相对路径和 `--limit 10` 小范围验证，并说明 `--force`、`--period daily/yearly`、`--engine auto`、`--config` 与 `config/kline.json`。计划中的验证命令 `node utils/parse_pool_json.js data/pool/20260325 --codes-only` 会写入 `data/pool/20260325/codes.json`，该生成文件在执行前已有未提交变更；为避免覆盖用户/既有数据变更，改用等价 `--output /tmp/task-user-manual-20260325-codes.json` 验证解析逻辑。
 
 ##### `TASK-20260522-0924-user-manual-T02-S03` 整理代理与 API 调用章节
 
