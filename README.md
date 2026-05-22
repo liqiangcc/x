@@ -1,49 +1,63 @@
-# 脚本目录结构说明
+# 股票数据脚本使用手册
 
-## 功能分类目录
+这是一个 script-first 的股票数据工作区，主要通过 Bash 和 Node.js 脚本完成行情 API 调用、代理轮换、pool 数据拉取、股票代码提取、kline 数据生成、数据库导入和结果处理。日常使用通常从仓库根目录直接运行脚本，没有单独的构建步骤。
 
-### /root/x/proxy/ - 代理管理脚本
-- `proxy_manager.sh` - 主要的代理管理脚本，支持随机选择
-- `test_and_rotate_proxy.sh` - 测试并轮换代理
-- `test_proxies.sh` - 测试所有代理
-- `rotate_proxy.sh` - 手动轮换代理
-- `check_proxies.sh` - 检查代理状态
-- `clash_as.sh` - Clash自动切换脚本
-- `test_proxy_system.sh` - 代理系统测试脚本
+生成数据集中放在 `data/` 和 `eastmoney_data/` 下。`data/pool/<YYYYMMDD>/`、`data/kline/daily/`、`data/kline/yearly/` 都是脚本输出目录，除非正在做明确的数据刷新，否则不要手工编辑这些 JSON 文件，也不要把它们混入普通脚本或文档提交。
 
-### /root/x/api/ - API调用脚本
-- `call_ttjj_api.sh` - 纯API调用脚本（无代理管理）
-- `call_api_with_proxy.sh` - 带代理管理的API调用脚本
+## 目录地图
 
-### /root/x/db/ - 数据库相关脚本
-- `init_db.sh` - 初始化数据库
-- `load_data_to_db.sh` - 加载数据到数据库
-- `createTable.sh` - 创建数据表
-- `sql.sh` - SQL查询工具
-- `*_2_db.sh` - 各种数据导入数据库的脚本
+### `api/` - API 调用入口
 
-### /root/x/fetch/ - 数据获取脚本
-- `check_kline_empty.js` - 检查 kline 文件是否为空或结构异常
-- `fetch_all_sectors.sh` - 获取所有行业板块
-- `fetch_and_store.sh` - 获取并存储数据
-- `fetch_data.sh` - 获取数据
-- `fetch_sector_stocks.sh` - 获取板块股票
-- `fetch_tiantian_fund_data.sh` - 获取天天基金数据
+- `call_ttjj_api.sh` - 直接调用天天基金/东方财富 API，适合快速、小批量或已确认代理状态的场景。
+- `call_api_with_proxy.sh` - 带代理管理和自动重试的 API 调用入口，适合关键请求。
+- `call_api_batch.sh`、`call_api_with_rate_limit.sh` - 批量或限速调用辅助脚本。
+- `parse_etf_details.py`、`etf.json` - ETF 数据解析和样例数据。
 
-### /root/x/process/ - 数据处理脚本
-- `statistics.sh` - 统计分析
-- `format_table.sh` - 格式化表格
-- `calc_diff_pct.sh` - 计算差值百分比
-- `concat_line.sh` - 连接行
-- `avg.sh` - 计算平均值
+### `fetch/` - 数据获取和 kline 生成
 
-### /root/x/utils/ - 工具脚本
-- `q.sh` - 查询工具
-- `scode.sh` - 股票代码工具
-- `f_all_codes.sh` - 获取所有代码
-- `u_code_2_full.sh` - 更新代码为完整格式
-- `q_all_full_codes.sh` - 查询所有完整代码
-- `u_code_full.sh` - 更新完整代码
+- `pull_pool_task.js` - 拉取指定交易日或最近交易日的 pool 数据。
+- `fetch_pool.js`、`extract_jsonp.js` - 底层 pool 请求和 JSONP 解析辅助脚本。
+- `query_pool_klines.js` - 根据 `codes.json` 批量生成日线或年线 kline 文件。
+- `fetch_kline.js` - 单只股票 kline 获取入口，支持本机/AWS 自动切换。
+- `check_kline_empty.js` - 巡检 kline JSON 是否为空、结构异常或缺少 `data.klines`。
+- `fetch_all_sectors.sh`、`fetch_sector_stocks.sh`、`fetch_and_store.sh`、`fetch_data.sh`、`fetch_tiantian_fund_data.sh` - 行业、板块和其他数据获取脚本。
+
+### `utils/` - 数据整理工具
+
+- `parse_pool_json.js` - 从 pool JSON 提取去重股票代码、平铺字段或生成 `codes.json`。
+- `generate_pool_codes_batch.js`、`merge_pool_codes.js`、`generate_trading_days.js` - 批量生成、合并代码和交易日辅助工具。
+- `q.sh`、`scode.sh`、`f_all_codes.sh`、`q_all_full_codes.sh`、`u_code_2_full.sh`、`u_code_full.sh` - 股票代码查询和格式转换工具。
+
+### `proxy/` - 代理管理
+
+- `proxy_manager.sh` - 主要代理管理脚本，支持检查、随机选择和轮换。
+- `test_and_rotate_proxy.sh` - 检测当前 IP 状态并在需要时轮换代理。
+- `test_proxies.sh`、`rotate_proxy.sh`、`check_proxies.sh`、`clash_as.sh`、`test_proxy_system.sh` - 代理测试、手动轮换和 Clash/mihomo 辅助脚本。
+
+### `db/` - 数据库脚本和 schema
+
+- `database_schema.sql` - 数据库 schema。
+- `init_db.sh`、`createTable.sh` - 初始化数据库和建表。
+- `load_data_to_db.sh`、`*_2_db.sh`、`save_ttjj_to_db.py` - 数据导入脚本。
+- `sql.sh` - SQL 查询入口。
+
+### `process/` - 结果处理和统计
+
+- `statistics.sh`、`statistics.py` - 统计分析入口。
+- `format_table.sh` - 表格格式化。
+- `calc_diff_pct.sh`、`concat_line.sh`、`avg.sh` - 行数据处理辅助脚本。
+- `get_year_exceed_dates.js`、`select_limit_up_year_breakout.js` - 年线突破和涨停相关筛选脚本。
+
+### `config/` - 运行配置
+
+- `kline.json` - kline 获取默认配置，包括 AWS region 列表和 Lambda 名称；`fetch_kline.js` 与 `query_pool_klines.js` 默认读取它。
+
+### `data/` 和 `eastmoney_data/` - 生成输出
+
+- `data/pool/<YYYYMMDD>/` - 每个交易日的 `dt.json`、`qs.json`、`zb.json`、`zt.json` 和 `codes.json`。
+- `data/pool/summary.json` - 多日 pool 拉取任务汇总。
+- `data/kline/daily/<code>.json` - 个股日线。
+- `data/kline/yearly/<code>.json` - 个股年线。
 
 ## 使用方法
 

@@ -78,16 +78,17 @@
 
 ##### `TASK-20260522-0924-user-manual-T02-S01` 改写项目概览和目录地图
 
-- Status: `pending`
+- Status: `done`
 - Goal: 让 README 开头说明仓库用途、核心目录、生成数据边界和何时使用哪些脚本族。
 - Steps:
   - 重写 README 标题和开头，说明这是股票数据脚本工作区。
   - 保留并压缩目录说明，突出 `api/`、`fetch/`、`process/`、`proxy/`、`utils/`、`db/`、`config/`、`data/`。
   - 明确 `data/pool/<YYYYMMDD>/`、`data/kline/daily/`、`data/kline/yearly/` 是生成输出。
 - Expected files: `README.md`
-- Validation: `rg -n "script-first|脚本|data/pool|data/kline|api/|fetch/|process/|proxy/|utils/|db/|config/" README.md`
+- Validation: `rg -n "script-first|脚本|data/pool|data/kline|api/|fetch/|process/|proxy/|utils/|db/|config/" README.md` -> passed
+- Changed files: `README.md`, `tasks/TASK-20260522-0924-user-manual.md`
 - Commit: `pending`
-- Notes: 
+- Notes: 已将 README 开头从脚本清单改为使用手册入口，增加项目用途、script-first 运行方式、生成数据边界，并按 `api/`、`fetch/`、`utils/`、`proxy/`、`db/`、`process/`、`config/`、`data/` 重写目录地图。后续使用方法章节暂未重排，留给 `T02-S02` 及之后子任务继续整理。
 
 ##### `TASK-20260522-0924-user-manual-T02-S02` 补齐快速开始和 Pool 到 Kline 工作流
 
