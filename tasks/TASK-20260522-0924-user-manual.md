@@ -63,7 +63,7 @@
 - Expected files: `tasks/TASK-20260522-0924-user-manual.md`
 - Validation: `manual check: 大纲覆盖 README.md 当前已有主要章节，且没有要求新增生成数据` -> passed
 - Changed files: `tasks/TASK-20260522-0924-user-manual.md`
-- Commit: `pending`
+- Commit: `f84b5ac`
 - Notes: README 建议重组为：1. 项目概览，说明这是股票数据脚本工作区和主要使用场景；2. 目录地图，按 `api/`、`fetch/`、`utils/`、`proxy/`、`db/`、`process/`、`config/`、`data/` 说明职责；3. 环境与配置，列出 Node、Bash、jq、curl、sqlite/AWS/Clash 相关前提和 `config/kline.json`；4. 快速开始，采用小范围 Pool -> Codes -> Kline 路径，强调 `--limit 10` 和生成输出边界；5. 常用工作流，覆盖拉取指定日期/最近交易日 pool、生成 `codes.json`、批量日线/年线、单只 kline、字段平铺查询、kline 巡检；6. 代理与 API，README 只保留直接 API 与代理 API 的选择规则、`DEBUG_MODE`、`DISABLE_PROXY_ROTATION` 和常用命令，并链接到 `PROXY_README.md`；7. 数据库与处理脚本，整理初始化、导入、SQL 查询、统计和格式化入口；8. 验证与巡检，集中列出 `check_kline_empty.js`、`simple_test.sh`、`quick_test.sh`、`batch_test.sh` 等；9. 故障排查，覆盖限流/封禁、代理失败、kline 空或无效 JSON、AWS Lambda 配置失败、数据目录缺失；10. 维护约定，强调小范围运行、生成数据单独提交、改脚本同步 CLI help/README。`PROXY_README.md` 保留代理系统深层细节，包括 `/opt/clash/runtime.yaml`、`lx` 代理组、`jq`、测试/轮换/列出代理、mihomo HUP 重载；README 只做摘要和跳转。
 
 ### `TASK-20260522-0924-user-manual-T02` 重写 README 使用手册
