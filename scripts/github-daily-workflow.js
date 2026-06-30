@@ -17,7 +17,17 @@ function buildDailyArgs(env = process.env) {
   const limit = valueOrDefault(env.LIMIT_INPUT, "10");
   const engine = valueOrDefault(env.ENGINE_INPUT, "auto");
   const date = String(env.DATE_INPUT ?? "").trim();
-  const args = ["daily", "--period", period, "--limit", limit, "--engine", engine, "--commit"];
+  const args = [
+    "daily",
+    "--period",
+    period,
+    "--limit",
+    limit,
+    "--engine",
+    engine,
+    "--commit",
+    "--allow-partial",
+  ];
 
   if (date) {
     args.push("--date", date);

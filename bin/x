@@ -24,7 +24,7 @@ function printUsage() {
   x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws]
   x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force-pool] [--commit]
+  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force-pool] [--commit] [--allow-partial]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -58,7 +58,7 @@ function parseOptions(argv, defaults = {}) {
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (["latest", "commit", "force", "forcePool", "json"].includes(key)) {
+    if (["latest", "commit", "force", "forcePool", "json", "allowPartial"].includes(key)) {
       options[key] = true;
       continue;
     }
@@ -391,8 +391,15 @@ async function commandDaily(argv) {
   };
   failures.failed = failures.items.length;
 
+  const klineFailed = Number(klineSummary.failed ?? 0);
+  const unexpectedKlineFailure = klineResult.exitCode !== 0 && klineFailed === 0;
+  const hardFailed =
+    poolResult.exitCode !== 0 ||
+    codesResult.exitCode !== 0 ||
+    quality.status === "failed" ||
+    unexpectedKlineFailure;
   const failed =
-    Number(klineSummary.failed ?? 0) +
+    klineFailed +
     (poolResult.exitCode === 0 ? 0 : 1) +
     (codesResult.exitCode === 0 ? 0 : 1);
   const success = Number(klineSummary.success ?? 0) + Number(klineSummary.migrated_existing ?? 0);
@@ -443,7 +450,9 @@ async function commandDaily(argv) {
     await commitData(runId);
   }
 
-  if (run.status !== "completed") {
+  if (run.status !== "completed" && options.allowPartial && !hardFailed) {
+    console.error("Daily run completed with partial kline failures; --allow-partial enabled.");
+  } else if (run.status !== "completed") {
     process.exitCode = 1;
   }
 }
@@ -786,7 +795,7 @@ function printDailyRunSummary(run, quality, failures) {
 
   for (const item of failures.items.slice(0, 5)) {
     console.error(
-      `Kline failure ${item.code ?? "unknown"}: ${item.error ?? item.status ?? "unknown"}`
+      `Kline failure ${item.code ?? "unknown"}: ${item.reason ?? item.error ?? item.status ?? "unknown"}`
     );
   }
 

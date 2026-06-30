@@ -14,6 +14,7 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "--engine",
     "auto",
     "--commit",
+    "--allow-partial",
     "--latest",
   ]);
 });
@@ -35,6 +36,7 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       "--engine",
       "local",
       "--commit",
+      "--allow-partial",
       "--date",
       "20260630",
     ]
