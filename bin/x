@@ -21,10 +21,10 @@ function printUsage() {
   x doctor
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x codes build <pool_dir>
-  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws]
-  x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force]
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws] [--aws-region r1,r2] [--lambda-name name] [--config file]
+  x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force-pool] [--commit] [--allow-partial]
+  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -235,6 +235,21 @@ async function commandKlineSync(argv) {
   if (options.force) {
     args.push("--force");
   }
+  if (options.concurrency) {
+    args.push("--concurrency", String(options.concurrency));
+  }
+  if (options.awsRegion) {
+    args.push("--aws-region", options.awsRegion);
+  }
+  if (options.lambdaName) {
+    args.push("--lambda-name", options.lambdaName);
+  }
+  if (options.config) {
+    args.push("--config", options.config);
+  }
+  if (options.minSuccessRate) {
+    args.push("--min-success-rate", String(options.minSuccessRate));
+  }
   const { stdout, stderr } = await runNode("fetch/query_pool_klines.js", args);
   process.stdout.write(stdout);
   process.stderr.write(stderr);
@@ -362,6 +377,21 @@ async function commandDaily(argv) {
   if (options.force) {
     klineArgs.push("--force");
   }
+  if (options.concurrency) {
+    klineArgs.push("--concurrency", String(options.concurrency));
+  }
+  if (options.awsRegion) {
+    klineArgs.push("--aws-region", options.awsRegion);
+  }
+  if (options.lambdaName) {
+    klineArgs.push("--lambda-name", options.lambdaName);
+  }
+  if (options.config) {
+    klineArgs.push("--config", options.config);
+  }
+  if (options.minSuccessRate) {
+    klineArgs.push("--min-success-rate", String(options.minSuccessRate));
+  }
   const klineResult = await runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs);
   process.stdout.write(klineResult.stdout);
   process.stderr.write(klineResult.stderr);
@@ -393,11 +423,16 @@ async function commandDaily(argv) {
 
   const klineFailed = Number(klineSummary.failed ?? 0);
   const unexpectedKlineFailure = klineResult.exitCode !== 0 && klineFailed === 0;
+  const klineFailureReasons = Array.isArray(klineSummary.failure_reasons) ? klineSummary.failure_reasons : [];
+  const hardKlineFailure = klineFailureReasons.some((reason) =>
+    ["success_rate_below_minimum", "aws_success_zero"].includes(reason)
+  );
   const hardFailed =
     poolResult.exitCode !== 0 ||
     codesResult.exitCode !== 0 ||
     quality.status === "failed" ||
-    unexpectedKlineFailure;
+    unexpectedKlineFailure ||
+    hardKlineFailure;
   const failed =
     klineFailed +
     (poolResult.exitCode === 0 ? 0 : 1) +
@@ -406,7 +441,7 @@ async function commandDaily(argv) {
   const skipped = Number(klineSummary.skipped_existing ?? 0);
   const total = Number(klineSummary.total_codes ?? success + skipped + Number(klineSummary.failed ?? 0));
   const status =
-    failed > 0 || quality.status === "failed"
+    hardFailed || failed > 0 || quality.status === "failed"
       ? "completed_with_failures"
       : "completed";
 
@@ -422,6 +457,10 @@ async function commandDaily(argv) {
     success,
     skipped,
     failed,
+    kline_success_rate: klineSummary.success_rate ?? null,
+    kline_engine_counts: klineSummary.engine_counts ?? {},
+    kline_region_counts: klineSummary.region_counts ?? {},
+    kline_failure_reasons: klineFailureReasons,
     started_at: startedAt,
     finished_at: isoNow(),
     artifacts: {
@@ -775,6 +814,8 @@ function commitMessage(run, quality) {
     `success: ${run.success}`,
     `failed: ${run.failed}`,
     `skipped: ${run.skipped}`,
+    `success_rate: ${run.kline_success_rate ?? "n/a"}`,
+    `engine_counts: ${JSON.stringify(run.kline_engine_counts ?? {})}`,
     `quality: ${qualityStatus}`,
   ].join("\n");
   return { title, body };
@@ -789,6 +830,9 @@ function printDailyRunSummary(run, quality, failures) {
       `success=${run.success}`,
       `failed=${run.failed}`,
       `skipped=${run.skipped}`,
+      `success_rate=${run.kline_success_rate ?? "n/a"}`,
+      `engine_counts=${JSON.stringify(run.kline_engine_counts ?? {})}`,
+      `region_counts=${JSON.stringify(run.kline_region_counts ?? {})}`,
       `quality=${qualityStatus}`,
     ].join(" ")
   );

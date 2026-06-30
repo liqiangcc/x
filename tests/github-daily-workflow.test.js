@@ -9,12 +9,15 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "daily",
     "--period",
     "daily",
-    "--limit",
-    "10",
     "--engine",
-    "auto",
+    "aws",
+    "--force",
     "--commit",
     "--allow-partial",
+    "--concurrency",
+    "25",
+    "--min-success-rate",
+    "0.95",
     "--latest",
   ]);
 });
@@ -31,14 +34,23 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       "daily",
       "--period",
       "yearly",
-      "--limit",
-      "25",
       "--engine",
       "local",
+      "--force",
       "--commit",
       "--allow-partial",
+      "--concurrency",
+      "4",
+      "--min-success-rate",
+      "0.95",
+      "--limit",
+      "25",
       "--date",
       "20260630",
     ]
   );
+});
+
+test("buildDailyArgs omits empty workflow limit", () => {
+  assert.equal(buildDailyArgs({ LIMIT_INPUT: "" }).includes("--limit"), false);
 });

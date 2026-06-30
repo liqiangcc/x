@@ -18,11 +18,11 @@ on:
       limit:
         description: "Maximum number of codes to sync."
         required: false
-        default: "10"
+        default: ""
       engine:
         description: "Kline engine."
         required: false
-        default: "auto"
+        default: "aws"
         type: choice
         options:
           - auto
@@ -33,6 +33,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: daily-data-commit
@@ -59,6 +60,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Configure AWS credentials
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.engine == '' || github.event.inputs.engine == 'aws' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+
+      - name: AWS kline preflight
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.engine == '' || github.event.inputs.engine == 'aws' }}
+        run: node bin/x kline fetch 600519 --period daily --engine aws > /tmp/kline-aws-preflight.json
 
       - name: Run daily data workflow
         env:

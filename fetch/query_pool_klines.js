@@ -12,19 +12,40 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_path> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--force]"
+    "Usage: node fetch/query_pool_klines.js <input_path> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--force] [--concurrency <N>] [--min-success-rate <0..1>]"
   );
+}
+
+function parsePositiveInteger(value, flagName) {
+  if (!value || !/^\d+$/.test(value) || Number(value) < 1) {
+    throw new Error(`Invalid value for ${flagName}: ${value ?? ""}`);
+  }
+  return Number(value);
+}
+
+function parseSuccessRate(value) {
+  const rate = Number(value);
+  if (!value || !Number.isFinite(rate) || rate < 0 || rate > 1) {
+    throw new Error(`Invalid value for --min-success-rate: ${value ?? ""}`);
+  }
+  return rate;
+}
+
+function defaultConcurrency(engine) {
+  return engine === "local" ? 4 : 25;
 }
 
 function parseArguments(argv) {
   const options = {
     awsRegions: null,
+    concurrency: null,
     configFile: null,
     engine: "auto",
     force: false,
     inputPath: null,
     lambdaName: "kline",
     limit: null,
+    minSuccessRate: null,
     outputDir: path.resolve("data/kline"),
     period: "daily",
   };
@@ -94,10 +115,21 @@ function parseArguments(argv) {
 
     if (arg === "--limit") {
       const nextArg = argv[index + 1];
-      if (!nextArg || !/^\d+$/.test(nextArg) || Number(nextArg) < 1) {
-        throw new Error(`Invalid value for --limit: ${nextArg ?? ""}`);
-      }
-      options.limit = Number(nextArg);
+      options.limit = parsePositiveInteger(nextArg, "--limit");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--concurrency") {
+      const nextArg = argv[index + 1];
+      options.concurrency = parsePositiveInteger(nextArg, "--concurrency");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--min-success-rate") {
+      const nextArg = argv[index + 1];
+      options.minSuccessRate = parseSuccessRate(nextArg);
       index += 1;
       continue;
     }
@@ -118,6 +150,10 @@ function parseArguments(argv) {
     printUsage();
     process.exitCode = 1;
     return null;
+  }
+
+  if (options.concurrency === null) {
+    options.concurrency = defaultConcurrency(options.engine);
   }
 
   return options;
@@ -265,101 +301,234 @@ async function fetchSingleKline(secid, options) {
   return JSON.parse(stdout);
 }
 
-async function main() {
-  const options = parseArguments(process.argv.slice(2));
-  if (!options) {
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrency, items.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
+function incrementCount(counts, key) {
+  if (!key) {
     return;
   }
+  counts[key] = (counts[key] ?? 0) + 1;
+}
 
-  const codes = await loadCodes(options.inputPath);
-  const selectedCodes = options.limit ? codes.slice(0, options.limit) : codes;
-  const periodDir = path.join(options.outputDir, options.period);
-  await fs.mkdir(periodDir, { recursive: true });
-
-  const summary = {
+function createSummary(options, selectedCodes) {
+  return {
     aws_regions: options.awsRegions,
+    concurrency: options.concurrency,
     engine: options.engine,
+    force: options.force,
     input_path: options.inputPath,
     lambda_name: options.lambdaName,
+    min_success_rate: options.minSuccessRate,
     period: options.period,
     total_codes: selectedCodes.length,
     success: 0,
     migrated_existing: 0,
     skipped_existing: 0,
     failed: 0,
+    success_rate: selectedCodes.length === 0 ? 1 : 0,
+    engine_counts: {},
+    region_counts: {},
+    failure_reasons: [],
+    status: "completed",
     files: {},
   };
+}
 
-  for (const inputCode of selectedCodes) {
-    const secid = inferSecid(inputCode);
-    const code = extractStockCode(inputCode);
-    const outputPath = getOutputPath(options.outputDir, options.period, code);
-    const legacyOutputPath = getLegacyOutputPath(options.outputDir, options.period, code);
+async function processCode(inputCode, options, fetchKline) {
+  let secid;
+  let code;
+  try {
+    secid = inferSecid(inputCode);
+    code = extractStockCode(inputCode);
+  } catch (error) {
+    return {
+      code: inputCode,
+      countKey: "failed",
+      file: {
+        status: "failed",
+        secid: null,
+        error: error.message,
+      },
+    };
+  }
 
-    if (!options.force) {
-      try {
-        await fs.access(outputPath);
-        summary.files[code] = {
+  const outputPath = getOutputPath(options.outputDir, options.period, code);
+  const legacyOutputPath = getLegacyOutputPath(options.outputDir, options.period, code);
+
+  if (!options.force) {
+    try {
+      await fs.access(outputPath);
+      return {
+        code,
+        countKey: "skipped_existing",
+        file: {
           status: "skipped_existing",
           file: outputPath,
           secid,
-        };
-        summary.skipped_existing += 1;
-        continue;
-      } catch {}
+        },
+      };
+    } catch {}
 
-      try {
-        const rawLegacy = await fs.readFile(legacyOutputPath, "utf8");
-        const legacyPayload = JSON.parse(rawLegacy);
-        const normalized = normalizeKlinePayload(legacyPayload, code, secid, options.period);
-        await fs.mkdir(path.dirname(outputPath), { recursive: true });
-        await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
-        summary.files[code] = {
+    try {
+      const rawLegacy = await fs.readFile(legacyOutputPath, "utf8");
+      const legacyPayload = JSON.parse(rawLegacy);
+      const normalized = normalizeKlinePayload(legacyPayload, code, secid, options.period);
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+      return {
+        code,
+        countKey: "migrated_existing",
+        file: {
           status: "migrated_existing",
           file: outputPath,
           legacy_file: legacyOutputPath,
           secid,
           points: normalized.klines.length,
-        };
-        summary.migrated_existing += 1;
-        continue;
-      } catch {}
-    }
+        },
+      };
+    } catch {}
+  }
 
-    try {
-      const data = await fetchSingleKline(secid, options);
-      const normalized = normalizeKlinePayload(data, code, secid, options.period);
-      await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
-      summary.files[code] = {
+  try {
+    const data = await fetchKline(secid, options);
+    const normalized = normalizeKlinePayload(data, code, secid, options.period);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+    return {
+      code,
+      countKey: "success",
+      file: {
         engine: data.source_engine ?? options.engine,
         region: data.source_region ?? null,
         status: "success",
         file: outputPath,
         secid,
         points: normalized.klines.length,
-      };
-      summary.success += 1;
-    } catch (error) {
-      summary.files[code] = {
+      },
+    };
+  } catch (error) {
+    return {
+      code,
+      countKey: "failed",
+      file: {
         status: "failed",
         secid,
         error: error.message,
-      };
-      summary.failed += 1;
-    }
-  }
-
-  const summaryPath = path.join(periodDir, `summary.${options.period}.json`);
-  await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
-  console.log(summaryPath);
-
-  if (summary.failed > 0) {
-    process.exitCode = 1;
+      },
+    };
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+function finalizeSummary(summary, options) {
+  summary.success_rate = summary.total_codes === 0 ? 1 : summary.success / summary.total_codes;
+
+  if (summary.failed > 0) {
+    summary.failure_reasons.push("failed_items");
+  }
+
+  if (options.minSuccessRate !== null && summary.success_rate < options.minSuccessRate) {
+    summary.failure_reasons.push("success_rate_below_minimum");
+  }
+
+  if (
+    options.minSuccessRate !== null &&
+    options.engine === "aws" &&
+    summary.total_codes > 0 &&
+    (summary.engine_counts.aws ?? 0) === 0
+  ) {
+    summary.failure_reasons.push("aws_success_zero");
+  }
+
+  if (summary.failure_reasons.includes("aws_success_zero")) {
+    summary.status = "failed_aws_unavailable";
+  } else if (summary.failure_reasons.includes("success_rate_below_minimum")) {
+    summary.status = "failed_success_rate";
+  } else if (summary.failed > 0) {
+    summary.status = "completed_with_failures";
+  }
+}
+
+async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
+  const effectiveOptions = {
+    awsRegions: options.awsRegions ?? null,
+    concurrency: options.concurrency ?? defaultConcurrency(options.engine ?? "auto"),
+    configFile: options.configFile ?? null,
+    engine: options.engine ?? "auto",
+    force: Boolean(options.force),
+    inputPath: options.inputPath,
+    lambdaName: options.lambdaName ?? "kline",
+    limit: options.limit ?? null,
+    minSuccessRate: options.minSuccessRate ?? null,
+    outputDir: options.outputDir ?? path.resolve("data/kline"),
+    period: options.period ?? "daily",
+  };
+  const codes = await loadCodes(effectiveOptions.inputPath);
+  const selectedCodes = effectiveOptions.limit ? codes.slice(0, effectiveOptions.limit) : codes;
+  const periodDir = path.join(effectiveOptions.outputDir, effectiveOptions.period);
+  await fs.mkdir(periodDir, { recursive: true });
+
+  const summary = createSummary(effectiveOptions, selectedCodes);
+  const results = await mapWithConcurrency(selectedCodes, effectiveOptions.concurrency, (inputCode) =>
+    processCode(inputCode, effectiveOptions, fetchKline)
+  );
+
+  for (const result of results) {
+    summary.files[result.code] = result.file;
+    summary[result.countKey] += 1;
+    if (result.countKey === "success") {
+      incrementCount(summary.engine_counts, result.file.engine);
+      incrementCount(summary.region_counts, result.file.region);
+    }
+  }
+
+  finalizeSummary(summary, effectiveOptions);
+
+  const summaryPath = path.join(periodDir, `summary.${effectiveOptions.period}.json`);
+  await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+  return {
+    exitCode: summary.failure_reasons.length > 0 ? 1 : 0,
+    summary,
+    summaryPath,
+  };
+}
+
+async function main() {
+  const options = parseArguments(process.argv.slice(2));
+  if (!options) {
+    return;
+  }
+
+  const result = await queryPoolKlines(options);
+  console.log(result.summaryPath);
+
+  if (result.exitCode !== 0) {
+    process.exitCode = result.exitCode;
+  }
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  defaultConcurrency,
+  parseArguments,
+  queryPoolKlines,
+};

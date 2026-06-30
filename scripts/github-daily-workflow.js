@@ -2,6 +2,7 @@
 
 "use strict";
 
+const fs = require("node:fs/promises");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
@@ -14,20 +15,32 @@ function valueOrDefault(value, fallback) {
 
 function buildDailyArgs(env = process.env) {
   const period = valueOrDefault(env.PERIOD_INPUT, "daily");
-  const limit = valueOrDefault(env.LIMIT_INPUT, "10");
-  const engine = valueOrDefault(env.ENGINE_INPUT, "auto");
+  const limit = String(env.LIMIT_INPUT ?? "").trim();
+  const engine = valueOrDefault(env.ENGINE_INPUT, "aws");
+  const concurrency = valueOrDefault(
+    env.CONCURRENCY_INPUT,
+    engine === "local" ? "4" : "25"
+  );
+  const minSuccessRate = valueOrDefault(env.MIN_SUCCESS_RATE_INPUT, "0.95");
   const date = String(env.DATE_INPUT ?? "").trim();
   const args = [
     "daily",
     "--period",
     period,
-    "--limit",
-    limit,
     "--engine",
     engine,
+    "--force",
     "--commit",
     "--allow-partial",
+    "--concurrency",
+    concurrency,
+    "--min-success-rate",
+    minSuccessRate,
   ];
+
+  if (limit) {
+    args.push("--limit", limit);
+  }
 
   if (date) {
     args.push("--date", date);
@@ -52,6 +65,68 @@ function run(command, args) {
   });
 }
 
+function argValue(args, flagName, fallback) {
+  const index = args.indexOf(flagName);
+  if (index === -1 || index + 1 >= args.length) {
+    return fallback;
+  }
+  return args[index + 1];
+}
+
+function formatCounts(counts) {
+  const entries = Object.entries(counts ?? {}).sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length === 0) {
+    return "{}";
+  }
+  return entries.map(([key, value]) => `${key}: ${value}`).join(", ");
+}
+
+async function writeGithubStepSummary(args) {
+  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+  if (!summaryFile) {
+    return;
+  }
+
+  const period = argValue(args, "--period", "daily");
+  const summaryPath = path.join(ROOT, "data", "kline", period, `summary.${period}.json`);
+  let summary;
+  try {
+    summary = JSON.parse(await fs.readFile(summaryPath, "utf8"));
+  } catch (error) {
+    await fs.appendFile(
+      summaryFile,
+      [
+        "## Daily data summary",
+        "",
+        `Kline summary was not available: ${error.message}`,
+        "",
+      ].join("\n"),
+      "utf8"
+    );
+    return;
+  }
+
+  const awsSuccesses = Number(summary.engine_counts?.aws ?? 0);
+  const lines = [
+    "## Daily data summary",
+    "",
+    `- period: ${summary.period}`,
+    `- engine: ${summary.engine}`,
+    `- total_codes: ${summary.total_codes}`,
+    `- success: ${summary.success}`,
+    `- failed: ${summary.failed}`,
+    `- skipped_existing: ${summary.skipped_existing}`,
+    `- success_rate: ${summary.success_rate}`,
+    `- engine_counts: ${formatCounts(summary.engine_counts)}`,
+    `- region_counts: ${formatCounts(summary.region_counts)}`,
+    `- aws_successes: ${awsSuccesses}`,
+    `- status: ${summary.status}`,
+    "",
+  ];
+
+  await fs.appendFile(summaryFile, lines.join("\n"), "utf8");
+}
+
 async function runChecked(command, args) {
   const code = await run(command, args);
   if (code !== 0) {
@@ -62,7 +137,9 @@ async function runChecked(command, args) {
 async function main() {
   await runChecked("git", ["pull", "--rebase"]);
 
-  const dailyCode = await run(process.execPath, [path.join(ROOT, "bin/x"), ...buildDailyArgs()]);
+  const dailyArgs = buildDailyArgs();
+  const dailyCode = await run(process.execPath, [path.join(ROOT, "bin/x"), ...dailyArgs]);
+  await writeGithubStepSummary(dailyArgs);
   if (dailyCode !== 0) {
     process.exit(dailyCode);
   }
