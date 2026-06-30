@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 
 const fs = require("node:fs/promises");
-const os = require("node:os");
 const path = require("node:path");
-const { execFile } = require("node:child_process");
-const { promisify } = require("node:util");
+const { getKline } = require("../src/sources/eastmoney/client");
+const { inferSecid, splitSecid } = require("../src/core/secid");
 
-const execFileAsync = promisify(execFile);
-const API_SCRIPT = path.resolve(__dirname, "../api/call_ttjj_api.sh");
 const CONFIG_FILE = path.resolve(__dirname, "../config/kline.json");
 const PERIOD_MAP = {
   daily: "101",
@@ -164,33 +161,16 @@ async function applyConfigDefaults(options) {
   return options;
 }
 
-function inferSecid(input) {
-  if (/^\d+\.[A-Za-z0-9]+$/.test(input)) {
-    return input;
-  }
-  if (/^6\d{5}$/.test(input)) {
-    return `1.${input}`;
-  }
-  if (/^[03]\d{5}$/.test(input)) {
-    return `0.${input}`;
-  }
-  if (/^9\d{5}$/.test(input)) {
-    return `0.${input}`;
-  }
-  throw new Error(`Unable to infer secid from input: ${input}`);
-}
-
 async function fetchLocalKline(secid, klt) {
   let lastError;
-
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const { stdout } = await execFileAsync(
-        API_SCRIPT,
-        ["get_kline", secid, klt, "100000", "20991231"],
-        { maxBuffer: 20 * 1024 * 1024 }
-      );
-      return JSON.parse(stdout);
+      return await getKline({
+        secid,
+        klt,
+        lmt: 100000,
+        end: "20991231",
+      });
     } catch (error) {
       lastError = error;
       if (attempt < 3) {
@@ -200,11 +180,19 @@ async function fetchLocalKline(secid, klt) {
       }
     }
   }
-
   throw lastError;
 }
 
 async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
+  let LambdaClient;
+  let InvokeCommand;
+  try {
+    ({ LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda"));
+  } catch {
+    throw new Error("AWS engine requires npm install for @aws-sdk/client-lambda.");
+  }
+
+  const client = new LambdaClient({ region: awsRegion });
   const payload = JSON.stringify({
     secid,
     klt: Number(klt),
@@ -214,47 +202,26 @@ async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
     debug: false,
     end: "20991231",
   });
+  const response = await client.send(
+    new InvokeCommand({
+      FunctionName: lambdaName,
+      Payload: Buffer.from(payload),
+    })
+  );
 
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "kline-lambda-"));
-  const outputFile = path.join(tempDir, "payload.json");
+  const rawPayload = Buffer.from(response.Payload ?? []).toString("utf8");
+  const invokePayload = JSON.parse(rawPayload);
 
-  try {
-    const { stdout } = await execFileAsync(
-      "aws",
-      [
-        "lambda",
-        "invoke",
-        "--function-name",
-        lambdaName,
-        "--region",
-        awsRegion,
-        "--cli-binary-format",
-        "raw-in-base64-out",
-        "--payload",
-        payload,
-        outputFile,
-      ],
-      { maxBuffer: 20 * 1024 * 1024 }
-    );
-
-    const meta = JSON.parse(stdout);
-    const rawPayload = await fs.readFile(outputFile, "utf8");
-    const invokePayload = JSON.parse(rawPayload);
-
-    if (meta.FunctionError) {
-      throw new Error(`Lambda function error: ${meta.FunctionError}`);
-    }
-
-    if (invokePayload.statusCode !== 200) {
-      throw new Error(`Lambda returned statusCode ${invokePayload.statusCode}: ${invokePayload.body ?? ""}`);
-    }
-
-    return typeof invokePayload.body === "string"
-      ? JSON.parse(invokePayload.body)
-      : invokePayload.body;
-  } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+  if (response.FunctionError) {
+    throw new Error(`Lambda function error: ${response.FunctionError}`);
   }
+  if (invokePayload.statusCode !== 200) {
+    throw new Error(`Lambda returned statusCode ${invokePayload.statusCode}: ${invokePayload.body ?? ""}`);
+  }
+
+  return typeof invokePayload.body === "string"
+    ? JSON.parse(invokePayload.body)
+    : invokePayload.body;
 }
 
 function normalizeKlineData(rawData, secid, sourceEngine, sourceRegion = null) {
@@ -267,8 +234,7 @@ function normalizeKlineData(rawData, secid, sourceEngine, sourceRegion = null) {
   }
 
   if (Array.isArray(rawData?.data)) {
-    const code = secid.includes(".") ? secid.split(".")[1] : secid;
-    const market = secid.includes(".") ? Number(secid.split(".")[0]) : null;
+    const { code, market } = splitSecid(secid);
     const klines = rawData.data.map((item) =>
       [
         item.f51,
@@ -307,7 +273,6 @@ function normalizeKlineData(rawData, secid, sourceEngine, sourceRegion = null) {
 
 async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
   let lastError;
-
   for (const region of awsRegions) {
     try {
       const rawData = await invokeAwsRegion(secid, klt, region, lambdaName);
@@ -316,7 +281,6 @@ async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
       lastError = error;
     }
   }
-
   throw lastError;
 }
 
@@ -344,11 +308,12 @@ async function resolveKline(options) {
     const rawData = await fetchLocalKline(secid, klt);
     return normalizeKlineData(rawData, secid, "local");
   } catch (localError) {
-    const message = [
-      `AWS failed: ${awsError?.message ?? "unknown error"}`,
-      `Local failed: ${localError.message}`,
-    ].join(" | ");
-    throw new Error(message);
+    throw new Error(
+      [
+        `AWS failed: ${awsError?.message ?? "unknown error"}`,
+        `Local failed: ${localError.message}`,
+      ].join(" | ")
+    );
   }
 }
 
@@ -359,10 +324,6 @@ async function main() {
   }
 
   const options = await applyConfigDefaults(cliOptions);
-  if (!options) {
-    return;
-  }
-
   const data = await resolveKline(options);
   const output = `${JSON.stringify(data, null, 2)}\n`;
 

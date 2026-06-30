@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
+const { buildPoolRequest, fetchPool: fetchPoolData } = require("../src/sources/eastmoney/client");
 
 const execFileAsync = promisify(execFile);
 const VALID_POOLS = new Set(["dt", "qs", "zb", "zt"]);
@@ -147,122 +148,6 @@ async function resolveTradingDate(daysOffset) {
   return tradingDates[targetIndex];
 }
 
-async function loadTemplate(pool) {
-  const templatePath = path.resolve(__dirname, `../curl_${pool}.txt`);
-  return fs.readFile(templatePath, "utf8");
-}
-
-function patchCurlCommand(template, dateValue) {
-  const urlMatch = template.match(/^(curl\s+')([^']+)('.*)$/s);
-  if (!urlMatch) {
-    throw new Error("Template does not start with a parsable curl URL.");
-  }
-
-  const [, prefix, originalUrl, suffix] = urlMatch;
-  const url = new URL(originalUrl);
-  const timestamp = Date.now().toString();
-
-  url.searchParams.set("date", dateValue);
-  if (url.searchParams.has("cb")) {
-    url.searchParams.set("cb", `callbackdata${timestamp}`);
-  }
-  if (url.searchParams.has("_")) {
-    url.searchParams.set("_", timestamp);
-  }
-
-  return `${prefix}${url.toString()}${suffix}`;
-}
-
-function parseCurlTemplate(commandText) {
-  const lines = commandText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => (line.endsWith("\\") ? line.slice(0, -1).trimEnd() : line));
-
-  const firstLine = lines[0];
-  const urlMatch = firstLine?.match(/^curl\s+'([^']+)'$/);
-  if (!urlMatch) {
-    throw new Error("Patched curl command does not contain a parsable URL.");
-  }
-
-  const headers = {};
-  for (const line of lines.slice(1)) {
-    const headerMatch = line.match(/^-H\s+'([^:]+):\s*(.*)'$/);
-    if (headerMatch) {
-      const [, name, value] = headerMatch;
-      headers[name] = value;
-      continue;
-    }
-
-    const cookieMatch = line.match(/^-b\s+'(.*)'$/);
-    if (cookieMatch) {
-      headers.Cookie = cookieMatch[1];
-    }
-  }
-
-  return {
-    url: urlMatch[1],
-    headers,
-  };
-}
-
-function extractJsonString(rawText) {
-  const trimmed = rawText.trim();
-  const match = trimmed.match(/^[\w$.]+\(([\s\S]*)\);?$/);
-  if (!match) {
-    throw new Error("Response does not match expected JSONP format.");
-  }
-
-  return match[1].trim();
-}
-
-async function executeCurl(commandText) {
-  const { stdout } = await execFileAsync("bash", ["-lc", commandText], {
-    maxBuffer: 10 * 1024 * 1024,
-  });
-
-  return stdout;
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-async function executeNodeHttp(commandText) {
-  const { url, headers } = parseCurlTemplate(commandText);
-  let lastError;
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers,
-        redirect: "follow",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.text();
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) {
-        await sleep(attempt * 300);
-      }
-    }
-  }
-
-  const causeMessage =
-    lastError && typeof lastError === "object" && "cause" in lastError && lastError.cause
-      ? `: ${lastError.cause.message || String(lastError.cause)}`
-      : "";
-  throw new Error(`Node HTTP request failed${causeMessage}`);
-}
-
 async function main() {
   const { engine, daysOffset, outputJson, outputFile, printCurl, positionalArgs } = parseArguments(
     process.argv.slice(2)
@@ -288,25 +173,23 @@ async function main() {
     : daysOffset !== null
       ? await resolveTradingDate(daysOffset)
       : defaultDateForPool(pool);
-  const template = await loadTemplate(pool);
-  const commandText = patchCurlCommand(template, dateValue);
+  const request = await buildPoolRequest(pool, dateValue);
 
   if (printCurl) {
     if (outputFile) {
-      await fs.writeFile(outputFile, `${commandText}\n`, "utf8");
+      await fs.writeFile(outputFile, `${request.commandText}\n`, "utf8");
       console.log(outputFile);
       return;
     }
 
-    process.stdout.write(`${commandText}\n`);
+    process.stdout.write(`${request.commandText}\n`);
     return;
   }
 
-  const rawOutput =
-    engine === "node" ? await executeNodeHttp(commandText) : await executeCurl(commandText);
+  const data = await fetchPoolData(pool, dateValue);
   const outputText = outputJson
-    ? `${JSON.stringify(JSON.parse(extractJsonString(rawOutput)), null, 2)}\n`
-    : rawOutput;
+    ? `${JSON.stringify(data, null, 2)}\n`
+    : `${JSON.stringify(data)}\n`;
 
   if (outputFile) {
     await fs.writeFile(outputFile, outputText, "utf8");

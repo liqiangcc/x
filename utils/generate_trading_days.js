@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 
-const { execFile } = require("node:child_process");
 const path = require("node:path");
-const { promisify } = require("node:util");
+const { getKline } = require("../src/sources/eastmoney/client");
 
-const execFileAsync = promisify(execFile);
-const API_SCRIPT = path.resolve(__dirname, "../api/call_ttjj_api.sh");
 const DEFAULT_SECID = "1.000001";
 
 function printUsage() {
@@ -95,25 +92,12 @@ function parseArguments(argv) {
 
 async function fetchTradingDates(startDate, endDate) {
   const limit = String(calculateLimit(startDate, endDate));
-  const { stdout, stderr } = await execFileAsync(API_SCRIPT, [
-    "get_kline",
-    DEFAULT_SECID,
-    "101",
-    limit,
-    endDate,
-  ]);
-
-  if (stderr && stderr.trim()) {
-    throw new Error(stderr.trim());
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(stdout);
-  } catch (error) {
-    throw new Error(`Failed to parse API response: ${error.message}`);
-  }
-
+  const parsed = await getKline({
+    secid: DEFAULT_SECID,
+    klt: "101",
+    lmt: limit,
+    end: endDate,
+  });
   return extractTradingDates(parsed, startDate, endDate);
 }
 
@@ -153,7 +137,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  extractTradingDates,
+  fetchTradingDates,
+};

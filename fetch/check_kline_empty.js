@@ -235,6 +235,9 @@ async function main() {
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+    if (issues.length > 0) {
+      process.exitCode = 1;
+    }
     return;
   }
 

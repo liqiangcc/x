@@ -20,9 +20,17 @@ function printUsage() {
   x doctor
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x codes build <pool_dir>
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws]
   x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force-pool] [--commit]
+  x db init [--db db/stocks.db] [--schema db/database_schema.sql]
+  x db query --sql <sql> [--db db/stocks.db]
+  x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
+  x stats new-highs [--year YYYY|--date YYYYMMDD] [--db mydb.db]
+  x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
+  x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
+  x proxy check
   x run list
   x run show <run_id>
   x run failures <run_id>
@@ -119,7 +127,6 @@ async function commandDoctor() {
   const checks = [
     ["node", ["--version"]],
     ["git", ["--version"]],
-    ["bash", ["--version"]],
   ];
 
   let failed = 0;
@@ -133,9 +140,40 @@ async function commandDoctor() {
     }
   }
 
+  const major = Number(process.versions.node.split(".")[0]);
+  if (major < 22) {
+    console.error(`node: v${process.versions.node} detected; Node 22+ is required for SQLite commands.`);
+  }
+
   if (failed > 0) {
     process.exitCode = 1;
   }
+}
+
+async function commandKlineFetch(argv) {
+  const options = parseOptions(argv, { period: "daily", engine: "auto" });
+  const input = options._[0];
+  if (!input) {
+    throw new Error("kline fetch requires <code_or_secid>");
+  }
+
+  const args = [input, "--period", options.period, "--engine", options.engine];
+  if (options.awsRegion) {
+    args.push("--aws-region", options.awsRegion);
+  }
+  if (options.lambdaName) {
+    args.push("--lambda-name", options.lambdaName);
+  }
+  if (options.config) {
+    args.push("--config", options.config);
+  }
+  if (options.output) {
+    args.push("--output", options.output);
+  }
+
+  const { stdout, stderr } = await runNode("fetch/fetch_kline.js", args);
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
 }
 
 async function commandPoolPull(argv) {
@@ -626,6 +664,90 @@ async function commandReport(argv) {
   console.log(rel(reportDir));
 }
 
+function printJson(payload) {
+  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+async function commandDb(argv) {
+  const subcommand = argv[0];
+  const options = parseOptions(argv.slice(1), {
+    db: "db/stocks.db",
+    schema: "db/database_schema.sql",
+  });
+  const { initDatabase, queryDatabase } = require("./../src/db/sqlite");
+
+  if (subcommand === "init") {
+    printJson(initDatabase({ dbFile: options.db, schemaFile: options.schema }));
+    return;
+  }
+
+  if (subcommand === "query") {
+    if (!options.sql) {
+      throw new Error("db query requires --sql <sql>");
+    }
+    printJson(queryDatabase({ dbFile: options.db, sql: options.sql }));
+    return;
+  }
+
+  throw new Error(`Unknown db command: ${subcommand ?? ""}`);
+}
+
+async function commandStats(argv) {
+  const subcommand = argv[0];
+  const options = parseOptions(argv.slice(1), { db: "mydb.db" });
+  const { analyzeNewHighs, yearlyPositivePct } = require("./../src/stats/statistics");
+
+  if (subcommand === "yearly-positive") {
+    if (!options.metricColumn) {
+      throw new Error("stats yearly-positive requires --metric-column <column>");
+    }
+    printJson(yearlyPositivePct({
+      dbFile: options.db,
+      metricColumn: options.metricColumn,
+      stockCode: options.stockCode ?? null,
+    }));
+    return;
+  }
+
+  if (subcommand === "new-highs") {
+    printJson(analyzeNewHighs({
+      dbFile: options.db,
+      year: options.year ?? null,
+      date: options.date ?? null,
+    }));
+    return;
+  }
+
+  throw new Error(`Unknown stats command: ${subcommand ?? ""}`);
+}
+
+async function commandProxy(argv) {
+  const subcommand = argv[0];
+  const options = parseOptions(argv.slice(1));
+  const { checkEastmoneyAccess, listProxies, rotateProxy } = require("./../src/proxy/clash");
+  const common = {
+    configFile: options.config,
+    groupName: options.group,
+  };
+
+  if (subcommand === "list") {
+    printJson(await listProxies(common));
+    return;
+  }
+
+  if (subcommand === "rotate") {
+    printJson(await rotateProxy({ ...common, proxyName: options.proxy ?? null }));
+    return;
+  }
+
+  if (subcommand === "check") {
+    printJson(await checkEastmoneyAccess());
+    return;
+  }
+
+  throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
+}
+
 async function hasDataDiff() {
   const pathspec = await existingDataPathspecs();
   try {
@@ -734,6 +856,10 @@ async function main() {
     await commandKlineSync(rest);
     return;
   }
+  if (command === "kline" && subcommand === "fetch") {
+    await commandKlineFetch(rest);
+    return;
+  }
   if (command === "kline" && subcommand === "validate") {
     await commandKlineValidate(rest);
     return;
@@ -748,6 +874,18 @@ async function main() {
   }
   if (command === "report") {
     await commandReport([subcommand, ...rest]);
+    return;
+  }
+  if (command === "db") {
+    await commandDb([subcommand, ...rest]);
+    return;
+  }
+  if (command === "stats") {
+    await commandStats([subcommand, ...rest]);
+    return;
+  }
+  if (command === "proxy") {
+    await commandProxy([subcommand, ...rest]);
     return;
   }
   if (command === "git") {
