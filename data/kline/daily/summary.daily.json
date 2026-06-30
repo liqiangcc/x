@@ -1,68 +1,108 @@
 {
   "aws_regions": null,
-  "engine": "local",
+  "concurrency": 25,
+  "engine": "aws",
+  "force": true,
   "input_path": "/home/runner/work/x/x/data/pool/20260630",
   "lambda_name": "kline",
+  "min_success_rate": 0.95,
   "period": "daily",
   "total_codes": 10,
-  "success": 0,
-  "migrated_existing": 2,
+  "success": 10,
+  "migrated_existing": 0,
   "skipped_existing": 0,
-  "failed": 8,
+  "failed": 0,
+  "success_rate": 1,
+  "engine_counts": {
+    "aws": 10
+  },
+  "region_counts": {
+    "ap-northeast-1": 8,
+    "ap-northeast-3": 1,
+    "ap-northeast-2": 1
+  },
+  "failure_reasons": [],
+  "status": "completed",
   "files": {
     "000004": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000004.json",
       "secid": "0.000004",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000004 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 8250
     },
     "000012": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000012.json",
       "secid": "0.000012",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000012 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 8241
     },
     "000017": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000017.json",
       "secid": "0.000017",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000017 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 7205
     },
     "000021": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000021.json",
       "secid": "0.000021",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000021 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 7754
     },
     "000026": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000026.json",
       "secid": "0.000026",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000026 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 7931
     },
     "000100": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000100.json",
       "secid": "0.000100",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000100 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 5092
     },
     "000551": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000551.json",
       "secid": "0.000551",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000551 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 7778
     },
     "000566": {
-      "status": "failed",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000566.json",
       "secid": "0.000566",
-      "error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000566 --period daily --engine local --lambda-name kline\nfetch failed\n"
+      "points": 7429
     },
     "000603": {
-      "status": "migrated_existing",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
       "file": "/home/runner/work/x/x/data/kline/daily/000/000603.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/000603.json",
       "secid": "0.000603",
-      "points": 6335
+      "points": 6399
     },
     "000620": {
-      "status": "migrated_existing",
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
       "file": "/home/runner/work/x/x/data/kline/daily/000/000620.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/000620.json",
       "secid": "0.000620",
-      "points": 5742
+      "points": 5806
     }
   }
 }
