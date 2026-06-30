@@ -61,10 +61,12 @@ test("queryPoolKlines handles concurrent success, failure, and skipped files", a
     "2",
   ]);
   const requested = [];
+  const regionStartIndexes = [];
   let active = 0;
   let maxActive = 0;
-  const fetcher = async (secid) => {
+  const fetcher = async (secid, fetchOptions) => {
     requested.push(secid);
+    regionStartIndexes.push(fetchOptions.awsRegionStartIndex);
     active += 1;
     maxActive = Math.max(maxActive, active);
     try {
@@ -86,6 +88,7 @@ test("queryPoolKlines handles concurrent success, failure, and skipped files", a
   assert.equal(exitCode, 1);
   assert.equal(maxActive, 2);
   assert.deepEqual(requested.sort(), ["1.600001", "1.600002", "1.600003"]);
+  assert.deepEqual(regionStartIndexes.sort((left, right) => left - right), [0, 1, 2]);
   assert.equal(summary.total_codes, 4);
   assert.equal(summary.success, 2);
   assert.equal(summary.failed, 1);
@@ -93,6 +96,7 @@ test("queryPoolKlines handles concurrent success, failure, and skipped files", a
   assert.equal(summary.success_rate, 0.5);
   assert.deepEqual(summary.engine_counts, { aws: 1, local: 1 });
   assert.deepEqual(summary.region_counts, { "ap-northeast-1": 1 });
+  assert.equal(summary.aws_region_strategy, "round_robin_start_index");
   assert.deepEqual(summary.failure_reasons, ["failed_items"]);
   assert.equal(summary.files["600004"].status, "skipped_existing");
 });

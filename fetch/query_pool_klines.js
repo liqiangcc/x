@@ -295,6 +295,10 @@ async function fetchSingleKline(secid, options) {
     args.push("--config", options.configFile);
   }
 
+  if (Number.isInteger(options.awsRegionStartIndex)) {
+    args.push("--aws-region-start-index", String(options.awsRegionStartIndex));
+  }
+
   const { stdout } = await execFileAsync("node", args, {
     maxBuffer: 25 * 1024 * 1024,
   });
@@ -327,6 +331,7 @@ function incrementCount(counts, key) {
 function createSummary(options, selectedCodes) {
   return {
     aws_regions: options.awsRegions,
+    aws_region_strategy: options.engine === "local" ? "none" : "round_robin_start_index",
     concurrency: options.concurrency,
     engine: options.engine,
     force: options.force,
@@ -348,7 +353,17 @@ function createSummary(options, selectedCodes) {
   };
 }
 
-async function processCode(inputCode, options, fetchKline) {
+function fetchOptionsForIndex(options, itemIndex) {
+  if (options.engine === "local") {
+    return options;
+  }
+  return {
+    ...options,
+    awsRegionStartIndex: itemIndex,
+  };
+}
+
+async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
   let secid;
   let code;
   try {
@@ -404,7 +419,7 @@ async function processCode(inputCode, options, fetchKline) {
   }
 
   try {
-    const data = await fetchKline(secid, options);
+    const data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
     const normalized = normalizeKlinePayload(data, code, secid, options.period);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
@@ -482,8 +497,8 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   await fs.mkdir(periodDir, { recursive: true });
 
   const summary = createSummary(effectiveOptions, selectedCodes);
-  const results = await mapWithConcurrency(selectedCodes, effectiveOptions.concurrency, (inputCode) =>
-    processCode(inputCode, effectiveOptions, fetchKline)
+  const results = await mapWithConcurrency(selectedCodes, effectiveOptions.concurrency, (inputCode, itemIndex) =>
+    processCode(inputCode, effectiveOptions, fetchKline, itemIndex)
   );
 
   for (const result of results) {

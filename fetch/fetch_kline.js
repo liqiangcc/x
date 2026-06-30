@@ -33,14 +33,30 @@ const VALID_ENGINES = new Set(["auto", "local", "aws"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output <file>]"
+    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--lambda-name <name>] [--config <file>] [--output <file>]"
   );
+}
+
+function parseNonNegativeInteger(value, flagName) {
+  if (!value || !/^\d+$/.test(value)) {
+    throw new Error(`Invalid value for ${flagName}: ${value ?? ""}`);
+  }
+  return Number(value);
+}
+
+function rotateRegions(regions, startIndex) {
+  if (!Array.isArray(regions) || regions.length === 0) {
+    return [];
+  }
+  const offset = startIndex % regions.length;
+  return [...regions.slice(offset), ...regions.slice(0, offset)];
 }
 
 function parseArguments(argv) {
   const options = {
     awsRegions: [...DEFAULT_AWS_REGIONS],
     awsRegionsOverridden: false,
+    awsRegionStartIndex: 0,
     configFile: CONFIG_FILE,
     engine: "auto",
     input: null,
@@ -87,6 +103,13 @@ function parseArguments(argv) {
       }
       options.awsRegions = regions;
       options.awsRegionsOverridden = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--aws-region-start-index") {
+      const nextArg = argv[index + 1];
+      options.awsRegionStartIndex = parseNonNegativeInteger(nextArg, "--aws-region-start-index");
       index += 1;
       continue;
     }
@@ -158,6 +181,7 @@ async function applyConfigDefaults(options) {
     throw new Error(`Failed to load config ${options.configFile}: ${error.message}`);
   }
 
+  options.awsRegions = rotateRegions(options.awsRegions, options.awsRegionStartIndex);
   return options;
 }
 
