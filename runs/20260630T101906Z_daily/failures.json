@@ -1,0 +1,70 @@
+{
+  "run_id": "20260630T101906Z_daily",
+  "failed": 8,
+  "items": [
+    {
+      "target": "0.000004",
+      "code": "000004",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000004 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000012",
+      "code": "000012",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000012 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000017",
+      "code": "000017",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000017 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000021",
+      "code": "000021",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000021 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000026",
+      "code": "000026",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000026 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000100",
+      "code": "000100",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000100 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000551",
+      "code": "000551",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000551 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000566",
+      "code": "000566",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000566 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    }
+  ]
+}
