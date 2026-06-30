@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { buildPoolRequest } = require("../src/sources/eastmoney/client");
+const { buildMarketStocksUrl, buildPoolRequest } = require("../src/sources/eastmoney/client");
 
 test("buildPoolRequest patches date and JSONP callback without executing curl", async () => {
   const request = await buildPoolRequest("zt", "20260325");
@@ -17,4 +17,16 @@ test("buildPoolRequest patches date and JSONP callback without executing curl", 
 
 test("buildPoolRequest rejects unknown pool names", async () => {
   await assert.rejects(() => buildPoolRequest("bad", "20260325"), /Invalid pool/);
+});
+
+test("buildMarketStocksUrl targets Shanghai and Shenzhen A-share lists", () => {
+  const url = new URL(buildMarketStocksUrl("hs-a", 2, 300));
+
+  assert.equal(url.hostname, "push2delay.eastmoney.com");
+  assert.equal(url.searchParams.get("pn"), "2");
+  assert.equal(url.searchParams.get("pz"), "300");
+  assert.equal(url.searchParams.get("fs"), "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23");
+  assert.match(url.searchParams.get("fields"), /f12/);
+  assert.match(url.searchParams.get("fields"), /f13/);
+  assert.match(url.searchParams.get("fields"), /f14/);
 });

@@ -9,6 +9,12 @@ const ROOT = path.resolve(__dirname, "../../..");
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0";
 const POOLS = new Set(["dt", "qs", "zb", "zt"]);
+const MARKET_STOCK_LISTS = {
+  "hs-a": {
+    fs: "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+    referer: "https://quote.eastmoney.com/center/gridlist.html",
+  },
+};
 
 function defaultHeaders(referer = "https://quote.eastmoney.com/") {
   return {
@@ -104,6 +110,49 @@ async function getKline({ secid, klt, lmt = 100000, end = "20991231" }) {
 async function requestJson(url, referer) {
   const rawText = await requestText(url, { headers: defaultHeaders(referer) });
   return parseJsonOrJsonp(rawText);
+}
+
+function buildMarketStocksUrl(market = "hs-a", page = 1, pageSize = 500) {
+  const list = MARKET_STOCK_LISTS[market];
+  if (!list) {
+    throw new Error(`Unsupported stock market: ${market}`);
+  }
+
+  const url = new URL("https://push2delay.eastmoney.com/api/qt/clist/get");
+  url.searchParams.set("pn", String(page));
+  url.searchParams.set("pz", String(pageSize));
+  url.searchParams.set("po", "1");
+  url.searchParams.set("np", "1");
+  url.searchParams.set("ut", "bd1d9ddb04089700cf9c27f6f7426281");
+  url.searchParams.set("fltt", "2");
+  url.searchParams.set("invt", "2");
+  url.searchParams.set("fid", "f12");
+  url.searchParams.set("fs", list.fs);
+  url.searchParams.set("fields", "f12,f13,f14,f2,f3,f4,f5,f6,f15,f16,f17,f18,f20,f21,f23,f24,f25,f124");
+  return url.toString();
+}
+
+async function getMarketStocks(market = "hs-a", page = 1, pageSize = 500) {
+  const list = MARKET_STOCK_LISTS[market];
+  if (!list) {
+    throw new Error(`Unsupported stock market: ${market}`);
+  }
+
+  return requestJson(buildMarketStocksUrl(market, page, pageSize), list.referer);
+}
+
+async function getAllMarketStocks(market = "hs-a", pageSize = 500) {
+  const { base, combined } = await fetchAllPages((page) =>
+    getMarketStocks(market, page, pageSize)
+  );
+  return {
+    ...base,
+    data: {
+      ...(base?.data ?? {}),
+      diff: combined,
+      total: combined.length,
+    },
+  };
 }
 
 async function getSectors(page = 1, pageSize = 100) {
@@ -220,14 +269,17 @@ async function getEtfDetails(fundCode) {
 }
 
 module.exports = {
+  buildMarketStocksUrl,
   buildPoolRequest,
   fetchPool,
   getAllEtfs,
+  getAllMarketStocks,
   getAllSectors,
   getAllStocks,
   getEtfDetails,
   getEtfs,
   getKline,
+  getMarketStocks,
   getSectors,
   getStocks,
 };

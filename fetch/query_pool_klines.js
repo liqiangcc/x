@@ -12,7 +12,7 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_path> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--force] [--concurrency <N>] [--min-success-rate <0..1>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--force] [--concurrency <N>] [--min-success-rate <0..1>]"
   );
 }
 

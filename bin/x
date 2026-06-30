@@ -26,20 +26,26 @@ const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
+const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 
 function rel(filePath) {
   return path.relative(ROOT, filePath).replaceAll(path.sep, "/");
+}
+
+function rootPath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : path.join(ROOT, filePath);
 }
 
 function printUsage() {
   console.log(`Usage:
   x doctor
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
+  x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
   x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws] [--aws-region r1,r2] [--lambda-name name] [--config file]
-  x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -474,6 +480,34 @@ async function commandPoolPull(argv) {
   process.stderr.write(stderr);
 }
 
+async function commandStocks(argv) {
+  const subcommand = argv[0];
+  if (subcommand !== "fetch") {
+    throw new Error(`Unknown stocks command: ${subcommand ?? ""}`);
+  }
+
+  const options = parseOptions(argv.slice(1), {
+    market: "hs-a",
+    outputDir: rel(DEFAULT_UNIVERSE_DIR),
+  });
+  const args = ["--market", options.market, "--output-dir", options.outputDir];
+
+  if (options.date && options.latest) {
+    throw new Error("--date and --latest cannot be used together.");
+  } else if (options.date) {
+    args.push("--date", normalizeDate(options.date));
+  } else {
+    args.push("--latest");
+  }
+  if (options.pageSize) {
+    args.push("--page-size", String(options.pageSize));
+  }
+
+  const { stdout, stderr } = await runNode("fetch/fetch_market_stocks.js", args);
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
+}
+
 async function commandCodesBuild(argv) {
   const options = parseOptions(argv);
   const inputPath = options._[0];
@@ -494,7 +528,7 @@ async function commandKlineSync(argv) {
   const options = parseOptions(argv, { period: "daily", engine: "auto" });
   const inputPath = options._[0];
   if (!inputPath) {
-    throw new Error("kline sync requires <pool_dir|codes.json>");
+    throw new Error("kline sync requires <input_dir|codes.json>");
   }
 
   const args = [inputPath, "--period", options.period, "--engine", options.engine];
@@ -590,17 +624,44 @@ async function buildQuality(runId, validateResult, period) {
   };
 }
 
+async function hasCompleteMarketUniverse(date, outputDir, market = "hs-a") {
+  const universeDir = path.join(rootPath(outputDir), date);
+  try {
+    const codesPayload = JSON.parse(await fs.readFile(path.join(universeDir, "codes.json"), "utf8"));
+    const stocksPayload = JSON.parse(await fs.readFile(path.join(universeDir, "stocks.json"), "utf8"));
+    return (
+      codesPayload.date === date &&
+      stocksPayload.date === date &&
+      codesPayload.market === market &&
+      stocksPayload.market === market &&
+      Array.isArray(codesPayload.codes) &&
+      Array.isArray(stocksPayload.stocks) &&
+      codesPayload.codes.length > 0 &&
+      codesPayload.codes.length === stocksPayload.stocks.length
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function commandDaily(argv) {
   const options = parseOptions(argv, {
     engine: "auto",
+    market: "hs-a",
     period: "daily",
     poolEngine: "curl",
     outputDir: "data/pool",
+    universe: "market",
+    universeDir: rel(DEFAULT_UNIVERSE_DIR),
   });
   const startedAt = isoNow();
+  const explicitDate = Boolean(options.date);
 
   if (!options.date && !options.latest) {
     options.latest = true;
+  }
+  if (!["market", "pool"].includes(options.universe)) {
+    throw new Error(`Invalid universe: ${options.universe}`);
   }
 
   let date = options.date ? normalizeDate(options.date) : null;
@@ -638,11 +699,35 @@ async function commandDaily(argv) {
   const runId = options.runId ?? runIdFor(date, options.period);
   const runDir = path.join(DEFAULT_RUNS_DIR, runId);
 
-  const codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
+  let codesResult;
+  let inputDir = poolDir;
+  let universeSummary = null;
+  if (options.universe === "pool") {
+    codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
+  } else {
+    inputDir = path.join(rootPath(options.universeDir), date);
+    if (explicitDate && (await hasCompleteMarketUniverse(date, options.universeDir, options.market))) {
+      codesResult = {
+        stdout: `Using existing market universe: ${rel(inputDir)}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
+    } else {
+      codesResult = await runNodeAllowFailure("fetch/fetch_market_stocks.js", [
+        "--date",
+        date,
+        "--market",
+        options.market,
+        "--output-dir",
+        options.universeDir,
+      ]);
+    }
+    universeSummary = await readJson(path.join(inputDir, "summary.json"), null).catch(() => null);
+  }
   process.stdout.write(codesResult.stdout);
   process.stderr.write(codesResult.stderr);
 
-  const klineArgs = [rel(poolDir), "--period", options.period, "--engine", options.engine];
+  const klineArgs = [rel(inputDir), "--period", options.period, "--engine", options.engine];
   if (options.limit) {
     klineArgs.push("--limit", String(options.limit));
   }
@@ -723,7 +808,10 @@ async function commandDaily(argv) {
     date,
     period: options.period,
     engine: options.engine,
-    input: rel(path.join(poolDir, "codes.json")),
+    universe: options.universe,
+    market: options.universe === "market" ? options.market : null,
+    universe_total_codes: universeSummary?.total_codes ?? null,
+    input: rel(path.join(inputDir, "codes.json")),
     status,
     total,
     success,
@@ -737,6 +825,7 @@ async function commandDaily(argv) {
     finished_at: isoNow(),
     artifacts: {
       pool_dir: rel(poolDir),
+      universe_dir: options.universe === "market" ? rel(inputDir) : null,
       kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),
       kline_summary: rel(summaryPath),
       run: rel(path.join(runDir, "run.json")),
@@ -746,6 +835,7 @@ async function commandDaily(argv) {
     commands: {
       pool_exit_code: poolResult.exitCode,
       codes_exit_code: codesResult.exitCode,
+      universe_exit_code: options.universe === "market" ? codesResult.exitCode : null,
       kline_exit_code: klineResult.exitCode,
       quality_exit_code: validateResult.exitCode,
     },
@@ -1076,10 +1166,14 @@ async function existingDataPathspecs() {
 
 function commitMessage(run, quality) {
   const qualityStatus = quality?.status ?? "recorded";
-  const title = `data(daily): ${run.date} update pool, codes and ${run.period} kline`;
+  const universe = run.universe ?? "pool";
+  const title = `data(daily): ${run.date} update ${universe} universe and ${run.period} kline`;
   const body = [
     `run_id: ${run.run_id}`,
     `pool_date: ${run.date}`,
+    `universe: ${universe}`,
+    `market: ${run.market ?? "n/a"}`,
+    `universe_total_codes: ${run.universe_total_codes ?? "n/a"}`,
     `period: ${run.period}`,
     `engine: ${run.engine}`,
     `total: ${run.total}`,
@@ -1102,6 +1196,8 @@ function printDailyRunSummary(run, quality, failures) {
       `success=${run.success}`,
       `failed=${run.failed}`,
       `skipped=${run.skipped}`,
+      `universe=${run.universe ?? "pool"}`,
+      `universe_total_codes=${run.universe_total_codes ?? "n/a"}`,
       `success_rate=${run.kline_success_rate ?? "n/a"}`,
       `engine_counts=${JSON.stringify(run.kline_engine_counts ?? {})}`,
       `region_counts=${JSON.stringify(run.kline_region_counts ?? {})}`,
@@ -1186,6 +1282,10 @@ async function main() {
   }
   if (command === "pool" && subcommand === "pull") {
     await commandPoolPull(rest);
+    return;
+  }
+  if (command === "stocks") {
+    await commandStocks([subcommand, ...rest]);
     return;
   }
   if (command === "codes" && subcommand === "build") {

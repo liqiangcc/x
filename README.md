@@ -48,6 +48,8 @@ bin/x aws status --profile default --region ap-northeast-1
 bin/x daily --latest --limit 10 --period daily
 ```
 
+`daily` 默认使用沪深 A 股全市场 universe；不传 `--limit` 时会同步全市场股票 kline。需要回到旧的热点 pool 输入时，显式加 `--universe pool`。
+
 指定日期：
 
 ```bash
@@ -80,6 +82,7 @@ Pool 和 codes：
 
 ```bash
 bin/x pool pull --date 20260325
+bin/x stocks fetch --date 20260325 --market hs-a
 bin/x codes build data/pool/20260325
 ```
 
@@ -87,6 +90,7 @@ Kline：
 
 ```bash
 bin/x kline fetch 000020 --period daily --engine local
+bin/x kline sync data/universe/20260325 --period daily --limit 10
 bin/x kline sync data/pool/20260325 --period daily --limit 10
 bin/x kline validate data/kline --period daily --json
 ```
@@ -131,6 +135,7 @@ bin/x proxy check
 
 ```text
 data/pool/<YYYYMMDD>/
+data/universe/<YYYYMMDD>/
 data/kline/<period>/<prefix>/<code>.json
 runs/<run_id>/
 reports/<YYYYMMDD>/
@@ -159,6 +164,8 @@ bin/x kline validate data/kline --period daily --json
 ## GitHub Actions AWS 配置
 
 Daily Action 使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
+
+默认配置不传 `limit`，会先生成 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单，再通过 AWS 同步全部 kline。手动触发时可用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
 
 - 必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
 - 可选 variable：`AWS_REGION`，默认 `ap-northeast-1`

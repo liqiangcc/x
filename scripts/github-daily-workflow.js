@@ -17,6 +17,7 @@ function buildDailyArgs(env = process.env) {
   const period = valueOrDefault(env.PERIOD_INPUT, "daily");
   const limit = String(env.LIMIT_INPUT ?? "").trim();
   const engine = valueOrDefault(env.ENGINE_INPUT, "aws");
+  const universe = valueOrDefault(env.UNIVERSE_INPUT, "market");
   const concurrency = valueOrDefault(
     env.CONCURRENCY_INPUT,
     engine === "local" ? "4" : "25"
@@ -29,6 +30,8 @@ function buildDailyArgs(env = process.env) {
     period,
     "--engine",
     engine,
+    "--universe",
+    universe,
     "--force",
     "--commit",
     "--allow-partial",
@@ -107,9 +110,12 @@ async function writeGithubStepSummary(args) {
   }
 
   const awsSuccesses = Number(summary.engine_counts?.aws ?? 0);
+  const universe = argValue(args, "--universe", "market");
   const lines = [
     "## Daily data summary",
     "",
+    `- universe: ${universe}`,
+    `- input_path: ${summary.input_path}`,
     `- period: ${summary.period}`,
     `- engine: ${summary.engine}`,
     `- total_codes: ${summary.total_codes}`,

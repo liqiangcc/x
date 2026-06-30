@@ -19,6 +19,14 @@ on:
         description: "Maximum number of codes to sync."
         required: false
         default: ""
+      universe:
+        description: "Code universe for kline sync."
+        required: false
+        default: "market"
+        type: choice
+        options:
+          - market
+          - pool
       engine:
         description: "Kline engine."
         required: false
@@ -77,5 +85,6 @@ jobs:
           DATE_INPUT: ${{ github.event.inputs.date }}
           PERIOD_INPUT: ${{ github.event.inputs.period }}
           LIMIT_INPUT: ${{ github.event.inputs.limit }}
+          UNIVERSE_INPUT: ${{ github.event.inputs.universe }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
         run: node scripts/github-daily-workflow.js
