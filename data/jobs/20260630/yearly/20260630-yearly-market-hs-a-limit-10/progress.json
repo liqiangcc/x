@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "job_id": "20260630-yearly-market-hs-a-limit-10",
+  "date": "20260630",
+  "period": "yearly",
+  "universe": "market",
+  "market": "hs-a",
+  "status": "completed",
+  "total_codes": 10,
+  "batch_size": 10,
+  "chain_depth": 0,
+  "max_chain_depth": 9,
+  "all_codes": [
+    "000001",
+    "000002",
+    "000003",
+    "000004",
+    "000005",
+    "000006",
+    "000007",
+    "000008",
+    "000009",
+    "000010"
+  ],
+  "pending_codes": [],
+  "completed_codes": [
+    "000001",
+    "000002",
+    "000003",
+    "000004",
+    "000005",
+    "000006",
+    "000007",
+    "000008",
+    "000009",
+    "000010"
+  ],
+  "failed_codes": [],
+  "blocked_codes": [],
+  "last_batch_codes": [
+    "000001",
+    "000002",
+    "000003",
+    "000004",
+    "000005",
+    "000006",
+    "000007",
+    "000008",
+    "000009",
+    "000010"
+  ],
+  "last_batch_source": "pending",
+  "last_summary": {
+    "status": "completed",
+    "total_codes": 10,
+    "success": 7,
+    "migrated_existing": 3,
+    "skipped_existing": 0,
+    "failed": 0,
+    "success_rate": 1,
+    "failure_reasons": [],
+    "engine_counts": {
+      "aws": 7
+    },
+    "region_counts": {
+      "ap-northeast-2": 2,
+      "ap-northeast-3": 1,
+      "ap-southeast-1": 2,
+      "ca-central-1": 1,
+      "eu-north-1": 1
+    }
+  },
+  "created_at": "2026-06-30T18:53:37Z",
+  "updated_at": "2026-06-30T18:53:51Z",
+  "counts": {
+    "pending": 0,
+    "completed": 10,
+    "failed": 0,
+    "blocked": 0,
+    "remaining": 0
+  }
+}
