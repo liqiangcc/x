@@ -1,108 +1,155 @@
 {
   "aws_regions": null,
-  "concurrency": 25,
+  "aws_region_strategy": "round_robin_start_index",
+  "available_codes": 5534,
+  "batch_size": 10,
+  "candidate_codes": 5524,
+  "concurrency": 1,
   "engine": "aws",
-  "force": true,
-  "input_path": "/home/runner/work/x/x/data/pool/20260630",
+  "force": false,
+  "input_path": "/home/runner/work/x/x/data/universe/20260630",
   "lambda_name": "kline",
   "min_success_rate": 0.95,
+  "offset": 0,
   "period": "daily",
+  "retry_attempts": 1,
+  "retry_concurrency": 1,
+  "retry_delay_ms": 1000,
+  "selection_mode": "next_missing",
   "total_codes": 10,
-  "success": 10,
-  "migrated_existing": 0,
+  "success": 7,
+  "migrated_existing": 3,
   "skipped_existing": 0,
   "failed": 0,
+  "initial_failed": 0,
+  "retried": 0,
+  "retry_success": 0,
+  "retry_failed": 0,
   "success_rate": 1,
+  "attempts_by_code": {
+    "000001": 1,
+    "000002": 1,
+    "000003": 1,
+    "000005": 1,
+    "000006": 1,
+    "000007": 1,
+    "000008": 1,
+    "000009": 1,
+    "000010": 1,
+    "000011": 1
+  },
   "engine_counts": {
-    "aws": 10
+    "aws": 7
   },
+  "failure_reason_counts": {},
   "region_counts": {
-    "ap-northeast-1": 8,
-    "ap-northeast-3": 1,
-    "ap-northeast-2": 1
+    "ap-southeast-2": 1,
+    "ca-central-1": 2,
+    "eu-central-1": 1,
+    "eu-west-2": 1,
+    "eu-west-3": 1,
+    "sa-east-1": 1
   },
+  "retriable_failure_counts": {},
   "failure_reasons": [],
   "status": "completed",
   "files": {
-    "000004": {
+    "000001": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-southeast-2",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000004.json",
-      "secid": "0.000004",
-      "points": 8250
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000001.json",
+      "secid": "0.000001",
+      "points": 8425,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000012": {
+    "000002": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ca-central-1",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000012.json",
-      "secid": "0.000012",
-      "points": 8241
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000002.json",
+      "secid": "0.000002",
+      "points": 8440,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000017": {
+    "000003": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "eu-central-1",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000017.json",
-      "secid": "0.000017",
-      "points": 7205
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000003.json",
+      "secid": "0.000003",
+      "points": 2423,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000021": {
+    "000005": {
       "engine": "aws",
-      "region": "ap-northeast-3",
+      "region": "eu-west-2",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000021.json",
-      "secid": "0.000021",
-      "points": 7754
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000005.json",
+      "secid": "0.000005",
+      "points": 7206,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000026": {
+    "000006": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ca-central-1",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000026.json",
-      "secid": "0.000026",
-      "points": 7931
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000006.json",
+      "secid": "0.000006",
+      "points": 8110,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000100": {
-      "engine": "aws",
-      "region": "ap-northeast-2",
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000100.json",
-      "secid": "0.000100",
-      "points": 5092
+    "000007": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000007.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/000007.json",
+      "secid": "0.000007",
+      "points": 7543,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000551": {
-      "engine": "aws",
-      "region": "ap-northeast-1",
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000551.json",
-      "secid": "0.000551",
-      "points": 7778
+    "000008": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000008.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/000008.json",
+      "secid": "0.000008",
+      "points": 7859,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000566": {
+    "000009": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "eu-west-3",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000566.json",
-      "secid": "0.000566",
-      "points": 7429
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000009.json",
+      "secid": "0.000009",
+      "points": 8336,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000603": {
-      "engine": "aws",
-      "region": "ap-northeast-1",
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000603.json",
-      "secid": "0.000603",
-      "points": 6399
+    "000010": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000010.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/000010.json",
+      "secid": "0.000010",
+      "points": 6370,
+      "attempts": 1,
+      "last_attempt": 0
     },
-    "000620": {
+    "000011": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "sa-east-1",
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000620.json",
-      "secid": "0.000620",
-      "points": 5806
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000011.json",
+      "secid": "0.000011",
+      "points": 8117,
+      "attempts": 1,
+      "last_attempt": 0
     }
   }
 }
