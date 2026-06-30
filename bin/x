@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
+const { existingPathspecs, stagedFiles } = require("../src/core/git");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -748,27 +749,8 @@ async function commandProxy(argv) {
   throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
 }
 
-async function hasDataDiff() {
-  const pathspec = await existingDataPathspecs();
-  try {
-    await execFileAsync("git", ["diff", "--quiet", "--", ...pathspec], { cwd: ROOT });
-    await execFileAsync("git", ["diff", "--cached", "--quiet", "--", ...pathspec], { cwd: ROOT });
-    return false;
-  } catch {
-    return true;
-  }
-}
-
 async function existingDataPathspecs() {
-  const candidates = ["data", "runs", "reports"];
-  const existing = [];
-  for (const candidate of candidates) {
-    try {
-      await fs.access(path.join(ROOT, candidate));
-      existing.push(candidate);
-    } catch {}
-  }
-  return existing;
+  return existingPathspecs(ROOT);
 }
 
 function commitMessage(run, quality) {
@@ -795,8 +777,14 @@ async function commitData(runId) {
   const quality = await readJson(qualityPath, { status: "recorded" });
   const pathspec = await existingDataPathspecs();
 
+  if (pathspec.length === 0) {
+    console.log("No data paths to commit.");
+    return;
+  }
+
   await execFileAsync("git", ["add", "--", ...pathspec], { cwd: ROOT });
-  if (!(await hasDataDiff())) {
+  const files = await stagedFiles(ROOT, pathspec);
+  if (files.length === 0) {
     console.log("No data changes to commit.");
     return;
   }
@@ -804,7 +792,7 @@ async function commitData(runId) {
   const message = commitMessage(run, quality);
   await execFileAsync(
     "git",
-    ["commit", "-m", message.title, "-m", message.body, "--", ...pathspec],
+    ["commit", "-m", message.title, "-m", message.body, "--", ...files],
     { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 }
   );
 }
