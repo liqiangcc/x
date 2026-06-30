@@ -29,6 +29,22 @@ function formatLocalDate(date = new Date()) {
   return `${year}${month}${day}`;
 }
 
+function formatDateInTimeZone(date = new Date(), timeZone = "Asia/Shanghai") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+}
+
+function formatMarketDate(offsetDays = 0, date = new Date()) {
+  const shifted = new Date(date.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+  return formatDateInTimeZone(shifted, "Asia/Shanghai");
+}
+
 function toUtcDate(yyyymmdd) {
   const normalized = normalizeDate(yyyymmdd);
   return new Date(Date.UTC(
@@ -45,7 +61,9 @@ function calculateInclusiveDays(startDate, endDate) {
 
 module.exports = {
   calculateInclusiveDays,
+  formatDateInTimeZone,
   formatLocalDate,
+  formatMarketDate,
   normalizeDate,
   toUtcDate,
 };

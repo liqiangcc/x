@@ -5,6 +5,7 @@ const path = require("node:path");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 const { buildPoolRequest, fetchPool: fetchPoolData } = require("../src/sources/eastmoney/client");
+const { formatMarketDate } = require("../src/core/date");
 
 const execFileAsync = promisify(execFile);
 const VALID_POOLS = new Set(["dt", "qs", "zb", "zt"]);
@@ -17,13 +18,8 @@ function printUsage() {
   );
 }
 
-function formatToday(offsetDays = 0) {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}${month}${day}`;
+function formatToday(offsetDays = 0, date = new Date()) {
+  return formatMarketDate(offsetDays, date);
 }
 
 function normalizeDate(input) {
@@ -120,14 +116,28 @@ function defaultDateForPool(pool) {
   return formatToday(0);
 }
 
-async function resolveTradingDate(daysOffset) {
-  const endDate = formatToday(0);
-  const startDate = formatToday(-(daysOffset + 14));
-  const { stdout } = await execFileAsync(
-    "node",
-    [TRADING_DAYS_SCRIPT, startDate, endDate, "--json"],
-    { maxBuffer: 10 * 1024 * 1024 }
-  );
+async function resolveTradingDate(daysOffset, options = {}) {
+  const run = options.execFileAsync ?? execFileAsync;
+  const warn = options.warn ?? console.error;
+  const now = options.now ?? new Date();
+  const endDate = formatToday(0, now);
+  const startDate = formatToday(-(daysOffset + 14), now);
+  let stdout;
+  try {
+    ({ stdout } = await run(
+      "node",
+      [TRADING_DAYS_SCRIPT, startDate, endDate, "--json"],
+      { maxBuffer: 10 * 1024 * 1024 }
+    ));
+  } catch (error) {
+    if (daysOffset === 0) {
+      warn(
+        `Trading day lookup failed; falling back to market date ${endDate}: ${error.message}`
+      );
+      return endDate;
+    }
+    throw error;
+  }
 
   let tradingDates;
   try {
@@ -200,7 +210,14 @@ async function main() {
   process.stdout.write(outputText);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  formatToday,
+  resolveTradingDate,
+};
