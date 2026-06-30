@@ -1,1 +1,13 @@
 db/stocks.db
+.codex
+.agents/
+.skill-staging/
+/dt.json
+/dt.txt
+/qs.json
+/qs.txt
+/zb.json
+/zb.txt
+/zt.json
+/zt.txt
+/tmp_*.json

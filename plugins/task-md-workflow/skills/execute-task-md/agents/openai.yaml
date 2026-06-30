@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Task MD"
+  short_description: "Execute task Markdown subtasks"
+  default_prompt: "Use $execute-task-md with a task ID or subtask ID to execute pending subtasks, update the task Markdown, and commit completed work."

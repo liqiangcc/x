@@ -1,109 +1,1517 @@
 {
   "aws_regions": null,
   "engine": "auto",
-  "input_path": "/tmp/missing_yearly_20260326.txt",
+  "input_path": "/root/x/data/pool/20260401",
   "lambda_name": "kline",
   "period": "yearly",
-  "total_codes": 12,
-  "success": 12,
+  "total_codes": 188,
+  "success": 188,
   "skipped_existing": 0,
   "failed": 0,
   "files": {
-    "603817": {
+    "300069": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-northeast-2",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/603817.json",
-      "secid": "1.603817",
+      "file": "/root/x/data/kline/yearly/300069.json",
+      "secid": "0.300069",
+      "points": 17
+    },
+    "300149": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300149.json",
+      "secid": "0.300149",
+      "points": 17
+    },
+    "300204": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300204.json",
+      "secid": "0.300204",
+      "points": 16
+    },
+    "300436": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300436.json",
+      "secid": "0.300436",
+      "points": 12
+    },
+    "300461": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300461.json",
+      "secid": "0.300461",
+      "points": 12
+    },
+    "300464": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300464.json",
+      "secid": "0.300464",
+      "points": 12
+    },
+    "300683": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300683.json",
+      "secid": "0.300683",
       "points": 10
     },
-    "603876": {
+    "300834": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-northeast-2",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/603876.json",
-      "secid": "1.603876",
-      "points": 9
+      "file": "/root/x/data/kline/yearly/300834.json",
+      "secid": "0.300834",
+      "points": 5
     },
-    "605011": {
+    "300953": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-northeast-2",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/605011.json",
-      "secid": "1.605011",
+      "file": "/root/x/data/kline/yearly/300953.json",
+      "secid": "0.300953",
       "points": 6
     },
-    "605555": {
+    "300964": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/300964.json",
+      "secid": "0.300964",
+      "points": 6
+    },
+    "301008": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301008.json",
+      "secid": "0.301008",
+      "points": 6
+    },
+    "301048": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301048.json",
+      "secid": "0.301048",
+      "points": 6
+    },
+    "301053": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301053.json",
+      "secid": "0.301053",
+      "points": 6
+    },
+    "301081": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301081.json",
+      "secid": "0.301081",
+      "points": 6
+    },
+    "301128": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301128.json",
+      "secid": "0.301128",
+      "points": 6
+    },
+    "301130": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301130.json",
+      "secid": "0.301130",
+      "points": 5
+    },
+    "301188": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301188.json",
+      "secid": "0.301188",
+      "points": 6
+    },
+    "301189": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301189.json",
+      "secid": "0.301189",
+      "points": 6
+    },
+    "301191": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301191.json",
+      "secid": "0.301191",
+      "points": 5
+    },
+    "301201": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301201.json",
+      "secid": "0.301201",
+      "points": 5
+    },
+    "301312": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301312.json",
+      "secid": "0.301312",
+      "points": 5
+    },
+    "301392": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301392.json",
+      "secid": "0.301392",
+      "points": 3
+    },
+    "301509": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/301509.json",
+      "secid": "0.301509",
+      "points": 4
+    },
+    "600007": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600007.json",
+      "secid": "1.600007",
+      "points": 28
+    },
+    "600015": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600015.json",
+      "secid": "1.600015",
+      "points": 24
+    },
+    "600066": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600066.json",
+      "secid": "1.600066",
+      "points": 30
+    },
+    "600105": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600105.json",
+      "secid": "1.600105",
+      "points": 30
+    },
+    "600110": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600110.json",
+      "secid": "1.600110",
+      "points": 30
+    },
+    "600184": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600184.json",
+      "secid": "1.600184",
+      "points": 24
+    },
+    "600186": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600186.json",
+      "secid": "1.600186",
+      "points": 29
+    },
+    "600207": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600207.json",
+      "secid": "1.600207",
+      "points": 28
+    },
+    "600222": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600222.json",
+      "secid": "1.600222",
+      "points": 28
+    },
+    "600249": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600249.json",
+      "secid": "1.600249",
+      "points": 23
+    },
+    "600310": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600310.json",
+      "secid": "1.600310",
+      "points": 26
+    },
+    "600350": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600350.json",
+      "secid": "1.600350",
+      "points": 25
+    },
+    "600351": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600351.json",
+      "secid": "1.600351",
+      "points": 25
+    },
+    "600396": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600396.json",
+      "secid": "1.600396",
+      "points": 26
+    },
+    "600429": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600429.json",
+      "secid": "1.600429",
+      "points": 24
+    },
+    "600487": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600487.json",
+      "secid": "1.600487",
+      "points": 24
+    },
+    "600488": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600488.json",
+      "secid": "1.600488",
+      "points": 26
+    },
+    "600495": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600495.json",
+      "secid": "1.600495",
+      "points": 23
+    },
+    "600502": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600502.json",
+      "secid": "1.600502",
+      "points": 24
+    },
+    "600513": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600513.json",
+      "secid": "1.600513",
+      "points": 24
+    },
+    "600528": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600528.json",
+      "secid": "1.600528",
+      "points": 26
+    },
+    "600539": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600539.json",
+      "secid": "1.600539",
+      "points": 26
+    },
+    "600545": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600545.json",
+      "secid": "1.600545",
+      "points": 24
+    },
+    "600594": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600594.json",
+      "secid": "1.600594",
+      "points": 23
+    },
+    "600643": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600643.json",
+      "secid": "1.600643",
+      "points": 34
+    },
+    "600666": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600666.json",
+      "secid": "1.600666",
+      "points": 34
+    },
+    "600724": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600724.json",
+      "secid": "1.600724",
+      "points": 31
+    },
+    "600746": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600746.json",
+      "secid": "1.600746",
+      "points": 31
+    },
+    "600754": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600754.json",
+      "secid": "1.600754",
+      "points": 31
+    },
+    "600801": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600801.json",
+      "secid": "1.600801",
+      "points": 33
+    },
+    "600844": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600844.json",
+      "secid": "1.600844",
+      "points": 33
+    },
+    "600851": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600851.json",
+      "secid": "1.600851",
+      "points": 33
+    },
+    "600867": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600867.json",
+      "secid": "1.600867",
+      "points": 33
+    },
+    "600872": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600872.json",
+      "secid": "1.600872",
+      "points": 32
+    },
+    "600875": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600875.json",
+      "secid": "1.600875",
+      "points": 32
+    },
+    "600894": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600894.json",
+      "secid": "1.600894",
+      "points": 31
+    },
+    "600919": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600919.json",
+      "secid": "1.600919",
+      "points": 11
+    },
+    "600936": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600936.json",
+      "secid": "1.600936",
+      "points": 11
+    },
+    "600996": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/600996.json",
+      "secid": "1.600996",
+      "points": 11
+    },
+    "601000": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601000.json",
+      "secid": "1.601000",
+      "points": 17
+    },
+    "601083": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601083.json",
+      "secid": "1.601083",
+      "points": 4
+    },
+    "601100": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601100.json",
+      "secid": "1.601100",
+      "points": 16
+    },
+    "601133": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601133.json",
+      "secid": "1.601133",
+      "points": 4
+    },
+    "601515": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601515.json",
+      "secid": "1.601515",
+      "points": 15
+    },
+    "601579": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601579.json",
+      "secid": "1.601579",
+      "points": 13
+    },
+    "601789": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601789.json",
+      "secid": "1.601789",
+      "points": 16
+    },
+    "601872": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601872.json",
+      "secid": "1.601872",
+      "points": 21
+    },
+    "601988": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601988.json",
+      "secid": "1.601988",
+      "points": 21
+    },
+    "601998": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/601998.json",
+      "secid": "1.601998",
+      "points": 20
+    },
+    "603016": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603016.json",
+      "secid": "1.603016",
+      "points": 11
+    },
+    "603017": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603017.json",
+      "secid": "1.603017",
+      "points": 13
+    },
+    "603115": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603115.json",
+      "secid": "1.603115",
+      "points": 8
+    },
+    "603121": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603121.json",
+      "secid": "1.603121",
+      "points": 8
+    },
+    "603158": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603158.json",
+      "secid": "1.603158",
+      "points": 12
+    },
+    "603193": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603193.json",
+      "secid": "1.603193",
+      "points": 4
+    },
+    "603227": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603227.json",
+      "secid": "1.603227",
+      "points": 12
+    },
+    "603248": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603248.json",
+      "secid": "1.603248",
+      "points": 2
+    },
+    "603256": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603256.json",
+      "secid": "1.603256",
+      "points": 8
+    },
+    "603288": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603288.json",
+      "secid": "1.603288",
+      "points": 13
+    },
+    "603296": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603296.json",
+      "secid": "1.603296",
+      "points": 4
+    },
+    "603328": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603328.json",
+      "secid": "1.603328",
+      "points": 13
+    },
+    "603538": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603538.json",
+      "secid": "1.603538",
+      "points": 10
+    },
+    "603585": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603585.json",
+      "secid": "1.603585",
+      "points": 11
+    },
+    "603601": {
       "engine": "aws",
       "region": "ap-northeast-1",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/605555.json",
-      "secid": "1.605555",
+      "file": "/root/x/data/kline/yearly/603601.json",
+      "secid": "1.603601",
+      "points": 12
+    },
+    "603618": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603618.json",
+      "secid": "1.603618",
+      "points": 12
+    },
+    "603626": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603626.json",
+      "secid": "1.603626",
+      "points": 10
+    },
+    "603685": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603685.json",
+      "secid": "1.603685",
+      "points": 10
+    },
+    "603687": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603687.json",
+      "secid": "1.603687",
+      "points": 8
+    },
+    "603727": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603727.json",
+      "secid": "1.603727",
+      "points": 11
+    },
+    "603738": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603738.json",
+      "secid": "1.603738",
+      "points": 11
+    },
+    "603778": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603778.json",
+      "secid": "1.603778",
+      "points": 12
+    },
+    "603803": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603803.json",
+      "secid": "1.603803",
+      "points": 10
+    },
+    "603819": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603819.json",
+      "secid": "1.603819",
+      "points": 11
+    },
+    "603826": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603826.json",
+      "secid": "1.603826",
+      "points": 10
+    },
+    "603912": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603912.json",
+      "secid": "1.603912",
+      "points": 10
+    },
+    "603937": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603937.json",
+      "secid": "1.603937",
+      "points": 10
+    },
+    "603949": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603949.json",
+      "secid": "1.603949",
+      "points": 7
+    },
+    "603985": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/603985.json",
+      "secid": "1.603985",
+      "points": 10
+    },
+    "605006": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605006.json",
+      "secid": "1.605006",
+      "points": 7
+    },
+    "605162": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605162.json",
+      "secid": "1.605162",
       "points": 6
+    },
+    "605258": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605258.json",
+      "secid": "1.605258",
+      "points": 7
+    },
+    "605287": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605287.json",
+      "secid": "1.605287",
+      "points": 6
+    },
+    "605289": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605289.json",
+      "secid": "1.605289",
+      "points": 6
+    },
+    "605299": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605299.json",
+      "secid": "1.605299",
+      "points": 7
+    },
+    "605398": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/605398.json",
+      "secid": "1.605398",
+      "points": 6
+    },
+    "688163": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688163.json",
+      "secid": "1.688163",
+      "points": 5
     },
     "688178": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
       "file": "/root/x/data/kline/yearly/688178.json",
       "secid": "1.688178",
       "points": 7
     },
-    "688226": {
+    "688197": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/688226.json",
-      "secid": "1.688226",
-      "points": 6
+      "file": "/root/x/data/kline/yearly/688197.json",
+      "secid": "1.688197",
+      "points": 5
     },
-    "688309": {
+    "688266": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/688309.json",
-      "secid": "1.688309",
+      "file": "/root/x/data/kline/yearly/688266.json",
+      "secid": "1.688266",
       "points": 7
     },
     "688314": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
       "file": "/root/x/data/kline/yearly/688314.json",
       "secid": "1.688314",
       "points": 6
     },
-    "688336": {
+    "688331": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/688336.json",
-      "secid": "1.688336",
-      "points": 7
-    },
-    "688411": {
-      "engine": "aws",
-      "region": "ap-northeast-1",
-      "status": "success",
-      "file": "/root/x/data/kline/yearly/688411.json",
-      "secid": "1.688411",
-      "points": 2
+      "file": "/root/x/data/kline/yearly/688331.json",
+      "secid": "1.688331",
+      "points": 5
     },
     "688428": {
       "engine": "aws",
-      "region": "ap-northeast-1",
+      "region": "ap-south-1",
       "status": "success",
       "file": "/root/x/data/kline/yearly/688428.json",
       "secid": "1.688428",
       "points": 5
     },
-    "688793": {
+    "688455": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688455.json",
+      "secid": "1.688455",
+      "points": 5
+    },
+    "688488": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688488.json",
+      "secid": "1.688488",
+      "points": 7
+    },
+    "688513": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688513.json",
+      "secid": "1.688513",
+      "points": 7
+    },
+    "688553": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688553.json",
+      "secid": "1.688553",
+      "points": 6
+    },
+    "688566": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688566.json",
+      "secid": "1.688566",
+      "points": 7
+    },
+    "688677": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688677.json",
+      "secid": "1.688677",
+      "points": 6
+    },
+    "688726": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688726.json",
+      "secid": "1.688726",
+      "points": 3
+    },
+    "688799": {
+      "engine": "aws",
+      "region": "ap-south-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/688799.json",
+      "secid": "1.688799",
+      "points": 6
+    },
+    "000008": {
       "engine": "aws",
       "region": "ap-northeast-1",
       "status": "success",
-      "file": "/root/x/data/kline/yearly/688793.json",
-      "secid": "1.688793",
+      "file": "/root/x/data/kline/yearly/000008.json",
+      "secid": "0.000008",
+      "points": 35
+    },
+    "000048": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000048.json",
+      "secid": "0.000048",
+      "points": 33
+    },
+    "000062": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000062.json",
+      "secid": "0.000062",
+      "points": 30
+    },
+    "000065": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000065.json",
+      "secid": "0.000065",
+      "points": 29
+    },
+    "000078": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000078.json",
+      "secid": "0.000078",
+      "points": 29
+    },
+    "000534": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000534.json",
+      "secid": "0.000534",
+      "points": 33
+    },
+    "000592": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000592.json",
+      "secid": "0.000592",
+      "points": 30
+    },
+    "000631": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000631.json",
+      "secid": "0.000631",
+      "points": 29
+    },
+    "000692": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000692.json",
+      "secid": "0.000692",
+      "points": 30
+    },
+    "000720": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000720.json",
+      "secid": "0.000720",
+      "points": 30
+    },
+    "000788": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000788.json",
+      "secid": "0.000788",
+      "points": 30
+    },
+    "000815": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000815.json",
+      "secid": "0.000815",
+      "points": 29
+    },
+    "000890": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000890.json",
+      "secid": "0.000890",
+      "points": 28
+    },
+    "000927": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000927.json",
+      "secid": "0.000927",
+      "points": 28
+    },
+    "000928": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000928.json",
+      "secid": "0.000928",
+      "points": 28
+    },
+    "000951": {
+      "engine": "aws",
+      "region": "ap-northeast-1",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000951.json",
+      "secid": "0.000951",
+      "points": 28
+    },
+    "000967": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000967.json",
+      "secid": "0.000967",
+      "points": 27
+    },
+    "000989": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/000989.json",
+      "secid": "0.000989",
+      "points": 27
+    },
+    "001309": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/001309.json",
+      "secid": "0.001309",
+      "points": 5
+    },
+    "001400": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/001400.json",
+      "secid": "0.001400",
+      "points": 2
+    },
+    "002015": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002015.json",
+      "secid": "0.002015",
+      "points": 22
+    },
+    "002038": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002038.json",
+      "secid": "0.002038",
+      "points": 23
+    },
+    "002051": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002051.json",
+      "secid": "0.002051",
+      "points": 21
+    },
+    "002082": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002082.json",
+      "secid": "0.002082",
+      "points": 21
+    },
+    "002083": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002083.json",
+      "secid": "0.002083",
+      "points": 21
+    },
+    "002135": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002135.json",
+      "secid": "0.002135",
+      "points": 20
+    },
+    "002192": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002192.json",
+      "secid": "0.002192",
+      "points": 20
+    },
+    "002263": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002263.json",
+      "secid": "0.002263",
+      "points": 19
+    },
+    "002269": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002269.json",
+      "secid": "0.002269",
+      "points": 19
+    },
+    "002294": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002294.json",
+      "secid": "0.002294",
+      "points": 18
+    },
+    "002307": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002307.json",
+      "secid": "0.002307",
+      "points": 18
+    },
+    "002309": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002309.json",
+      "secid": "0.002309",
+      "points": 18
+    },
+    "002323": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002323.json",
+      "secid": "0.002323",
+      "points": 18
+    },
+    "002328": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002328.json",
+      "secid": "0.002328",
+      "points": 18
+    },
+    "002361": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002361.json",
+      "secid": "0.002361",
+      "points": 17
+    },
+    "002408": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002408.json",
+      "secid": "0.002408",
+      "points": 17
+    },
+    "002422": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002422.json",
+      "secid": "0.002422",
+      "points": 17
+    },
+    "002432": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002432.json",
+      "secid": "0.002432",
+      "points": 17
+    },
+    "002558": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002558.json",
+      "secid": "0.002558",
+      "points": 16
+    },
+    "002560": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002560.json",
+      "secid": "0.002560",
+      "points": 16
+    },
+    "002575": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002575.json",
+      "secid": "0.002575",
+      "points": 16
+    },
+    "002578": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002578.json",
+      "secid": "0.002578",
+      "points": 16
+    },
+    "002579": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002579.json",
+      "secid": "0.002579",
+      "points": 16
+    },
+    "002580": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002580.json",
+      "secid": "0.002580",
+      "points": 16
+    },
+    "002624": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002624.json",
+      "secid": "0.002624",
+      "points": 16
+    },
+    "002634": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002634.json",
+      "secid": "0.002634",
+      "points": 16
+    },
+    "002636": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002636.json",
+      "secid": "0.002636",
+      "points": 16
+    },
+    "002639": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002639.json",
+      "secid": "0.002639",
+      "points": 16
+    },
+    "002645": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002645.json",
+      "secid": "0.002645",
+      "points": 16
+    },
+    "002705": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002705.json",
+      "secid": "0.002705",
+      "points": 13
+    },
+    "002729": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002729.json",
+      "secid": "0.002729",
+      "points": 13
+    },
+    "002730": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002730.json",
+      "secid": "0.002730",
+      "points": 13
+    },
+    "002771": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002771.json",
+      "secid": "0.002771",
+      "points": 12
+    },
+    "002810": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002810.json",
+      "secid": "0.002810",
+      "points": 11
+    },
+    "002821": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002821.json",
+      "secid": "0.002821",
+      "points": 11
+    },
+    "002902": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002902.json",
+      "secid": "0.002902",
+      "points": 10
+    },
+    "002923": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002923.json",
+      "secid": "0.002923",
+      "points": 9
+    },
+    "002940": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002940.json",
+      "secid": "0.002940",
+      "points": 9
+    },
+    "002966": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002966.json",
+      "secid": "0.002966",
+      "points": 8
+    },
+    "002980": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002980.json",
+      "secid": "0.002980",
+      "points": 7
+    },
+    "002990": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002990.json",
+      "secid": "0.002990",
+      "points": 7
+    },
+    "002995": {
+      "engine": "aws",
+      "region": "ap-northeast-3",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/002995.json",
+      "secid": "0.002995",
+      "points": 7
+    },
+    "003018": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/003018.json",
+      "secid": "0.003018",
+      "points": 7
+    },
+    "003042": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/003042.json",
+      "secid": "0.003042",
       "points": 6
+    },
+    "003816": {
+      "engine": "aws",
+      "region": "ap-northeast-2",
+      "status": "success",
+      "file": "/root/x/data/kline/yearly/003816.json",
+      "secid": "0.003816",
+      "points": 8
     }
   }
 }

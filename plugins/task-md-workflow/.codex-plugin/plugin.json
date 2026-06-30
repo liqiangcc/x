@@ -1,0 +1,42 @@
+{
+  "name": "task-md-workflow",
+  "version": "0.1.0",
+  "description": "Create and execute resumable Markdown task plans with unique task IDs and per-subtask commits.",
+  "author": {
+    "name": "Local Project",
+    "email": "local@example.com",
+    "url": "https://example.local"
+  },
+  "homepage": "https://example.local/task-md-workflow",
+  "repository": "https://example.local/task-md-workflow",
+  "license": "MIT",
+  "keywords": [
+    "tasks",
+    "skills",
+    "markdown",
+    "workflow",
+    "git"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Task MD Workflow",
+    "shortDescription": "Plan and execute resumable Markdown tasks",
+    "longDescription": "Project-local Codex plugin that provides skills for turning goals into resumable Markdown task files and executing those tasks by ID with a git commit after each completed subtask.",
+    "developerName": "Local Project",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://example.local/task-md-workflow",
+    "privacyPolicyURL": "https://example.local/privacy",
+    "termsOfServiceURL": "https://example.local/terms",
+    "defaultPrompt": [
+      "Create a task md for this goal",
+      "Execute this task ID",
+      "Resume the next pending subtask"
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

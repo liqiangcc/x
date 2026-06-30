@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Task MD"
+  short_description: "Create resumable task Markdown"
+  default_prompt: "Use $plan-task-md to turn a question or goal into a resumable task Markdown file with unique task and subtask IDs."

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Query Limit-Up Stocks"
+  short_description: "Query zt stocks by trading date"
+  default_prompt: "Use $query-limit-up-stocks to list the limit-up stocks for a given trading date from local pool data."
+
+policy:
+  allow_implicit_invocation: true

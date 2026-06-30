@@ -1,31 +1,84 @@
 {
-  "requested_date": "20260326",
-  "range_days": 1,
+  "requested_date": "20260402",
+  "range_days": 2,
   "engine": "curl",
   "stats": {
-    "success": 0,
-    "failed": 4,
+    "success": 8,
+    "failed": 0,
     "skipped_dates": 0
   },
   "dates": {
-    "20260326": {
+    "20260401": {
       "status": "completed",
       "pools": {
         "dt": {
-          "status": "failed",
-          "error": "Command failed: node /root/x/fetch/fetch_pool.js dt 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260401/dt.json",
+          "qdate": 20260402,
+          "count": 6,
+          "rc": 0
         },
         "qs": {
-          "status": "failed",
-          "error": "Command failed: node /root/x/fetch/fetch_pool.js qs 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260401/qs.json",
+          "qdate": 20260402,
+          "count": 125,
+          "rc": 0
         },
         "zb": {
-          "status": "failed",
-          "error": "Command failed: node /root/x/fetch/fetch_pool.js zb 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260401/zb.json",
+          "qdate": 20260402,
+          "count": 38,
+          "rc": 0
         },
         "zt": {
-          "status": "failed",
-          "error": "Command failed: node /root/x/fetch/fetch_pool.js zt 20260326 --engine node --json\nNode HTTP request failed: Client network socket disconnected before secure TLS connection was established\n"
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260401/zt.json",
+          "qdate": 20260402,
+          "count": 56,
+          "rc": 0
+        }
+      }
+    },
+    "20260402": {
+      "status": "completed",
+      "pools": {
+        "dt": {
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260402/dt.json",
+          "qdate": 20260402,
+          "count": 5,
+          "rc": 0
+        },
+        "qs": {
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260402/qs.json",
+          "qdate": 20260402,
+          "count": 116,
+          "rc": 0
+        },
+        "zb": {
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260402/zb.json",
+          "qdate": 20260402,
+          "count": 18,
+          "rc": 0
+        },
+        "zt": {
+          "status": "success",
+          "engine_used": "curl",
+          "file": "/root/x/data/pool/20260402/zt.json",
+          "qdate": 20260402,
+          "count": 28,
+          "rc": 0
         }
       }
     }
