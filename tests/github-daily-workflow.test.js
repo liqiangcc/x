@@ -13,11 +13,16 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "aws",
     "--universe",
     "market",
-    "--force",
     "--commit",
     "--allow-partial",
     "--concurrency",
-    "25",
+    "1",
+    "--retry-attempts",
+    "3",
+    "--retry-concurrency",
+    "1",
+    "--batch-size",
+    "500",
     "--min-success-rate",
     "0.95",
     "--latest",
@@ -32,6 +37,7 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       LIMIT_INPUT: "25",
       ENGINE_INPUT: "local",
       UNIVERSE_INPUT: "pool",
+      FORCE_INPUT: "true",
     }),
     [
       "daily",
@@ -41,13 +47,19 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       "local",
       "--universe",
       "pool",
-      "--force",
       "--commit",
       "--allow-partial",
       "--concurrency",
       "4",
+      "--retry-attempts",
+      "0",
+      "--retry-concurrency",
+      "1",
+      "--batch-size",
+      "200",
       "--min-success-rate",
       "0.95",
+      "--force",
       "--limit",
       "25",
       "--date",
@@ -58,4 +70,13 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
 
 test("buildDailyArgs omits empty workflow limit", () => {
   assert.equal(buildDailyArgs({ LIMIT_INPUT: "" }).includes("--limit"), false);
+});
+
+test("buildDailyArgs uses conservative yearly AWS defaults", () => {
+  const args = buildDailyArgs({ PERIOD_INPUT: "yearly", ENGINE_INPUT: "aws" });
+
+  assert.equal(args[args.indexOf("--concurrency") + 1], "1");
+  assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");
+  assert.equal(args[args.indexOf("--retry-concurrency") + 1], "1");
+  assert.equal(args[args.indexOf("--batch-size") + 1], "200");
 });

@@ -50,6 +50,8 @@ bin/x daily --latest --limit 10 --period daily
 
 `daily` 默认使用沪深 A 股全市场 universe；不传 `--limit` 时会同步全市场股票 kline。需要回到旧的热点 pool 输入时，显式加 `--universe pool`。
 
+GitHub Action 以稳定优先：默认 kline 并发为 1，按缺失文件分批处理；已有 kline 文件会跳过，手动传 `force=true` 才会覆盖刷新。
+
 指定日期：
 
 ```bash
@@ -91,6 +93,8 @@ Kline：
 ```bash
 bin/x kline fetch 000020 --period daily --engine local
 bin/x kline sync data/universe/20260325 --period daily --limit 10
+bin/x kline sync data/universe/20260325 --period daily --batch-size 500 --concurrency 1 --retry-attempts 3 --retry-concurrency 1
+bin/x kline retry data/kline/daily/summary.daily.json --period daily --engine aws
 bin/x kline sync data/pool/20260325 --period daily --limit 10
 bin/x kline validate data/kline --period daily --json
 ```
@@ -166,11 +170,14 @@ bin/x kline validate data/kline --period daily --json
 Daily Action 使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
 
 默认配置不传 `limit`，会先生成 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单，再通过 AWS 同步全部 kline。手动触发时可用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
+Action job 显式设置 `timeout-minutes: 360`，这是 GitHub-hosted runner 单 job 的 6 小时上限。默认不强制刷新已有 kline，而是按下一批缺失代码续跑。
 
 - 必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
 - 可选 variable：`AWS_REGION`，默认 `ap-northeast-1`
 - IAM 最小权限：允许调用 `config/kline.json` 中配置的 Lambda，默认函数名 `kline`
 - 批量 AWS kline 会按代码索引轮询起始 region，并在失败时继续 fallback 到其余 region。
+- 批量失败后会对 transient 网络错误串行重试；仍失败时可用 `bin/x kline retry <summary.json|failures.json>` 只重跑失败项。
+- 默认 Action 参数：daily `batch_size=500`、yearly `batch_size=200`、`concurrency=1`、`retry_concurrency=1`；yearly 建议手动分批运行。
 - 当前可轮询 region：`ap-northeast-1`, `ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-southeast-1`, `ap-southeast-2`, `ca-central-1`, `eu-central-1`, `eu-north-1`, `eu-west-1`, `eu-west-2`, `eu-west-3`, `sa-east-1`, `us-east-1`, `us-east-2`, `us-west-1`, `us-west-2`。
 
 不要把验证生成的数据、报告或运行记录混入代码提交，除非本次提交目标就是数据刷新。

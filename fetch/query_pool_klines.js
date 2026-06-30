@@ -12,8 +12,15 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--force] [--concurrency <N>] [--min-success-rate <0..1>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
   );
+}
+
+function parseNonNegativeInteger(value, flagName) {
+  if (!value || !/^\d+$/.test(value)) {
+    throw new Error(`Invalid value for ${flagName}: ${value ?? ""}`);
+  }
+  return Number(value);
 }
 
 function parsePositiveInteger(value, flagName) {
@@ -32,12 +39,13 @@ function parseSuccessRate(value) {
 }
 
 function defaultConcurrency(engine) {
-  return engine === "local" ? 4 : 25;
+  return engine === "local" ? 4 : 1;
 }
 
 function parseArguments(argv) {
   const options = {
     awsRegions: null,
+    batchSize: null,
     concurrency: null,
     configFile: null,
     engine: "auto",
@@ -46,8 +54,12 @@ function parseArguments(argv) {
     lambdaName: "kline",
     limit: null,
     minSuccessRate: null,
+    offset: 0,
     outputDir: path.resolve("data/kline"),
     period: "daily",
+    retryAttempts: 0,
+    retryConcurrency: null,
+    retryDelayMs: 1000,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -120,9 +132,44 @@ function parseArguments(argv) {
       continue;
     }
 
+    if (arg === "--batch-size") {
+      const nextArg = argv[index + 1];
+      options.batchSize = parsePositiveInteger(nextArg, "--batch-size");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--offset") {
+      const nextArg = argv[index + 1];
+      options.offset = parseNonNegativeInteger(nextArg, "--offset");
+      index += 1;
+      continue;
+    }
+
     if (arg === "--concurrency") {
       const nextArg = argv[index + 1];
       options.concurrency = parsePositiveInteger(nextArg, "--concurrency");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--retry-attempts") {
+      const nextArg = argv[index + 1];
+      options.retryAttempts = parseNonNegativeInteger(nextArg, "--retry-attempts");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--retry-delay-ms") {
+      const nextArg = argv[index + 1];
+      options.retryDelayMs = parseNonNegativeInteger(nextArg, "--retry-delay-ms");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--retry-concurrency") {
+      const nextArg = argv[index + 1];
+      options.retryConcurrency = parsePositiveInteger(nextArg, "--retry-concurrency");
       index += 1;
       continue;
     }
@@ -154,6 +201,9 @@ function parseArguments(argv) {
 
   if (options.concurrency === null) {
     options.concurrency = defaultConcurrency(options.engine);
+  }
+  if (options.retryConcurrency === null) {
+    options.retryConcurrency = 1;
   }
 
   return options;
@@ -259,6 +309,54 @@ function getLegacyOutputPath(outputDir, period, code) {
   return path.join(outputDir, period, `${code}.json`);
 }
 
+async function hasShardedOutput(outputDir, period, code) {
+  try {
+    await fs.access(getOutputPath(outputDir, period, code));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function codeNeedsProcessing(inputCode, options) {
+  if (options.force) {
+    return true;
+  }
+
+  try {
+    const code = extractStockCode(inputCode);
+    return !(await hasShardedOutput(options.outputDir, options.period, code));
+  } catch {
+    return true;
+  }
+}
+
+async function selectCodes(codes, options) {
+  let candidates = codes;
+  let selectionMode = "all";
+
+  if (options.batchSize && !options.limit && !options.force) {
+    candidates = [];
+    for (const code of codes) {
+      if (await codeNeedsProcessing(code, options)) {
+        candidates.push(code);
+      }
+    }
+    selectionMode = "next_missing";
+  }
+
+  const offsetCodes = candidates.slice(options.offset);
+  const size = options.limit ?? options.batchSize ?? null;
+  const selectedCodes = size ? offsetCodes.slice(0, size) : offsetCodes;
+
+  return {
+    availableCodes: codes.length,
+    candidateCodes: candidates.length,
+    selectedCodes,
+    selectionMode,
+  };
+}
+
 function normalizeKlinePayload(payload, code, secid, period) {
   const klines = Array.isArray(payload?.klines)
     ? payload.klines
@@ -321,6 +419,12 @@ async function mapWithConcurrency(items, concurrency, mapper) {
   return results;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function incrementCount(counts, key) {
   if (!key) {
     return;
@@ -328,25 +432,60 @@ function incrementCount(counts, key) {
   counts[key] = (counts[key] ?? 0) + 1;
 }
 
-function createSummary(options, selectedCodes) {
+function classifyFailure(error) {
+  const message = String(error?.message ?? error ?? "");
+  if (/Unable to infer (market|secid)|Invalid/.test(message)) {
+    return "invalid_code";
+  }
+  if (/statusCode 429|Too Many Requests|rate.?limit/i.test(message)) {
+    return "rate_limited";
+  }
+  if (
+    /Lambda returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
+  ) {
+    return "transient_network";
+  }
+  return "unknown";
+}
+
+function isRetriableFailure(errorClass) {
+  return ["rate_limited", "transient_network"].includes(errorClass);
+}
+
+function createSummary(options, selection) {
   return {
     aws_regions: options.awsRegions,
     aws_region_strategy: options.engine === "local" ? "none" : "round_robin_start_index",
+    available_codes: selection.availableCodes,
+    batch_size: options.batchSize,
+    candidate_codes: selection.candidateCodes,
     concurrency: options.concurrency,
     engine: options.engine,
     force: options.force,
     input_path: options.inputPath,
     lambda_name: options.lambdaName,
     min_success_rate: options.minSuccessRate,
+    offset: options.offset,
     period: options.period,
-    total_codes: selectedCodes.length,
+    retry_attempts: options.retryAttempts,
+    retry_concurrency: options.retryConcurrency,
+    retry_delay_ms: options.retryDelayMs,
+    selection_mode: selection.selectionMode,
+    total_codes: selection.selectedCodes.length,
     success: 0,
     migrated_existing: 0,
     skipped_existing: 0,
     failed: 0,
-    success_rate: selectedCodes.length === 0 ? 1 : 0,
+    initial_failed: 0,
+    retried: 0,
+    retry_success: 0,
+    retry_failed: 0,
+    success_rate: selection.selectedCodes.length === 0 ? 1 : 0,
+    attempts_by_code: {},
     engine_counts: {},
+    failure_reason_counts: {},
     region_counts: {},
+    retriable_failure_counts: {},
     failure_reasons: [],
     status: "completed",
     files: {},
@@ -370,6 +509,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
     secid = inferSecid(inputCode);
     code = extractStockCode(inputCode);
   } catch (error) {
+    const errorClass = classifyFailure(error);
     return {
       code: inputCode,
       countKey: "failed",
@@ -377,6 +517,8 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         status: "failed",
         secid: null,
         error: error.message,
+        error_class: errorClass,
+        retriable: isRetriableFailure(errorClass),
       },
     };
   }
@@ -436,6 +578,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
       },
     };
   } catch (error) {
+    const errorClass = classifyFailure(error);
     return {
       code,
       countKey: "failed",
@@ -443,8 +586,42 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         status: "failed",
         secid,
         error: error.message,
+        error_class: errorClass,
+        retriable: isRetriableFailure(errorClass),
       },
     };
+  }
+}
+
+function addAttempt(summary, result, attempt) {
+  summary.attempts_by_code[result.code] = (summary.attempts_by_code[result.code] ?? 0) + 1;
+  result.file.attempts = summary.attempts_by_code[result.code];
+  result.file.last_attempt = attempt;
+  if (result.countKey === "failed" && result.file.retriable) {
+    incrementCount(summary.retriable_failure_counts, result.file.error_class);
+  }
+}
+
+function summarizeFinalResults(summary, results) {
+  summary.success = 0;
+  summary.migrated_existing = 0;
+  summary.skipped_existing = 0;
+  summary.failed = 0;
+  summary.engine_counts = {};
+  summary.region_counts = {};
+  summary.failure_reason_counts = {};
+  summary.files = {};
+
+  for (const result of results) {
+    summary.files[result.code] = result.file;
+    summary[result.countKey] += 1;
+    if (result.countKey === "success") {
+      incrementCount(summary.engine_counts, result.file.engine);
+      incrementCount(summary.region_counts, result.file.region);
+    }
+    if (result.countKey === "failed") {
+      incrementCount(summary.failure_reason_counts, result.file.error_class ?? "unknown");
+    }
   }
 }
 
@@ -463,6 +640,7 @@ function finalizeSummary(summary, options) {
     options.minSuccessRate !== null &&
     options.engine === "aws" &&
     summary.total_codes > 0 &&
+    summary.success + summary.failed > 0 &&
     (summary.engine_counts.aws ?? 0) === 0
   ) {
     summary.failure_reasons.push("aws_success_zero");
@@ -480,6 +658,7 @@ function finalizeSummary(summary, options) {
 async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   const effectiveOptions = {
     awsRegions: options.awsRegions ?? null,
+    batchSize: options.batchSize ?? null,
     concurrency: options.concurrency ?? defaultConcurrency(options.engine ?? "auto"),
     configFile: options.configFile ?? null,
     engine: options.engine ?? "auto",
@@ -488,27 +667,75 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     lambdaName: options.lambdaName ?? "kline",
     limit: options.limit ?? null,
     minSuccessRate: options.minSuccessRate ?? null,
+    offset: options.offset ?? 0,
     outputDir: options.outputDir ?? path.resolve("data/kline"),
     period: options.period ?? "daily",
+    retryAttempts: options.retryAttempts ?? 0,
+    retryConcurrency: options.retryConcurrency ?? 1,
+    retryDelayMs: options.retryDelayMs ?? 1000,
   };
   const codes = await loadCodes(effectiveOptions.inputPath);
-  const selectedCodes = effectiveOptions.limit ? codes.slice(0, effectiveOptions.limit) : codes;
+  const selection = await selectCodes(codes, effectiveOptions);
+  const selectedCodes = selection.selectedCodes;
   const periodDir = path.join(effectiveOptions.outputDir, effectiveOptions.period);
   await fs.mkdir(periodDir, { recursive: true });
 
-  const summary = createSummary(effectiveOptions, selectedCodes);
-  const results = await mapWithConcurrency(selectedCodes, effectiveOptions.concurrency, (inputCode, itemIndex) =>
-    processCode(inputCode, effectiveOptions, fetchKline, itemIndex)
+  const summary = createSummary(effectiveOptions, selection);
+  const selectedEntries = selectedCodes.map((inputCode, itemIndex) => ({ inputCode, itemIndex }));
+  const initialResults = await mapWithConcurrency(selectedEntries, effectiveOptions.concurrency, (entry) =>
+    processCode(entry.inputCode, effectiveOptions, fetchKline, entry.itemIndex)
   );
 
-  for (const result of results) {
-    summary.files[result.code] = result.file;
-    summary[result.countKey] += 1;
-    if (result.countKey === "success") {
-      incrementCount(summary.engine_counts, result.file.engine);
-      incrementCount(summary.region_counts, result.file.region);
+  const finalResults = new Map();
+  let retryEntries = [];
+  for (const result of initialResults) {
+    addAttempt(summary, result, 0);
+    finalResults.set(result.code, result);
+    if (result.countKey === "failed") {
+      summary.initial_failed += 1;
+      if (result.file.retriable) {
+        const entry = selectedEntries.find((item) => item.inputCode === result.code || extractStockCode(item.inputCode) === result.code);
+        if (entry) {
+          retryEntries.push(entry);
+        }
+      }
     }
   }
+  const retriedCodes = new Set(retryEntries.map((entry) => extractStockCode(entry.inputCode)));
+
+  for (let attempt = 1; attempt <= effectiveOptions.retryAttempts && retryEntries.length > 0; attempt += 1) {
+    await delay(effectiveOptions.retryDelayMs * (2 ** (attempt - 1)));
+    const currentRetryEntries = retryEntries;
+    const retryResults = await mapWithConcurrency(
+      currentRetryEntries,
+      effectiveOptions.retryConcurrency,
+      (entry, retryIndex) =>
+        processCode(
+          entry.inputCode,
+          effectiveOptions,
+          fetchKline,
+          entry.itemIndex + selectedEntries.length * attempt + retryIndex
+        )
+    );
+
+    retryEntries = [];
+    for (const result of retryResults) {
+      addAttempt(summary, result, attempt);
+      finalResults.set(result.code, result);
+      if (result.countKey === "failed" && result.file.retriable) {
+        const entry = currentRetryEntries.find((item) => item.inputCode === result.code || extractStockCode(item.inputCode) === result.code);
+        if (entry) {
+          retryEntries.push(entry);
+        }
+      }
+    }
+  }
+
+  const finalValues = [...finalResults.values()];
+  summarizeFinalResults(summary, finalValues);
+  summary.retried = retriedCodes.size;
+  summary.retry_success = [...retriedCodes].filter((code) => finalResults.get(code)?.countKey !== "failed").length;
+  summary.retry_failed = [...retriedCodes].filter((code) => finalResults.get(code)?.countKey === "failed").length;
 
   finalizeSummary(summary, effectiveOptions);
 

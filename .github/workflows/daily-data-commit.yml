@@ -19,6 +19,27 @@ on:
         description: "Maximum number of codes to sync."
         required: false
         default: ""
+      batch_size:
+        description: "Maximum missing codes to process in this run. Empty uses stable defaults."
+        required: false
+        default: ""
+      concurrency:
+        description: "Kline fetch concurrency. Empty uses stable defaults."
+        required: false
+        default: ""
+      retry_attempts:
+        description: "Retry attempts for transient kline failures. Empty uses stable defaults."
+        required: false
+        default: ""
+      retry_concurrency:
+        description: "Retry concurrency. Empty uses stable defaults."
+        required: false
+        default: ""
+      force:
+        description: "Force refresh existing kline files."
+        required: false
+        default: false
+        type: boolean
       universe:
         description: "Code universe for kline sync."
         required: false
@@ -49,6 +70,7 @@ concurrency:
 jobs:
   daily:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,6 +107,11 @@ jobs:
           DATE_INPUT: ${{ github.event.inputs.date }}
           PERIOD_INPUT: ${{ github.event.inputs.period }}
           LIMIT_INPUT: ${{ github.event.inputs.limit }}
+          BATCH_SIZE_INPUT: ${{ github.event.inputs.batch_size }}
+          CONCURRENCY_INPUT: ${{ github.event.inputs.concurrency }}
+          RETRY_ATTEMPTS_INPUT: ${{ github.event.inputs.retry_attempts }}
+          RETRY_CONCURRENCY_INPUT: ${{ github.event.inputs.retry_concurrency }}
+          FORCE_INPUT: ${{ github.event.inputs.force }}
           UNIVERSE_INPUT: ${{ github.event.inputs.universe }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
         run: node scripts/github-daily-workflow.js

@@ -138,6 +138,93 @@ test("queryPoolKlines force refreshes existing output files", async (t) => {
   assert.equal(summary.files["600004"].status, "success");
 });
 
+test("queryPoolKlines retries transient failures serially", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001", "600002"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+    "--concurrency",
+    "2",
+    "--retry-attempts",
+    "1",
+    "--retry-delay-ms",
+    "0",
+    "--retry-concurrency",
+    "1",
+  ]);
+  const attempts = {};
+  const regionStartIndexes = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    attempts[secid] = (attempts[secid] ?? 0) + 1;
+    regionStartIndexes.push(fetchOptions.awsRegionStartIndex);
+    if (secid === "1.600001" && attempts[secid] === 1) {
+      throw new Error("UND_ERR_SOCKET fetch failed");
+    }
+    return klinePayload(secid.split(".")[1], "aws", "ap-northeast-1");
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(attempts["1.600001"], 2);
+  assert.equal(attempts["1.600002"], 1);
+  assert.deepEqual(regionStartIndexes.sort((left, right) => left - right), [0, 1, 2]);
+  assert.equal(summary.initial_failed, 1);
+  assert.equal(summary.retried, 1);
+  assert.equal(summary.retry_success, 1);
+  assert.equal(summary.retry_failed, 0);
+  assert.deepEqual(summary.retriable_failure_counts, { transient_network: 1 });
+  assert.equal(summary.attempts_by_code["600001"], 2);
+  assert.equal(summary.files["600001"].status, "success");
+  assert.deepEqual(summary.failure_reasons, []);
+});
+
+test("queryPoolKlines batch-size selects the next missing codes", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001", "600002", "600003"]);
+
+  const existingPath = path.join(outputDir, "daily", "600", "600001.json");
+  await fs.mkdir(path.dirname(existingPath), { recursive: true });
+  await fs.writeFile(
+    existingPath,
+    `${JSON.stringify({ code: "600001", market: 1, period: "daily", klines: [] }, null, 2)}\n`,
+    "utf8"
+  );
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+    "--batch-size",
+    "1",
+  ]);
+  const requested = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid) => {
+    requested.push(secid);
+    return klinePayload(secid.split(".")[1], "aws", "ap-northeast-1");
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(requested, ["1.600002"]);
+  assert.equal(summary.available_codes, 3);
+  assert.equal(summary.candidate_codes, 2);
+  assert.equal(summary.total_codes, 1);
+  assert.equal(summary.selection_mode, "next_missing");
+});
+
 test("queryPoolKlines enforces min success rate", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -191,19 +278,11 @@ test("queryPoolKlines enforces min success rate", async (t) => {
   ]);
 });
 
-test("queryPoolKlines fails AWS min-rate runs with zero AWS successes", async (t) => {
+test("queryPoolKlines fails AWS min-rate runs with zero AWS fetch successes", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
   const outputDir = path.join(dir, "kline");
   await writeCodes(inputPath, ["600001"]);
-
-  const existingPath = path.join(outputDir, "daily", "600", "600001.json");
-  await fs.mkdir(path.dirname(existingPath), { recursive: true });
-  await fs.writeFile(
-    existingPath,
-    `${JSON.stringify({ code: "600001", market: 1, period: "daily", klines: [] }, null, 2)}\n`,
-    "utf8"
-  );
 
   const options = parseArguments([
     inputPath,
@@ -217,12 +296,13 @@ test("queryPoolKlines fails AWS min-rate runs with zero AWS successes", async (t
     "0",
   ]);
   const { exitCode, summary } = await queryPoolKlines(options, async () => {
-    throw new Error("should not fetch skipped files");
+    throw new Error("UND_ERR_SOCKET fetch failed");
   });
 
   assert.equal(exitCode, 1);
-  assert.equal(summary.failed, 0);
+  assert.equal(summary.failed, 1);
   assert.equal(summary.success, 0);
   assert.equal(summary.status, "failed_aws_unavailable");
-  assert.deepEqual(summary.failure_reasons, ["aws_success_zero"]);
+  assert.deepEqual(summary.failure_reasons, ["failed_items", "aws_success_zero"]);
+  assert.deepEqual(summary.failure_reason_counts, { transient_network: 1 });
 });

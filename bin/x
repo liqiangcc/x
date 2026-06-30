@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require("node:fs/promises");
+const os = require("node:os");
 const path = require("node:path");
 const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
@@ -43,9 +44,10 @@ function printUsage() {
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
   x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws] [--aws-region r1,r2] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -455,6 +457,48 @@ async function commandKlineFetch(argv) {
   process.stderr.write(stderr);
 }
 
+function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {}) {
+  if (options.limit) {
+    args.push("--limit", String(options.limit));
+  }
+  if (options.batchSize) {
+    args.push("--batch-size", String(options.batchSize));
+  }
+  if (options.offset) {
+    args.push("--offset", String(options.offset));
+  }
+  if (includeOutputDir && options.outputDir) {
+    args.push("--output-dir", options.outputDir);
+  }
+  if (options.force) {
+    args.push("--force");
+  }
+  if (options.concurrency) {
+    args.push("--concurrency", String(options.concurrency));
+  }
+  if (options.retryAttempts) {
+    args.push("--retry-attempts", String(options.retryAttempts));
+  }
+  if (options.retryDelayMs) {
+    args.push("--retry-delay-ms", String(options.retryDelayMs));
+  }
+  if (options.retryConcurrency) {
+    args.push("--retry-concurrency", String(options.retryConcurrency));
+  }
+  if (options.awsRegion) {
+    args.push("--aws-region", options.awsRegion);
+  }
+  if (options.lambdaName) {
+    args.push("--lambda-name", options.lambdaName);
+  }
+  if (options.config) {
+    args.push("--config", options.config);
+  }
+  if (options.minSuccessRate) {
+    args.push("--min-success-rate", String(options.minSuccessRate));
+  }
+}
+
 async function commandPoolPull(argv) {
   const options = parseOptions(argv, { engine: "curl", outputDir: "data/pool" });
   const args = [];
@@ -532,33 +576,92 @@ async function commandKlineSync(argv) {
   }
 
   const args = [inputPath, "--period", options.period, "--engine", options.engine];
-  if (options.limit) {
-    args.push("--limit", String(options.limit));
-  }
-  if (options.outputDir) {
-    args.push("--output-dir", options.outputDir);
-  }
-  if (options.force) {
-    args.push("--force");
-  }
-  if (options.concurrency) {
-    args.push("--concurrency", String(options.concurrency));
-  }
-  if (options.awsRegion) {
-    args.push("--aws-region", options.awsRegion);
-  }
-  if (options.lambdaName) {
-    args.push("--lambda-name", options.lambdaName);
-  }
-  if (options.config) {
-    args.push("--config", options.config);
-  }
-  if (options.minSuccessRate) {
-    args.push("--min-success-rate", String(options.minSuccessRate));
-  }
+  appendKlineSyncOptions(args, options);
   const { stdout, stderr } = await runNode("fetch/query_pool_klines.js", args);
   process.stdout.write(stdout);
   process.stderr.write(stderr);
+}
+
+function extractRetryCodes(payload) {
+  if (Array.isArray(payload?.codes)) {
+    return [...new Set(payload.codes.map(String).filter(Boolean))].sort();
+  }
+
+  if (payload?.files && typeof payload.files === "object") {
+    return Object.entries(payload.files)
+      .filter(([, item]) => item?.status === "failed")
+      .map(([code, item]) => item?.code ?? code)
+      .filter(Boolean)
+      .sort();
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return [...new Set(payload.items
+      .map((item) => item?.code ?? item?.target)
+      .filter(Boolean)
+      .map((value) => String(value).includes(".") ? String(value).split(".")[1] : String(value))
+    )].sort();
+  }
+
+  return [];
+}
+
+function inferKlineOutputDirFromSummary(summaryPath, period) {
+  const resolved = path.resolve(summaryPath);
+  if (path.basename(resolved) === `summary.${period}.json`) {
+    return path.dirname(path.dirname(resolved));
+  }
+  return "data/kline";
+}
+
+async function commandKlineRetry(argv) {
+  const options = parseOptions(argv, { engine: "aws" });
+  const inputPath = options._[0];
+  if (!inputPath) {
+    throw new Error("kline retry requires <summary.json|failures.json>");
+  }
+
+  const payload = await readJson(path.resolve(inputPath));
+  const codes = extractRetryCodes(payload);
+  if (codes.length === 0) {
+    throw new Error("No failed kline codes found to retry.");
+  }
+
+  const itemPeriod = Array.isArray(payload?.items)
+    ? payload.items.find((item) => item?.period)?.period
+    : null;
+  const period = options.period ?? payload.period ?? itemPeriod ?? "daily";
+  const outputDir = options.outputDir ?? inferKlineOutputDirFromSummary(inputPath, period);
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "x-kline-retry-"));
+  const codesPath = path.join(tempDir, "codes.json");
+  await writeJson(codesPath, { codes });
+
+  const args = [
+    codesPath,
+    "--period",
+    period,
+    "--engine",
+    options.engine,
+    "--output-dir",
+    outputDir,
+  ];
+  appendKlineSyncOptions(args, {
+    ...options,
+    concurrency: options.concurrency ?? 1,
+    limit: null,
+    outputDir: null,
+    period,
+    retryAttempts: options.retryAttempts ?? 3,
+    retryConcurrency: options.retryConcurrency ?? 1,
+  }, { includeOutputDir: false });
+
+  const result = await runNodeAllowFailure("fetch/query_pool_klines.js", args);
+  process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
+  await fs.rm(tempDir, { recursive: true, force: true });
+  if (result.exitCode !== 0) {
+    process.exitCode = result.exitCode;
+  }
 }
 
 async function commandKlineValidate(argv) {
@@ -728,27 +831,7 @@ async function commandDaily(argv) {
   process.stderr.write(codesResult.stderr);
 
   const klineArgs = [rel(inputDir), "--period", options.period, "--engine", options.engine];
-  if (options.limit) {
-    klineArgs.push("--limit", String(options.limit));
-  }
-  if (options.force) {
-    klineArgs.push("--force");
-  }
-  if (options.concurrency) {
-    klineArgs.push("--concurrency", String(options.concurrency));
-  }
-  if (options.awsRegion) {
-    klineArgs.push("--aws-region", options.awsRegion);
-  }
-  if (options.lambdaName) {
-    klineArgs.push("--lambda-name", options.lambdaName);
-  }
-  if (options.config) {
-    klineArgs.push("--config", options.config);
-  }
-  if (options.minSuccessRate) {
-    klineArgs.push("--min-success-rate", String(options.minSuccessRate));
-  }
+  appendKlineSyncOptions(klineArgs, options, { includeOutputDir: false });
   const klineResult = await runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs);
   process.stdout.write(klineResult.stdout);
   process.stderr.write(klineResult.stderr);
@@ -817,8 +900,15 @@ async function commandDaily(argv) {
     success,
     skipped,
     failed,
+    batch_size: klineSummary.batch_size ?? null,
+    selection_mode: klineSummary.selection_mode ?? null,
+    initial_failed: klineSummary.initial_failed ?? 0,
+    retried: klineSummary.retried ?? 0,
+    retry_success: klineSummary.retry_success ?? 0,
+    retry_failed: klineSummary.retry_failed ?? 0,
     kline_success_rate: klineSummary.success_rate ?? null,
     kline_engine_counts: klineSummary.engine_counts ?? {},
+    kline_failure_reason_counts: klineSummary.failure_reason_counts ?? {},
     kline_region_counts: klineSummary.region_counts ?? {},
     kline_failure_reasons: klineFailureReasons,
     started_at: startedAt,
@@ -1180,8 +1270,15 @@ function commitMessage(run, quality) {
     `success: ${run.success}`,
     `failed: ${run.failed}`,
     `skipped: ${run.skipped}`,
+    `batch_size: ${run.batch_size ?? "n/a"}`,
+    `selection_mode: ${run.selection_mode ?? "n/a"}`,
+    `initial_failed: ${run.initial_failed ?? 0}`,
+    `retried: ${run.retried ?? 0}`,
+    `retry_success: ${run.retry_success ?? 0}`,
+    `retry_failed: ${run.retry_failed ?? 0}`,
     `success_rate: ${run.kline_success_rate ?? "n/a"}`,
     `engine_counts: ${JSON.stringify(run.kline_engine_counts ?? {})}`,
+    `failure_reason_counts: ${JSON.stringify(run.kline_failure_reason_counts ?? {})}`,
     `quality: ${qualityStatus}`,
   ].join("\n");
   return { title, body };
@@ -1198,8 +1295,15 @@ function printDailyRunSummary(run, quality, failures) {
       `skipped=${run.skipped}`,
       `universe=${run.universe ?? "pool"}`,
       `universe_total_codes=${run.universe_total_codes ?? "n/a"}`,
+      `batch_size=${run.batch_size ?? "n/a"}`,
+      `selection_mode=${run.selection_mode ?? "n/a"}`,
+      `initial_failed=${run.initial_failed ?? 0}`,
+      `retried=${run.retried ?? 0}`,
+      `retry_success=${run.retry_success ?? 0}`,
+      `retry_failed=${run.retry_failed ?? 0}`,
       `success_rate=${run.kline_success_rate ?? "n/a"}`,
       `engine_counts=${JSON.stringify(run.kline_engine_counts ?? {})}`,
+      `failure_reason_counts=${JSON.stringify(run.kline_failure_reason_counts ?? {})}`,
       `region_counts=${JSON.stringify(run.kline_region_counts ?? {})}`,
       `quality=${qualityStatus}`,
     ].join(" ")
@@ -1294,6 +1398,10 @@ async function main() {
   }
   if (command === "kline" && subcommand === "sync") {
     await commandKlineSync(rest);
+    return;
+  }
+  if (command === "kline" && subcommand === "retry") {
+    await commandKlineRetry(rest);
     return;
   }
   if (command === "kline" && subcommand === "fetch") {

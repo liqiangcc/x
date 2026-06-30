@@ -13,6 +13,10 @@ function valueOrDefault(value, fallback) {
   return normalized || fallback;
 }
 
+function isTruthy(value) {
+  return ["1", "true", "yes", "on"].includes(String(value ?? "").trim().toLowerCase());
+}
+
 function buildDailyArgs(env = process.env) {
   const period = valueOrDefault(env.PERIOD_INPUT, "daily");
   const limit = String(env.LIMIT_INPUT ?? "").trim();
@@ -20,8 +24,14 @@ function buildDailyArgs(env = process.env) {
   const universe = valueOrDefault(env.UNIVERSE_INPUT, "market");
   const concurrency = valueOrDefault(
     env.CONCURRENCY_INPUT,
-    engine === "local" ? "4" : "25"
+    engine === "local" ? "4" : "1"
   );
+  const retryAttempts = valueOrDefault(
+    env.RETRY_ATTEMPTS_INPUT,
+    engine === "aws" ? (period === "yearly" ? "5" : "3") : "0"
+  );
+  const retryConcurrency = valueOrDefault(env.RETRY_CONCURRENCY_INPUT, "1");
+  const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, period === "yearly" ? "200" : "500");
   const minSuccessRate = valueOrDefault(env.MIN_SUCCESS_RATE_INPUT, "0.95");
   const date = String(env.DATE_INPUT ?? "").trim();
   const args = [
@@ -32,14 +42,23 @@ function buildDailyArgs(env = process.env) {
     engine,
     "--universe",
     universe,
-    "--force",
     "--commit",
     "--allow-partial",
     "--concurrency",
     concurrency,
+    "--retry-attempts",
+    retryAttempts,
+    "--retry-concurrency",
+    retryConcurrency,
+    "--batch-size",
+    batchSize,
     "--min-success-rate",
     minSuccessRate,
   ];
+
+  if (isTruthy(env.FORCE_INPUT)) {
+    args.push("--force");
+  }
 
   if (limit) {
     args.push("--limit", limit);
@@ -122,7 +141,14 @@ async function writeGithubStepSummary(args) {
     `- success: ${summary.success}`,
     `- failed: ${summary.failed}`,
     `- skipped_existing: ${summary.skipped_existing}`,
+    `- batch_size: ${summary.batch_size}`,
+    `- selection_mode: ${summary.selection_mode}`,
+    `- initial_failed: ${summary.initial_failed}`,
+    `- retried: ${summary.retried}`,
+    `- retry_success: ${summary.retry_success}`,
+    `- retry_failed: ${summary.retry_failed}`,
     `- success_rate: ${summary.success_rate}`,
+    `- failure_reason_counts: ${formatCounts(summary.failure_reason_counts)}`,
     `- engine_counts: ${formatCounts(summary.engine_counts)}`,
     `- region_counts: ${formatCounts(summary.region_counts)}`,
     `- aws_successes: ${awsSuccesses}`,
