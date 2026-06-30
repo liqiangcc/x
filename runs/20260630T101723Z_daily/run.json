@@ -1,0 +1,29 @@
+{
+  "run_id": "20260630T101723Z_daily",
+  "type": "daily",
+  "date": "20260630",
+  "period": "daily",
+  "engine": "local",
+  "input": "data/pool/20260630/codes.json",
+  "status": "completed_with_failures",
+  "total": 1,
+  "success": 0,
+  "skipped": 0,
+  "failed": 1,
+  "started_at": "2026-06-30T10:14:30Z",
+  "finished_at": "2026-06-30T10:17:39Z",
+  "artifacts": {
+    "pool_dir": "data/pool/20260630",
+    "kline_dir": "data/kline/daily",
+    "kline_summary": "data/kline/daily/summary.daily.json",
+    "run": "runs/20260630T101723Z_daily/run.json",
+    "failures": "runs/20260630T101723Z_daily/failures.json",
+    "quality": "runs/20260630T101723Z_daily/quality.json"
+  },
+  "commands": {
+    "pool_exit_code": 0,
+    "codes_exit_code": 0,
+    "kline_exit_code": 1,
+    "quality_exit_code": 0
+  }
+}

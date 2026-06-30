@@ -1,83 +1,46 @@
 {
-  "requested_date": "20260402",
-  "range_days": 2,
+  "requested_date": "20260630",
+  "range_days": 1,
   "engine": "curl",
   "stats": {
-    "success": 8,
+    "success": 4,
     "failed": 0,
     "skipped_dates": 0
   },
   "dates": {
-    "20260401": {
+    "20260630": {
       "status": "completed",
       "pools": {
         "dt": {
           "status": "success",
           "engine_used": "curl",
-          "file": "/root/x/data/pool/20260401/dt.json",
-          "qdate": 20260402,
-          "count": 6,
-          "rc": 0
-        },
-        "qs": {
-          "status": "success",
-          "engine_used": "curl",
-          "file": "/root/x/data/pool/20260401/qs.json",
-          "qdate": 20260402,
-          "count": 125,
-          "rc": 0
-        },
-        "zb": {
-          "status": "success",
-          "engine_used": "curl",
-          "file": "/root/x/data/pool/20260401/zb.json",
-          "qdate": 20260402,
-          "count": 38,
-          "rc": 0
-        },
-        "zt": {
-          "status": "success",
-          "engine_used": "curl",
-          "file": "/root/x/data/pool/20260401/zt.json",
-          "qdate": 20260402,
-          "count": 56,
-          "rc": 0
-        }
-      }
-    },
-    "20260402": {
-      "status": "completed",
-      "pools": {
-        "dt": {
-          "status": "success",
-          "engine_used": "curl",
-          "file": "/root/x/data/pool/20260402/dt.json",
-          "qdate": 20260402,
+          "file": "/home/runner/work/x/x/data/pool/20260630/dt.json",
+          "qdate": 20260630,
           "count": 5,
           "rc": 0
         },
         "qs": {
           "status": "success",
           "engine_used": "curl",
-          "file": "/root/x/data/pool/20260402/qs.json",
-          "qdate": 20260402,
-          "count": 116,
+          "file": "/home/runner/work/x/x/data/pool/20260630/qs.json",
+          "qdate": 20260630,
+          "count": 282,
           "rc": 0
         },
         "zb": {
           "status": "success",
           "engine_used": "curl",
-          "file": "/root/x/data/pool/20260402/zb.json",
-          "qdate": 20260402,
-          "count": 18,
+          "file": "/home/runner/work/x/x/data/pool/20260630/zb.json",
+          "qdate": 20260630,
+          "count": 26,
           "rc": 0
         },
         "zt": {
           "status": "success",
-          "engine_used": "curl",
-          "file": "/root/x/data/pool/20260402/zt.json",
-          "qdate": 20260402,
-          "count": 28,
+          "engine_used": "node",
+          "file": "/home/runner/work/x/x/data/pool/20260630/zt.json",
+          "qdate": 20260630,
+          "count": 140,
           "rc": 0
         }
       }

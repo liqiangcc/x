@@ -1,0 +1,14 @@
+{
+  "run_id": "20260630T101723Z_daily",
+  "failed": 1,
+  "items": [
+    {
+      "target": "0.000004",
+      "code": "000004",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000004 --period daily --engine local --lambda-name kline\nfetch failed\n",
+      "retry_count": 0
+    }
+  ]
+}
