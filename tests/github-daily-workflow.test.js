@@ -28,13 +28,13 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "--commit",
     "--allow-partial",
     "--concurrency",
-    "1",
+    "4",
     "--retry-attempts",
     "3",
     "--retry-concurrency",
     "1",
     "--batch-size",
-    "500",
+    "100",
     "--min-success-rate",
     "0.95",
     "--latest",
@@ -70,7 +70,7 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       "--retry-concurrency",
       "1",
       "--batch-size",
-      "200",
+      "100",
       "--min-success-rate",
       "0.95",
       "--force",
@@ -105,13 +105,23 @@ test("buildDailyArgs forwards chained job inputs", () => {
   assert.equal(args[args.indexOf("--config") + 1], "config/kline.json");
 });
 
-test("buildDailyArgs uses conservative yearly AWS defaults", () => {
+test("buildDailyArgs uses the same stable daily and yearly AWS defaults", () => {
   const args = buildDailyArgs({ PERIOD_INPUT: "yearly", ENGINE_INPUT: "aws" });
 
-  assert.equal(args[args.indexOf("--concurrency") + 1], "1");
+  assert.equal(args[args.indexOf("--concurrency") + 1], "4");
   assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");
   assert.equal(args[args.indexOf("--retry-concurrency") + 1], "1");
-  assert.equal(args[args.indexOf("--batch-size") + 1], "200");
+  assert.equal(args[args.indexOf("--batch-size") + 1], "100");
+});
+
+test("buildDailyArgs lets manual batch and concurrency inputs override defaults", () => {
+  const args = buildDailyArgs({
+    BATCH_SIZE_INPUT: "50",
+    CONCURRENCY_INPUT: "2",
+  });
+
+  assert.equal(args[args.indexOf("--concurrency") + 1], "2");
+  assert.equal(args[args.indexOf("--batch-size") + 1], "50");
 });
 
 test("shouldDispatchNextRun only dispatches active GitHub batch jobs", () => {

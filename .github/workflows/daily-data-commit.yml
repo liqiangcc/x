@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: "Optional YYYYMMDD date. Empty means latest."
+        description: "同步日期 YYYYMMDD；留空表示自动使用最新交易日。"
         required: false
         default: ""
       period:
-        description: "Kline period."
+        description: "K线周期：daily=日线，yearly=年线。"
         required: false
         default: "daily"
         type: choice
@@ -16,36 +16,36 @@ on:
           - daily
           - yearly
       limit:
-        description: "Maximum number of codes to sync."
+        description: "调试用：最多同步多少只股票；留空表示全市场。"
         required: false
         default: ""
       batch_size:
-        description: "Maximum missing codes to process in this run. Empty uses stable defaults."
+        description: "每轮处理股票数；留空默认 100。"
         required: false
         default: ""
       concurrency:
-        description: "Kline fetch concurrency. Empty uses stable defaults."
+        description: "抓取并发数；留空默认 4。"
         required: false
         default: ""
       retry_attempts:
-        description: "Retry attempts for transient kline failures. Empty uses stable defaults."
+        description: "失败重试次数；留空默认日线 3、年线 5。"
         required: false
         default: ""
       retry_concurrency:
-        description: "Retry concurrency. Empty uses stable defaults."
+        description: "重试并发数；留空默认 1。"
         required: false
         default: ""
       min_success_rate:
-        description: "Minimum kline success rate for each batch. Empty uses stable default."
+        description: "每轮最低成功率；留空默认 0.95。"
         required: false
         default: ""
       force:
-        description: "Force refresh existing kline files."
+        description: "是否强制刷新已有 K线；默认否，已有有效文件计为完成。"
         required: false
         default: false
         type: boolean
       universe:
-        description: "Code universe for kline sync."
+        description: "股票范围：market=全市场，pool=当日池。"
         required: false
         default: "market"
         type: choice
@@ -53,7 +53,7 @@ on:
           - market
           - pool
       engine:
-        description: "Kline engine."
+        description: "抓取引擎：默认 aws。"
         required: false
         default: "aws"
         type: choice
@@ -62,19 +62,19 @@ on:
           - local
           - aws
       aws_region:
-        description: "Comma-separated AWS Lambda regions. Empty uses config rotation."
+        description: "高级：AWS 区域列表，逗号分隔；一般留空使用配置轮询。"
         required: false
         default: ""
       lambda_name:
-        description: "Lambda function name. Empty uses kline."
+        description: "高级：Lambda 函数名；一般留空使用 kline。"
         required: false
         default: ""
       config:
-        description: "Optional kline config file."
+        description: "高级：K线配置文件路径；一般留空。"
         required: false
         default: ""
       job_mode:
-        description: "Batch mode chains workflow runs until the market universe is complete."
+        description: "任务模式：batch=自动分批直到完成，single=只跑一轮。"
         required: false
         default: "batch"
         type: choice
@@ -82,15 +82,15 @@ on:
           - batch
           - single
       job_id:
-        description: "Existing job id to resume. Empty creates a deterministic job id."
+        description: "高级：恢复已有任务的 job id；一般留空自动生成。"
         required: false
         default: ""
       chain_depth:
-        description: "Internal chained run depth. Leave empty for manual first run."
+        description: "高级：链式运行深度；手动首轮一般留空。"
         required: false
         default: ""
       max_chain_depth:
-        description: "Internal chained run limit. Empty computes from universe size and batch size."
+        description: "高级：最大链式运行次数；一般留空自动计算。"
         required: false
         default: ""
   schedule:

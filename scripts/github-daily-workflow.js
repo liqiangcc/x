@@ -32,16 +32,13 @@ function buildDailyArgs(env = process.env) {
   const engine = valueOrDefault(env.ENGINE_INPUT, "aws");
   const universe = valueOrDefault(env.UNIVERSE_INPUT, "market");
   const jobMode = valueOrDefault(env.JOB_MODE_INPUT, "batch");
-  const concurrency = valueOrDefault(
-    env.CONCURRENCY_INPUT,
-    engine === "local" ? "4" : "1"
-  );
+  const concurrency = valueOrDefault(env.CONCURRENCY_INPUT, "4");
   const retryAttempts = valueOrDefault(
     env.RETRY_ATTEMPTS_INPUT,
     engine === "aws" ? (period === "yearly" ? "5" : "3") : "0"
   );
   const retryConcurrency = valueOrDefault(env.RETRY_CONCURRENCY_INPUT, "1");
-  const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, period === "yearly" ? "200" : "500");
+  const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, "100");
   const minSuccessRate = valueOrDefault(env.MIN_SUCCESS_RATE_INPUT, "0.95");
   const date = String(env.DATE_INPUT ?? "").trim();
   const jobId = String(env.JOB_ID_INPUT ?? "").trim();
@@ -225,11 +222,13 @@ async function writeGithubStepSummary(args, run = null) {
     `- failed: ${summary.failed}`,
     `- skipped_existing: ${summary.skipped_existing}`,
     `- batch_size: ${summary.batch_size}`,
+    `- concurrency: ${summary.concurrency}`,
     `- selection_mode: ${summary.selection_mode}`,
     `- initial_failed: ${summary.initial_failed}`,
     `- retried: ${summary.retried}`,
     `- retry_success: ${summary.retry_success}`,
     `- retry_failed: ${summary.retry_failed}`,
+    `- retry_concurrency: ${summary.retry_concurrency}`,
     `- success_rate: ${summary.success_rate}`,
     `- failure_reason_counts: ${formatCounts(summary.failure_reason_counts)}`,
     `- engine_counts: ${formatCounts(summary.engine_counts)}`,

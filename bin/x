@@ -768,7 +768,7 @@ function parseNonNegativeIntegerOption(value, fallback) {
 }
 
 function defaultDailyBatchSize(period) {
-  return period === "yearly" ? 200 : 500;
+  return 100;
 }
 
 async function loadCodesJson(inputDir) {
@@ -903,6 +903,9 @@ async function commandDaily(argv) {
   }
   if (!["batch", "single"].includes(options.jobMode ?? "single")) {
     throw new Error(`Invalid job mode: ${options.jobMode}`);
+  }
+  if (!options.concurrency) {
+    options.concurrency = "4";
   }
 
   let date = options.date ? normalizeDate(options.date) : null;
