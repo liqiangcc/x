@@ -66,19 +66,4 @@ jobs:
           PERIOD_INPUT: ${{ github.event.inputs.period }}
           LIMIT_INPUT: ${{ github.event.inputs.limit }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
-        run: |
-          set -euo pipefail
-
-          PERIOD="${PERIOD_INPUT:-daily}"
-          LIMIT="${LIMIT_INPUT:-10}"
-          ENGINE="${ENGINE_INPUT:-auto}"
-
-          ARGS=(daily --period "$PERIOD" --limit "$LIMIT" --engine "$ENGINE" --commit)
-          if [ -n "${DATE_INPUT:-}" ]; then
-            ARGS+=(--date "$DATE_INPUT")
-          else
-            ARGS+=(--latest)
-          fi
-
-          git pull --rebase
-          bin/x "${ARGS[@]}"
+        run: node scripts/github-daily-workflow.js

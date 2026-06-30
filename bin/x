@@ -437,6 +437,7 @@ async function commandDaily(argv) {
   await writeJson(path.join(runDir, "quality.json"), quality);
   await writeJson(path.join(runDir, "run.json"), run);
   console.log(rel(path.join(runDir, "run.json")));
+  printDailyRunSummary(run, quality, failures);
 
   if (options.commit) {
     await commitData(runId);
@@ -768,6 +769,32 @@ function commitMessage(run, quality) {
     `quality: ${qualityStatus}`,
   ].join("\n");
   return { title, body };
+}
+
+function printDailyRunSummary(run, quality, failures) {
+  const qualityStatus = quality?.status ?? "recorded";
+  console.log(
+    [
+      `Daily run ${run.run_id}: ${run.status}`,
+      `total=${run.total}`,
+      `success=${run.success}`,
+      `failed=${run.failed}`,
+      `skipped=${run.skipped}`,
+      `quality=${qualityStatus}`,
+    ].join(" ")
+  );
+
+  for (const item of failures.items.slice(0, 5)) {
+    console.error(
+      `Kline failure ${item.code ?? "unknown"}: ${item.error ?? item.status ?? "unknown"}`
+    );
+  }
+
+  if (quality?.status === "failed") {
+    for (const issue of (quality.issues ?? []).slice(0, 5)) {
+      console.error(`Quality issue ${issue.code ?? "unknown"}: ${issue.issue ?? "unknown"}`);
+    }
+  }
 }
 
 async function commitData(runId) {
