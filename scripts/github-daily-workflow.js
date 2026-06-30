@@ -7,6 +7,15 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
+const ISSUE_LABELS = {
+  blocked: { color: "d73a49", description: "Daily sync job is blocked." },
+  completed: { color: "0e8a16", description: "Daily sync job completed." },
+  "daily-sync": { color: "0366d6", description: "Daily data sync tracking issue." },
+  failed: { color: "b60205", description: "Daily sync job failed." },
+  kline: { color: "5319e7", description: "Kline data workflow." },
+  running: { color: "fbca04", description: "Daily sync job is running." },
+};
+const STATUS_LABELS = ["running", "blocked", "completed", "failed"];
 
 function valueOrDefault(value, fallback) {
   const normalized = String(value ?? "").trim();
@@ -120,6 +129,32 @@ function run(command, args) {
   });
 }
 
+function runCapture(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: ROOT,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({
+        code: code ?? 1,
+        stdout,
+        stderr,
+      });
+    });
+  });
+}
+
 function argValue(args, flagName, fallback) {
   const index = args.indexOf(flagName);
   if (index === -1 || index + 1 >= args.length) {
@@ -134,6 +169,21 @@ function formatCounts(counts) {
     return "{}";
   }
   return entries.map(([key, value]) => `${key}: ${value}`).join(", ");
+}
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) {
+    return "n/a";
+  }
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function shellQuote(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:=,@+-]+$/.test(text)) {
+    return text;
+  }
+  return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
 async function writeGithubStepSummary(args, run = null) {
@@ -217,6 +267,14 @@ async function runChecked(command, args) {
   }
 }
 
+async function runCaptureChecked(command, args) {
+  const result = await runCapture(command, args);
+  if (result.code !== 0) {
+    throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.code}: ${result.stderr || result.stdout}`);
+  }
+  return result.stdout;
+}
+
 async function findLatestRun({ sinceMs = null } = {}) {
   const runsDir = path.join(ROOT, "runs");
   let entries;
@@ -296,6 +354,219 @@ function buildDispatchArgs(run, env = process.env) {
   return args;
 }
 
+function runUrl(env = process.env) {
+  if (!env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID) {
+    return null;
+  }
+  const serverUrl = String(env.GITHUB_SERVER_URL || "https://github.com").replace(/\/$/, "");
+  return `${serverUrl}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`;
+}
+
+function issueStatusForRun(run, { dailyCode = 0, dispatchError = null } = {}) {
+  if (dispatchError) {
+    return "failed";
+  }
+  if (run?.job_status === "completed") {
+    return "completed";
+  }
+  if (run?.job_status === "blocked") {
+    return "blocked";
+  }
+  if (dailyCode !== 0 && !run?.should_dispatch_next) {
+    return "failed";
+  }
+  return "running";
+}
+
+function buildIssueTitle(run) {
+  return `Daily kline sync ${run.date} ${run.period} ${run.universe} ${run.job_id}`;
+}
+
+function progressCompletionRate(run) {
+  const counts = run?.progress_counts ?? {};
+  const completed = Number(counts.completed ?? 0);
+  const total = completed + Number(counts.pending ?? 0) + Number(counts.failed ?? 0) + Number(counts.blocked ?? 0);
+  return total > 0 ? completed / total : null;
+}
+
+function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext = false, env = process.env } = {}) {
+  const counts = run?.progress_counts ?? {};
+  const status = issueStatusForRun(run, { dailyCode, dispatchError });
+  const actionRunUrl = runUrl(env);
+  const resumeCommand = run?.job_status === "completed"
+    ? "n/a"
+    : `gh ${buildDispatchArgs(run, env).map(shellQuote).join(" ")}`;
+  return [
+    "## Daily kline sync",
+    "",
+    `- status: ${status}`,
+    `- job_id: ${run.job_id}`,
+    `- job_status: ${run.job_status}`,
+    `- date: ${run.date}`,
+    `- period: ${run.period}`,
+    `- universe: ${run.universe}`,
+    `- engine: ${run.engine}`,
+    `- batch_size: ${run.batch_size}`,
+    `- batch_codes: ${run.progress_batch_codes}`,
+    `- batch_source: ${run.progress_batch_source}`,
+    `- chain_depth: ${run.chain_depth}`,
+    `- max_chain_depth: ${run.max_chain_depth}`,
+    `- completed: ${counts.completed ?? 0}`,
+    `- pending: ${counts.pending ?? 0}`,
+    `- failed: ${counts.failed ?? 0}`,
+    `- blocked: ${counts.blocked ?? 0}`,
+    `- completion_rate: ${formatPercent(progressCompletionRate(run))}`,
+    `- latest_run: ${actionRunUrl ?? "n/a"}`,
+    `- progress_file: ${run.progress_file ?? "n/a"}`,
+    `- kline_summary: ${run.artifacts?.kline_summary ?? "n/a"}`,
+    `- dispatch_next: ${dispatchNext}`,
+    `- daily_exit_code: ${dailyCode}`,
+    `- dispatch_error: ${dispatchError?.message ?? "n/a"}`,
+    "",
+    "## Failure context",
+    "",
+    `- kline_failure_reasons: ${(run.kline_failure_reasons ?? []).join(", ") || "none"}`,
+    `- kline_failure_reason_counts: ${formatCounts(run.kline_failure_reason_counts)}`,
+    `- region_counts: ${formatCounts(run.kline_region_counts)}`,
+    "",
+    "## Resume",
+    "",
+    "```bash",
+    resumeCommand,
+    "```",
+    "",
+  ].join("\n");
+}
+
+function buildIssueComment(run, status, { issueCreated = false, dispatchError = null } = {}) {
+  if (status === "blocked") {
+    return `Daily kline sync job \`${run.job_id}\` is blocked. Check the issue body for failed codes and the resume command.`;
+  }
+  if (status === "failed") {
+    return `Daily kline sync job \`${run.job_id}\` failed${dispatchError ? `: ${dispatchError.message}` : "."}`;
+  }
+  if (status === "completed") {
+    return `Daily kline sync job \`${run.job_id}\` completed.`;
+  }
+  if (issueCreated) {
+    return `Started daily kline sync job \`${run.job_id}\`.`;
+  }
+  return null;
+}
+
+function shouldSyncJobIssue(run, env = process.env) {
+  if (String(env.GITHUB_ACTIONS ?? "").toLowerCase() !== "true") {
+    return false;
+  }
+  if (isTruthy(env.DISABLE_JOB_ISSUES)) {
+    return false;
+  }
+  return Boolean(run?.job_mode === "batch" && run.job_id);
+}
+
+function issueLabelsForStatus(status) {
+  return ["daily-sync", "kline", status];
+}
+
+function buildIssueSearchArgs(title) {
+  return [
+    "issue",
+    "list",
+    "--state",
+    "all",
+    "--limit",
+    "20",
+    "--search",
+    `in:title "${title}"`,
+    "--json",
+    "number,title,state,url",
+  ];
+}
+
+async function ensureIssueLabels() {
+  for (const [name, label] of Object.entries(ISSUE_LABELS)) {
+    await runCaptureChecked("gh", [
+      "label",
+      "create",
+      name,
+      "--color",
+      label.color,
+      "--description",
+      label.description,
+      "--force",
+    ]);
+  }
+}
+
+async function findIssueByTitle(title) {
+  const stdout = await runCaptureChecked("gh", buildIssueSearchArgs(title));
+  const issues = JSON.parse(stdout);
+  return issues.find((issue) => issue.title === title) ?? null;
+}
+
+async function createIssue(title, body, labels) {
+  const args = ["issue", "create", "--title", title, "--body", body];
+  for (const label of labels) {
+    args.push("--label", label);
+  }
+  const stdout = await runCaptureChecked("gh", args);
+  const match = stdout.match(/\/issues\/(\d+)/);
+  if (!match) {
+    throw new Error(`Unable to parse created issue number from gh output: ${stdout.trim()}`);
+  }
+  return {
+    number: Number(match[1]),
+    state: "OPEN",
+    title,
+    url: stdout.trim(),
+  };
+}
+
+async function updateIssue(number, body, labels) {
+  await runCaptureChecked("gh", ["issue", "edit", String(number), "--body", body, "--add-label", labels.join(",")]);
+  for (const label of STATUS_LABELS.filter((item) => !labels.includes(item))) {
+    await runCapture("gh", ["issue", "edit", String(number), "--remove-label", label]);
+  }
+}
+
+async function syncJobIssue(run, { dailyCode = 0, dispatchError = null, dispatchNext = false, env = process.env } = {}) {
+  if (!shouldSyncJobIssue(run, env)) {
+    return null;
+  }
+
+  await ensureIssueLabels();
+  const status = issueStatusForRun(run, { dailyCode, dispatchError });
+  const title = buildIssueTitle(run);
+  const body = buildIssueBody(run, { dailyCode, dispatchError, dispatchNext, env });
+  const labels = issueLabelsForStatus(status);
+  let issue = await findIssueByTitle(title);
+  let issueCreated = false;
+
+  if (!issue) {
+    issue = await createIssue(title, body, labels);
+    issueCreated = true;
+  } else {
+    if (issue.state === "CLOSED" && status !== "completed") {
+      await runCaptureChecked("gh", ["issue", "reopen", String(issue.number)]);
+    }
+    await updateIssue(issue.number, body, labels);
+  }
+
+  const comment = buildIssueComment(run, status, { issueCreated, dispatchError });
+  if (comment && status !== "completed") {
+    await runCaptureChecked("gh", ["issue", "comment", String(issue.number), "--body", comment]);
+  }
+  if (status === "completed" && issue.state !== "CLOSED") {
+    await runCaptureChecked("gh", ["issue", "close", String(issue.number), "--reason", "completed", "--comment", comment]);
+  }
+
+  return {
+    issue,
+    issueCreated,
+    status,
+  };
+}
+
 async function main() {
   await runChecked("git", ["pull", "--rebase"]);
 
@@ -307,8 +578,27 @@ async function main() {
   await runChecked("git", ["push"]);
 
   const dispatchNext = shouldDispatchNextRun(latestRun);
+  let dispatchError = null;
   if (dispatchNext) {
-    await runChecked("gh", buildDispatchArgs(latestRun));
+    try {
+      await runChecked("gh", buildDispatchArgs(latestRun));
+    } catch (error) {
+      dispatchError = error;
+    }
+  }
+
+  try {
+    await syncJobIssue(latestRun, {
+      dailyCode,
+      dispatchError,
+      dispatchNext,
+    });
+  } catch (error) {
+    console.error(`Issue sync failed: ${error.message}`);
+  }
+
+  if (dispatchError) {
+    throw dispatchError;
   }
 
   if (dailyCode !== 0 && !dispatchNext) {
@@ -324,7 +614,13 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildIssueBody,
+  buildIssueComment,
+  buildIssueSearchArgs,
+  buildIssueTitle,
   buildDailyArgs,
   buildDispatchArgs,
+  issueStatusForRun,
+  shouldSyncJobIssue,
   shouldDispatchNextRun,
 };

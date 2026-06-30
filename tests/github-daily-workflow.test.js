@@ -5,6 +5,12 @@ const test = require("node:test");
 const {
   buildDailyArgs,
   buildDispatchArgs,
+  buildIssueBody,
+  buildIssueComment,
+  buildIssueSearchArgs,
+  buildIssueTitle,
+  issueStatusForRun,
+  shouldSyncJobIssue,
   shouldDispatchNextRun,
 } = require("../scripts/github-daily-workflow");
 
@@ -158,4 +164,110 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
   assert.equal(args.includes("chain_depth=3"), true);
   assert.equal(args.includes("job_id=20260630-daily-market-hs-a"), true);
   assert.equal(args.includes("aws_region=ap-northeast-1,ap-southeast-1"), true);
+});
+
+function sampleRun(overrides = {}) {
+  return {
+    artifacts: {
+      kline_summary: "data/kline/daily/summary.daily.json",
+    },
+    batch_size: 500,
+    chain_depth: 2,
+    engine: "aws",
+    job_id: "20260630-daily-market-hs-a",
+    job_mode: "batch",
+    job_status: "running",
+    kline_failure_reason_counts: {},
+    kline_failure_reasons: [],
+    kline_region_counts: { "ap-northeast-1": 3 },
+    max_chain_depth: 20,
+    period: "daily",
+    progress_batch_codes: 500,
+    progress_batch_source: "pending",
+    progress_counts: {
+      blocked: 0,
+      completed: 1000,
+      failed: 2,
+      pending: 4532,
+      remaining: 4534,
+    },
+    progress_file: "data/jobs/20260630/daily/20260630-daily-market-hs-a/progress.json",
+    should_dispatch_next: true,
+    universe: "market",
+    date: "20260630",
+    ...overrides,
+  };
+}
+
+test("buildIssueTitle is unique per daily job id", () => {
+  assert.equal(
+    buildIssueTitle(sampleRun()),
+    "Daily kline sync 20260630 daily market 20260630-daily-market-hs-a"
+  );
+});
+
+test("issueStatusForRun maps terminal and dispatch failure states", () => {
+  assert.equal(issueStatusForRun(sampleRun()), "running");
+  assert.equal(issueStatusForRun(sampleRun({ job_status: "completed" })), "completed");
+  assert.equal(issueStatusForRun(sampleRun({ job_status: "blocked" })), "blocked");
+  assert.equal(issueStatusForRun(sampleRun({ should_dispatch_next: false }), { dailyCode: 1 }), "failed");
+  assert.equal(issueStatusForRun(sampleRun(), { dispatchError: new Error("dispatch failed") }), "failed");
+});
+
+test("shouldSyncJobIssue only enables issue writes for GitHub batch jobs", () => {
+  assert.equal(shouldSyncJobIssue(sampleRun(), { GITHUB_ACTIONS: "true" }), true);
+  assert.equal(shouldSyncJobIssue(sampleRun(), { GITHUB_ACTIONS: "false" }), false);
+  assert.equal(shouldSyncJobIssue(sampleRun(), { GITHUB_ACTIONS: "true", DISABLE_JOB_ISSUES: "true" }), false);
+  assert.equal(shouldSyncJobIssue(sampleRun({ job_mode: "single" }), { GITHUB_ACTIONS: "true" }), false);
+});
+
+test("buildIssueBody includes progress, run link, and resume command", () => {
+  const body = buildIssueBody(sampleRun(), {
+    dispatchNext: true,
+    env: {
+      GITHUB_REF_NAME: "master",
+      GITHUB_REPOSITORY: "liqiangcc/x",
+      GITHUB_RUN_ID: "123",
+      GITHUB_SERVER_URL: "https://github.com",
+      GITHUB_WORKFLOW: "Daily Data Commit",
+    },
+  });
+
+  assert.match(body, /- job_id: 20260630-daily-market-hs-a/);
+  assert.match(body, /- completed: 1000/);
+  assert.match(body, /- pending: 4532/);
+  assert.match(body, /- failed: 2/);
+  assert.match(body, /- completion_rate: 18\.07%/);
+  assert.match(body, /https:\/\/github\.com\/liqiangcc\/x\/actions\/runs\/123/);
+  assert.match(body, /gh workflow run 'Daily Data Commit'/);
+  assert.match(body, /chain_depth=3/);
+});
+
+test("buildIssueComment only comments on important states", () => {
+  const run = sampleRun();
+
+  assert.equal(buildIssueComment(run, "running"), null);
+  assert.equal(buildIssueComment(run, "running", { issueCreated: true }), "Started daily kline sync job `20260630-daily-market-hs-a`.");
+  assert.match(buildIssueComment(run, "blocked"), /is blocked/);
+  assert.match(buildIssueComment(run, "completed"), /completed/);
+  assert.match(buildIssueComment(run, "completed", { issueCreated: true }), /completed/);
+  assert.match(
+    buildIssueComment(run, "failed", { dispatchError: new Error("dispatch failed") }),
+    /dispatch failed/
+  );
+});
+
+test("buildIssueSearchArgs searches all issues by exact title candidate", () => {
+  assert.deepEqual(buildIssueSearchArgs("Daily kline sync 20260630 daily market job"), [
+    "issue",
+    "list",
+    "--state",
+    "all",
+    "--limit",
+    "20",
+    "--search",
+    "in:title \"Daily kline sync 20260630 daily market job\"",
+    "--json",
+    "number,title,state,url",
+  ]);
 });
