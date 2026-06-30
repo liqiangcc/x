@@ -200,6 +200,50 @@ function inferSecid(code) {
   throw new Error(`Unable to infer market for code: ${code}`);
 }
 
+function extractStockCode(input) {
+  if (/^\d+\.[A-Za-z0-9]+$/.test(input)) {
+    return input.split(".")[1];
+  }
+  return input;
+}
+
+function inferMarketFromSecid(secid) {
+  if (/^\d+\.[A-Za-z0-9]+$/.test(secid)) {
+    return Number(secid.split(".")[0]);
+  }
+  return null;
+}
+
+function getOutputPath(outputDir, period, code) {
+  const prefix = code.slice(0, 3);
+  return path.join(outputDir, period, prefix, `${code}.json`);
+}
+
+function getLegacyOutputPath(outputDir, period, code) {
+  return path.join(outputDir, period, `${code}.json`);
+}
+
+function normalizeKlinePayload(payload, code, secid, period) {
+  const klines = Array.isArray(payload?.klines)
+    ? payload.klines
+    : Array.isArray(payload?.data?.klines)
+      ? payload.data.klines
+      : [];
+  const normalizedCode = payload?.code ?? payload?.data?.code ?? code;
+  const market = payload?.market ?? payload?.data?.market ?? inferMarketFromSecid(secid);
+
+  return {
+    code: normalizedCode,
+    market,
+    period,
+    klines: [...klines].sort((left, right) => {
+      const leftDate = typeof left === "string" ? left.split(",")[0] : "";
+      const rightDate = typeof right === "string" ? right.split(",")[0] : "";
+      return leftDate.localeCompare(rightDate);
+    }),
+  };
+}
+
 async function fetchSingleKline(secid, options) {
   const args = [FETCH_KLINE_SCRIPT, secid, "--period", options.period, "--engine", options.engine];
 
@@ -240,14 +284,17 @@ async function main() {
     period: options.period,
     total_codes: selectedCodes.length,
     success: 0,
+    migrated_existing: 0,
     skipped_existing: 0,
     failed: 0,
     files: {},
   };
 
-  for (const code of selectedCodes) {
-    const secid = inferSecid(code);
-    const outputPath = path.join(periodDir, `${code}.json`);
+  for (const inputCode of selectedCodes) {
+    const secid = inferSecid(inputCode);
+    const code = extractStockCode(inputCode);
+    const outputPath = getOutputPath(options.outputDir, options.period, code);
+    const legacyOutputPath = getLegacyOutputPath(options.outputDir, options.period, code);
 
     if (!options.force) {
       try {
@@ -260,18 +307,37 @@ async function main() {
         summary.skipped_existing += 1;
         continue;
       } catch {}
+
+      try {
+        const rawLegacy = await fs.readFile(legacyOutputPath, "utf8");
+        const legacyPayload = JSON.parse(rawLegacy);
+        const normalized = normalizeKlinePayload(legacyPayload, code, secid, options.period);
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+        summary.files[code] = {
+          status: "migrated_existing",
+          file: outputPath,
+          legacy_file: legacyOutputPath,
+          secid,
+          points: normalized.klines.length,
+        };
+        summary.migrated_existing += 1;
+        continue;
+      } catch {}
     }
 
     try {
       const data = await fetchSingleKline(secid, options);
-      await fs.writeFile(outputPath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+      const normalized = normalizeKlinePayload(data, code, secid, options.period);
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
       summary.files[code] = {
         engine: data.source_engine ?? options.engine,
         region: data.source_region ?? null,
         status: "success",
         file: outputPath,
         secid,
-        points: Array.isArray(data?.data?.klines) ? data.data.klines.length : 0,
+        points: normalized.klines.length,
       };
       summary.success += 1;
     } catch (error) {

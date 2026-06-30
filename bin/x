@@ -1,0 +1,764 @@
+#!/usr/bin/env node
+
+const fs = require("node:fs/promises");
+const path = require("node:path");
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+
+const execFileAsync = promisify(execFile);
+const ROOT = path.resolve(__dirname, "..");
+const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
+const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
+const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
+
+function rel(filePath) {
+  return path.relative(ROOT, filePath).replaceAll(path.sep, "/");
+}
+
+function printUsage() {
+  console.log(`Usage:
+  x doctor
+  x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
+  x codes build <pool_dir>
+  x kline sync <pool_dir|codes.json> [--period daily|yearly] [--limit N] [--engine auto|local|aws] [--force]
+  x kline validate [target_path] [--period daily|yearly] [--json]
+  x daily [--latest|--date YYYYMMDD] [--limit N] [--period daily|yearly] [--engine auto|local|aws] [--force-pool] [--commit]
+  x run list
+  x run show <run_id>
+  x run failures <run_id>
+  x git status-data
+  x git commit-data --run-id <run_id>
+  x report daily --date YYYYMMDD`);
+}
+
+function normalizeDate(input) {
+  const digits = String(input).replace(/-/g, "");
+  if (!/^\d{8}$/.test(digits)) {
+    throw new Error(`Invalid date: ${input}`);
+  }
+  return digits;
+}
+
+function parseOptions(argv, defaults = {}) {
+  const options = { _: [], ...defaults };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (!arg.startsWith("--")) {
+      options._.push(arg);
+      continue;
+    }
+
+    const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+    if (["latest", "commit", "force", "forcePool", "json"].includes(key)) {
+      options[key] = true;
+      continue;
+    }
+
+    const nextArg = argv[index + 1];
+    if (!nextArg) {
+      throw new Error(`Missing value for ${arg}`);
+    }
+    options[key] = nextArg;
+    index += 1;
+  }
+  return options;
+}
+
+async function runNode(scriptPath, args, options = {}) {
+  return execFileAsync("node", [path.join(ROOT, scriptPath), ...args], {
+    cwd: ROOT,
+    maxBuffer: options.maxBuffer ?? 50 * 1024 * 1024,
+  });
+}
+
+async function runNodeAllowFailure(scriptPath, args) {
+  try {
+    const result = await runNode(scriptPath, args);
+    return { ...result, exitCode: 0 };
+  } catch (error) {
+    return {
+      stdout: error.stdout ?? "",
+      stderr: error.stderr ?? error.message,
+      exitCode: typeof error.code === "number" ? error.code : 1,
+    };
+  }
+}
+
+async function readJson(filePath, fallback = null) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8"));
+  } catch (error) {
+    if (fallback !== null && error.code === "ENOENT") {
+      return fallback;
+    }
+    throw error;
+  }
+}
+
+async function writeJson(filePath, payload) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function utcCompactTime(date = new Date()) {
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${hours}${minutes}${seconds}`;
+}
+
+function isoNow() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function runIdFor(date, period, now = new Date()) {
+  return `${date}T${utcCompactTime(now)}Z_${period}`;
+}
+
+async function commandDoctor() {
+  const checks = [
+    ["node", ["--version"]],
+    ["git", ["--version"]],
+    ["bash", ["--version"]],
+  ];
+
+  let failed = 0;
+  for (const [command, args] of checks) {
+    try {
+      const { stdout } = await execFileAsync(command, args, { cwd: ROOT });
+      console.log(`${command}: ${(stdout.split("\n")[0] || "ok").trim()}`);
+    } catch (error) {
+      failed += 1;
+      console.error(`${command}: missing or failed (${error.message})`);
+    }
+  }
+
+  if (failed > 0) {
+    process.exitCode = 1;
+  }
+}
+
+async function commandPoolPull(argv) {
+  const options = parseOptions(argv, { engine: "curl", outputDir: "data/pool" });
+  const args = [];
+
+  if (options.date) {
+    args.push(normalizeDate(options.date));
+  } else if (options._[0]) {
+    args.push(normalizeDate(options._[0]));
+  } else if (options.latest) {
+    args.push("--days", "0");
+  }
+
+  if (options.rangeDays) {
+    args.push("--range-days", String(options.rangeDays));
+  }
+  if (options.engine) {
+    args.push("--engine", options.engine);
+  }
+  args.push("--output-dir", options.outputDir);
+
+  const { stdout, stderr } = await runNode("fetch/pull_pool_task.js", args);
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
+}
+
+async function commandCodesBuild(argv) {
+  const options = parseOptions(argv);
+  const inputPath = options._[0];
+  if (!inputPath) {
+    throw new Error("codes build requires <pool_dir>");
+  }
+
+  const args = [inputPath, "--codes-only"];
+  if (options.output) {
+    args.push("--output", options.output);
+  }
+  const { stdout, stderr } = await runNode("utils/parse_pool_json.js", args);
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
+}
+
+async function commandKlineSync(argv) {
+  const options = parseOptions(argv, { period: "daily", engine: "auto" });
+  const inputPath = options._[0];
+  if (!inputPath) {
+    throw new Error("kline sync requires <pool_dir|codes.json>");
+  }
+
+  const args = [inputPath, "--period", options.period, "--engine", options.engine];
+  if (options.limit) {
+    args.push("--limit", String(options.limit));
+  }
+  if (options.outputDir) {
+    args.push("--output-dir", options.outputDir);
+  }
+  if (options.force) {
+    args.push("--force");
+  }
+  const { stdout, stderr } = await runNode("fetch/query_pool_klines.js", args);
+  process.stdout.write(stdout);
+  process.stderr.write(stderr);
+}
+
+async function commandKlineValidate(argv) {
+  const options = parseOptions(argv);
+  const targetPath = options._[0] ?? "data/kline";
+  const args = [targetPath];
+  if (options.period) {
+    args.push("--period", options.period);
+  }
+  if (options.json) {
+    args.push("--json");
+  }
+
+  const result = await runNodeAllowFailure("fetch/check_kline_empty.js", args);
+  process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
+  if (result.exitCode !== 0) {
+    process.exitCode = result.exitCode;
+  }
+}
+
+function extractKlineFailures(summary, period) {
+  const files = summary?.files && typeof summary.files === "object" ? summary.files : {};
+  return Object.entries(files)
+    .filter(([, item]) => item?.status === "failed")
+    .map(([code, item]) => ({
+      target: item.secid ?? code,
+      code,
+      type: "kline",
+      period,
+      reason: item.error ?? "unknown error",
+      retry_count: 0,
+    }));
+}
+
+async function buildQuality(runId, validateResult, period) {
+  let parsed;
+  try {
+    parsed = JSON.parse(validateResult.stdout);
+  } catch {
+    parsed = {
+      target_path: rel(path.join(DEFAULT_KLINE_DIR, period)),
+      total_files: 0,
+      issue_count: 1,
+      status: "failed",
+      issues: [
+        {
+          issue: "quality_parse_error",
+          error: validateResult.stderr || "failed to parse validator output",
+        },
+      ],
+    };
+  }
+
+  return {
+    run_id: runId,
+    target: parsed.target_path,
+    period,
+    total_files: parsed.total_files ?? 0,
+    issue_count: parsed.issue_count ?? parsed.empty_count ?? 0,
+    status: parsed.status ?? ((parsed.issue_count ?? parsed.empty_count ?? 0) > 0 ? "failed" : "ok"),
+    issues: parsed.issues ?? [],
+  };
+}
+
+async function commandDaily(argv) {
+  const options = parseOptions(argv, {
+    engine: "auto",
+    period: "daily",
+    poolEngine: "curl",
+    outputDir: "data/pool",
+  });
+  const startedAt = isoNow();
+
+  if (!options.date && !options.latest) {
+    options.latest = true;
+  }
+
+  let date = options.date ? normalizeDate(options.date) : null;
+  let poolResult;
+
+  if (date && !options.forcePool && (await hasCompletePoolSnapshot(date, options.outputDir))) {
+    poolResult = {
+      stdout: `Using existing pool snapshot: ${rel(path.join(ROOT, options.outputDir, date))}\n`,
+      stderr: "",
+      exitCode: 0,
+    };
+  } else {
+    const poolArgs = ["--output-dir", options.outputDir, "--engine", options.poolEngine];
+    if (date) {
+      poolArgs.unshift(date);
+    } else {
+      poolArgs.unshift("--days", "0");
+    }
+
+    poolResult = await runNodeAllowFailure("fetch/pull_pool_task.js", poolArgs);
+  }
+  process.stdout.write(poolResult.stdout);
+  process.stderr.write(poolResult.stderr);
+
+  const poolSummaryPath = path.join(ROOT, options.outputDir, "summary.json");
+  const poolSummary = await readJson(poolSummaryPath, {});
+  if (!date && poolResult.exitCode !== 0) {
+    throw new Error("Failed to resolve latest pool date.");
+  }
+  date = normalizeDate(date ?? poolSummary.requested_date);
+  if (!(await hasCompletePoolSnapshot(date, options.outputDir))) {
+    throw new Error(`Pool snapshot is incomplete or has mismatched qdate: ${rel(path.join(ROOT, options.outputDir, date))}`);
+  }
+  const poolDir = path.join(ROOT, options.outputDir, date);
+  const runId = options.runId ?? runIdFor(date, options.period);
+  const runDir = path.join(DEFAULT_RUNS_DIR, runId);
+
+  const codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
+  process.stdout.write(codesResult.stdout);
+  process.stderr.write(codesResult.stderr);
+
+  const klineArgs = [rel(poolDir), "--period", options.period, "--engine", options.engine];
+  if (options.limit) {
+    klineArgs.push("--limit", String(options.limit));
+  }
+  if (options.force) {
+    klineArgs.push("--force");
+  }
+  const klineResult = await runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs);
+  process.stdout.write(klineResult.stdout);
+  process.stderr.write(klineResult.stderr);
+
+  const summaryPath = path.join(DEFAULT_KLINE_DIR, options.period, `summary.${options.period}.json`);
+  const klineSummary = await readJson(summaryPath, {
+    period: options.period,
+    total_codes: 0,
+    success: 0,
+    migrated_existing: 0,
+    skipped_existing: 0,
+    failed: 0,
+    files: {},
+  });
+
+  const validateResult = await runNodeAllowFailure("fetch/check_kline_empty.js", [
+    "data/kline",
+    "--period",
+    options.period,
+    "--json",
+  ]);
+  const quality = await buildQuality(runId, validateResult, options.period);
+  const failures = {
+    run_id: runId,
+    failed: 0,
+    items: extractKlineFailures(klineSummary, options.period),
+  };
+  failures.failed = failures.items.length;
+
+  const failed =
+    Number(klineSummary.failed ?? 0) +
+    (poolResult.exitCode === 0 ? 0 : 1) +
+    (codesResult.exitCode === 0 ? 0 : 1);
+  const success = Number(klineSummary.success ?? 0) + Number(klineSummary.migrated_existing ?? 0);
+  const skipped = Number(klineSummary.skipped_existing ?? 0);
+  const total = Number(klineSummary.total_codes ?? success + skipped + Number(klineSummary.failed ?? 0));
+  const status =
+    failed > 0 || quality.status === "failed"
+      ? "completed_with_failures"
+      : "completed";
+
+  const run = {
+    run_id: runId,
+    type: "daily",
+    date,
+    period: options.period,
+    engine: options.engine,
+    input: rel(path.join(poolDir, "codes.json")),
+    status,
+    total,
+    success,
+    skipped,
+    failed,
+    started_at: startedAt,
+    finished_at: isoNow(),
+    artifacts: {
+      pool_dir: rel(poolDir),
+      kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),
+      kline_summary: rel(summaryPath),
+      run: rel(path.join(runDir, "run.json")),
+      failures: rel(path.join(runDir, "failures.json")),
+      quality: rel(path.join(runDir, "quality.json")),
+    },
+    commands: {
+      pool_exit_code: poolResult.exitCode,
+      codes_exit_code: codesResult.exitCode,
+      kline_exit_code: klineResult.exitCode,
+      quality_exit_code: validateResult.exitCode,
+    },
+  };
+
+  await writeJson(path.join(runDir, "failures.json"), failures);
+  await writeJson(path.join(runDir, "quality.json"), quality);
+  await writeJson(path.join(runDir, "run.json"), run);
+  console.log(rel(path.join(runDir, "run.json")));
+
+  if (options.commit) {
+    await commitData(runId);
+  }
+
+  if (run.status !== "completed") {
+    process.exitCode = 1;
+  }
+}
+
+async function hasCompletePoolSnapshot(date, outputDir) {
+  const poolDir = path.join(ROOT, outputDir, date);
+  for (const pool of ["dt", "qs", "zb", "zt"]) {
+    try {
+      const payload = JSON.parse(await fs.readFile(path.join(poolDir, `${pool}.json`), "utf8"));
+      if (String(payload?.data?.qdate ?? "") !== date) {
+        return false;
+      }
+      if (!Array.isArray(payload?.data?.pool)) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function commandRun(argv) {
+  const subcommand = argv[0];
+  if (subcommand === "list") {
+    const entries = await fs.readdir(DEFAULT_RUNS_DIR, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries.filter((item) => item.isDirectory()).map((item) => item.name).sort()) {
+      console.log(entry);
+    }
+    return;
+  }
+
+  const runId = argv[1];
+  if (!runId) {
+    throw new Error(`run ${subcommand ?? ""} requires <run_id>`);
+  }
+
+  const fileName = subcommand === "failures" ? "failures.json" : "run.json";
+  const filePath = path.join(DEFAULT_RUNS_DIR, runId, fileName);
+  process.stdout.write(await fs.readFile(filePath, "utf8"));
+}
+
+async function readExistingJson(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function loadPoolCandidates(date) {
+  const poolTypes = ["zt", "qs", "zb"];
+  const candidates = new Map();
+
+  for (const poolType of poolTypes) {
+    const payload = await readExistingJson(path.join(DEFAULT_POOL_DIR, date, `${poolType}.json`));
+    const records = Array.isArray(payload?.data?.pool) ? payload.data.pool : [];
+    for (const item of records) {
+      const code = item?.c;
+      if (!code) {
+        continue;
+      }
+
+      if (!candidates.has(code)) {
+        candidates.set(code, {
+          date,
+          code,
+          name: item?.n ?? "",
+          market: item?.m ?? null,
+          pools: [],
+          signals: [],
+          score: 0,
+          reason: "",
+          data_quality: "ok",
+        });
+      }
+
+      const candidate = candidates.get(code);
+      candidate.pools.push(poolType);
+      if (poolType === "zt") {
+        candidate.signals.push("limit_up_pool");
+        candidate.score += 50;
+      } else if (poolType === "qs") {
+        candidate.signals.push("strong_pool");
+        candidate.score += 30;
+      } else if (poolType === "zb") {
+        candidate.signals.push("limit_break_pool");
+        candidate.score += 15;
+      }
+    }
+  }
+
+  return [...candidates.values()];
+}
+
+async function loadKlines(period, code) {
+  const sharded = path.join(DEFAULT_KLINE_DIR, period, code.slice(0, 3), `${code}.json`);
+  const legacy = path.join(DEFAULT_KLINE_DIR, period, `${code}.json`);
+  const payload = (await readExistingJson(sharded)) ?? (await readExistingJson(legacy));
+  if (Array.isArray(payload?.klines)) {
+    return payload.klines;
+  }
+  if (Array.isArray(payload?.data?.klines)) {
+    return payload.data.klines;
+  }
+  return [];
+}
+
+function parseKlineRow(row) {
+  const fields = String(row).split(",");
+  return {
+    date: fields[0],
+    open: Number(fields[1]),
+    close: Number(fields[2]),
+    high: Number(fields[3]),
+    low: Number(fields[4]),
+    volume: Number(fields[5]),
+    amount: Number(fields[6]),
+  };
+}
+
+async function enrichCandidateWithKlineSignals(candidate) {
+  const dailyRows = (await loadKlines("daily", candidate.code)).map(parseKlineRow);
+  if (dailyRows.length === 0) {
+    candidate.data_quality = "missing_kline";
+    return candidate;
+  }
+
+  const latest = dailyRows[dailyRows.length - 1];
+  const previousRows = dailyRows.slice(Math.max(0, dailyRows.length - 250), -1);
+  const previousHigh = previousRows.reduce(
+    (max, row) => (Number.isFinite(row.high) ? Math.max(max, row.high) : max),
+    0
+  );
+
+  if (previousHigh > 0 && Number.isFinite(latest.close) && latest.close >= previousHigh) {
+    candidate.signals.push("year_breakout");
+    candidate.score += 25;
+  }
+
+  const recentRows = dailyRows.slice(Math.max(0, dailyRows.length - 21), -1);
+  const amounts = recentRows.map((row) => row.amount).filter(Number.isFinite);
+  const avgAmount = amounts.length > 0 ? amounts.reduce((sum, value) => sum + value, 0) / amounts.length : 0;
+  if (avgAmount > 0 && Number.isFinite(latest.amount) && latest.amount >= avgAmount * 1.5) {
+    candidate.signals.push("volume_expand");
+    candidate.score += 20;
+  }
+
+  return candidate;
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (/[",\n]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+  return text;
+}
+
+function candidatesToCsv(candidates) {
+  const header = ["date", "code", "name", "score", "pools", "signals", "data_quality", "reason"];
+  const rows = candidates.map((candidate) =>
+    [
+      candidate.date,
+      candidate.code,
+      candidate.name,
+      candidate.score,
+      candidate.pools.join("|"),
+      candidate.signals.join("|"),
+      candidate.data_quality,
+      candidate.reason,
+    ].map(csvEscape).join(",")
+  );
+  return `${header.join(",")}\n${rows.join("\n")}\n`;
+}
+
+async function commandReport(argv) {
+  const subcommand = argv[0];
+  if (subcommand !== "daily") {
+    throw new Error(`Unknown report command: ${subcommand ?? ""}`);
+  }
+
+  const options = parseOptions(argv.slice(1));
+  if (!options.date) {
+    throw new Error("report daily requires --date <YYYYMMDD>");
+  }
+
+  const date = normalizeDate(options.date);
+  const candidates = await Promise.all(
+    (await loadPoolCandidates(date)).map((candidate) => enrichCandidateWithKlineSignals(candidate))
+  );
+  candidates.sort((left, right) => right.score - left.score || left.code.localeCompare(right.code));
+
+  for (const candidate of candidates) {
+    candidate.signals = [...new Set(candidate.signals)];
+    candidate.reason = candidate.signals.join(", ");
+  }
+
+  const reportDir = path.join(ROOT, "reports", date);
+  const quality = {
+    date,
+    status: candidates.some((candidate) => candidate.data_quality !== "ok") ? "recorded" : "ok",
+    candidate_count: candidates.length,
+    missing_kline_count: candidates.filter((candidate) => candidate.data_quality !== "ok").length,
+  };
+  const summary = [
+    `# ${date} Daily Candidates`,
+    "",
+    `- candidates: ${candidates.length}`,
+    `- missing_kline: ${quality.missing_kline_count}`,
+    `- quality: ${quality.status}`,
+    "",
+  ].join("\n");
+
+  await fs.mkdir(reportDir, { recursive: true });
+  await writeJson(path.join(reportDir, "candidates.json"), { date, candidates });
+  await fs.writeFile(path.join(reportDir, "candidates.csv"), candidatesToCsv(candidates), "utf8");
+  await writeJson(path.join(reportDir, "quality.json"), quality);
+  await fs.writeFile(path.join(reportDir, "summary.md"), summary, "utf8");
+  console.log(rel(reportDir));
+}
+
+async function hasDataDiff() {
+  const pathspec = await existingDataPathspecs();
+  try {
+    await execFileAsync("git", ["diff", "--quiet", "--", ...pathspec], { cwd: ROOT });
+    await execFileAsync("git", ["diff", "--cached", "--quiet", "--", ...pathspec], { cwd: ROOT });
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+async function existingDataPathspecs() {
+  const candidates = ["data", "runs", "reports"];
+  const existing = [];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(path.join(ROOT, candidate));
+      existing.push(candidate);
+    } catch {}
+  }
+  return existing;
+}
+
+function commitMessage(run, quality) {
+  const qualityStatus = quality?.status ?? "recorded";
+  const title = `data(daily): ${run.date} update pool, codes and ${run.period} kline`;
+  const body = [
+    `run_id: ${run.run_id}`,
+    `pool_date: ${run.date}`,
+    `period: ${run.period}`,
+    `engine: ${run.engine}`,
+    `total: ${run.total}`,
+    `success: ${run.success}`,
+    `failed: ${run.failed}`,
+    `skipped: ${run.skipped}`,
+    `quality: ${qualityStatus}`,
+  ].join("\n");
+  return { title, body };
+}
+
+async function commitData(runId) {
+  const runPath = path.join(DEFAULT_RUNS_DIR, runId, "run.json");
+  const qualityPath = path.join(DEFAULT_RUNS_DIR, runId, "quality.json");
+  const run = await readJson(runPath);
+  const quality = await readJson(qualityPath, { status: "recorded" });
+  const pathspec = await existingDataPathspecs();
+
+  await execFileAsync("git", ["add", "--", ...pathspec], { cwd: ROOT });
+  if (!(await hasDataDiff())) {
+    console.log("No data changes to commit.");
+    return;
+  }
+
+  const message = commitMessage(run, quality);
+  await execFileAsync(
+    "git",
+    ["commit", "-m", message.title, "-m", message.body, "--", ...pathspec],
+    { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 }
+  );
+}
+
+async function commandGit(argv) {
+  const subcommand = argv[0];
+  if (subcommand === "status-data") {
+    const pathspec = await existingDataPathspecs();
+    const { stdout } = await execFileAsync("git", ["status", "--short", "--", ...pathspec], {
+      cwd: ROOT,
+    });
+    process.stdout.write(stdout);
+    return;
+  }
+
+  if (subcommand === "commit-data") {
+    const options = parseOptions(argv.slice(1));
+    if (!options.runId) {
+      throw new Error("git commit-data requires --run-id <run_id>");
+    }
+    await commitData(options.runId);
+    return;
+  }
+
+  throw new Error(`Unknown git command: ${subcommand ?? ""}`);
+}
+
+async function main() {
+  const [command, subcommand, ...rest] = process.argv.slice(2);
+
+  if (!command || command === "--help" || command === "-h") {
+    printUsage();
+    return;
+  }
+
+  if (command === "doctor") {
+    await commandDoctor();
+    return;
+  }
+  if (command === "pool" && subcommand === "pull") {
+    await commandPoolPull(rest);
+    return;
+  }
+  if (command === "codes" && subcommand === "build") {
+    await commandCodesBuild(rest);
+    return;
+  }
+  if (command === "kline" && subcommand === "sync") {
+    await commandKlineSync(rest);
+    return;
+  }
+  if (command === "kline" && subcommand === "validate") {
+    await commandKlineValidate(rest);
+    return;
+  }
+  if (command === "daily") {
+    await commandDaily([subcommand, ...rest].filter(Boolean));
+    return;
+  }
+  if (command === "run") {
+    await commandRun([subcommand, ...rest]);
+    return;
+  }
+  if (command === "report") {
+    await commandReport([subcommand, ...rest]);
+    return;
+  }
+  if (command === "git") {
+    await commandGit([subcommand, ...rest]);
+    return;
+  }
+
+  throw new Error(`Unknown command: ${command}`);
+}
+
+main().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
+});

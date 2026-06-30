@@ -1,0 +1,76 @@
+name: Daily Data Commit
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Optional YYYYMMDD date. Empty means latest."
+        required: false
+        default: ""
+      period:
+        description: "Kline period."
+        required: false
+        default: "daily"
+        type: choice
+        options:
+          - daily
+          - yearly
+      limit:
+        description: "Maximum number of codes to sync."
+        required: false
+        default: "10"
+      engine:
+        description: "Kline engine."
+        required: false
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - local
+          - aws
+  schedule:
+    - cron: "30 8 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-data-commit
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run daily data workflow
+        env:
+          DATE_INPUT: ${{ github.event.inputs.date }}
+          PERIOD_INPUT: ${{ github.event.inputs.period }}
+          LIMIT_INPUT: ${{ github.event.inputs.limit }}
+          ENGINE_INPUT: ${{ github.event.inputs.engine }}
+        run: |
+          set -euo pipefail
+
+          PERIOD="${PERIOD_INPUT:-daily}"
+          LIMIT="${LIMIT_INPUT:-10}"
+          ENGINE="${ENGINE_INPUT:-auto}"
+
+          ARGS=(daily --period "$PERIOD" --limit "$LIMIT" --engine "$ENGINE" --commit)
+          if [ -n "${DATE_INPUT:-}" ]; then
+            ARGS+=(--date "$DATE_INPUT")
+          else
+            ARGS+=(--latest)
+          fi
+
+          git pull --rebase
+          bin/x "${ARGS[@]}"

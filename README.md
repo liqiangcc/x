@@ -56,12 +56,32 @@
 
 - `data/pool/<YYYYMMDD>/` - 每个交易日的 `dt.json`、`qs.json`、`zb.json`、`zt.json` 和 `codes.json`。
 - `data/pool/summary.json` - 多日 pool 拉取任务汇总。
-- `data/kline/daily/<code>.json` - 个股日线。
-- `data/kline/yearly/<code>.json` - 个股年线。
+- `data/kline/daily/<prefix>/<code>.json` - 个股日线，`<prefix>` 为股票代码前三位。
+- `data/kline/yearly/<prefix>/<code>.json` - 个股年线，`<prefix>` 为股票代码前三位。
 
 ## 快速开始：Pool -> Codes -> Kline
 
-下面是最小可执行路径。先用小范围命令确认环境、代理和输出结构正常，再扩大日期范围或移除 `--limit`。
+推荐使用统一入口 `bin/x`。先用小范围命令确认环境、代理和输出结构正常，再扩大日期范围或移除 `--limit`。
+
+```bash
+# 0. 检查基础依赖
+bin/x doctor
+
+# 1. 最小闭环：pool -> codes -> kline -> quality -> runs
+bin/x daily --latest --limit 10 --period daily
+
+# 2. 如需把 data/runs/reports 作为数据账本提交
+bin/x daily --latest --limit 10 --period daily --commit
+
+# 3. 查看运行记录
+bin/x run list
+bin/x run show <run_id>
+
+# 4. 生成轻量候选报告
+bin/x report daily --date 20260325
+```
+
+底层脚本仍可直接运行，适合调试单阶段问题：
 
 ```bash
 # 1. 拉取最近一个交易日的 pool 数据
@@ -88,7 +108,7 @@ node fetch/query_pool_klines.js data/pool/20260325 --period yearly
 
 - `fetch/pull_pool_task.js` 拉取 pool 原始数据，默认输出到 `data/pool/<YYYYMMDD>/`，包含 `dt.json`、`qs.json`、`zb.json`、`zt.json` 等文件。
 - `utils/parse_pool_json.js` 解析 pool JSON；目录输入配合 `--codes-only` 时会写入 `data/pool/<YYYYMMDD>/codes.json`。
-- `fetch/query_pool_klines.js` 读取 `codes.json` 并批量调用 `fetch_kline.js`，默认写入 `data/kline/<period>/<code>.json`。
+- `fetch/query_pool_klines.js` 读取 `codes.json` 并批量调用 `fetch_kline.js`，默认写入 `data/kline/<period>/<prefix>/<code>.json`。
 - `fetch/fetch_kline.js` 获取单只股票 kline，默认 `--engine auto`，优先 AWS 多 region 轮换，失败再回退本机。
 - `fetch/check_kline_empty.js` 巡检 `data/kline` 下的 JSON 文件，发现空文件、无效 JSON、缺少 `data.klines` 或 kline 数组为空时退出码为 `1`。
 

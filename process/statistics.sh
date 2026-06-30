@@ -19,7 +19,7 @@ yearly_positive_pct() {
     local where_clause=""
     if [ -n "$c12_value" ]; then
         # Sanitize input
-        sanitized_c12_value=$(echo "$c12_value" | sed "s/['"]//g")
+        sanitized_c12_value=$(echo "$c12_value" | sed "s/['\\\"]//g")
         where_clause="WHERE c12 = '$sanitized_c12_value'"
     fi
 

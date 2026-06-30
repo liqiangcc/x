@@ -273,6 +273,10 @@ async function main() {
     for (const pool of POOLS) {
       try {
         const { data, engineUsed } = await fetchPool(pool, currentDate, engine);
+        const qdate = data?.data?.qdate ?? null;
+        if (String(qdate) !== currentDate) {
+          throw new Error(`Pool ${pool} returned qdate ${qdate}, expected ${currentDate}`);
+        }
         const outputPath = path.join(runDir, `${pool}.json`);
         await fs.writeFile(outputPath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
         const count = getPoolCount(data);
@@ -281,7 +285,7 @@ async function main() {
           status: "success",
           engine_used: engineUsed,
           file: outputPath,
-          qdate: data?.data?.qdate ?? null,
+          qdate,
           count,
           rc: data?.rc ?? null,
         };

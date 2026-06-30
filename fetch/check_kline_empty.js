@@ -71,24 +71,91 @@ function inspectKlinePayload(payload) {
     return "invalid_payload";
   }
 
-  if (!payload.data || typeof payload.data !== "object") {
-    return "missing_data";
-  }
+  const klines = getKlines(payload);
 
-  if (!Object.prototype.hasOwnProperty.call(payload.data, "klines")) {
+  if (!klines.exists) {
     return "missing_klines";
   }
 
-  if (!Array.isArray(payload.data.klines)) {
+  if (!Array.isArray(klines.value)) {
     return "invalid_klines";
   }
 
-  if (payload.data.klines.length === 0) {
+  if (klines.value.length === 0) {
     return "empty_klines";
   }
 
-  if (payload.data.klines.every((item) => typeof item === "string" && item.trim() === "")) {
+  if (klines.value.every((item) => typeof item === "string" && item.trim() === "")) {
     return "blank_klines";
+  }
+
+  const structuralIssue = inspectKlineRows(klines.value);
+  if (structuralIssue) {
+    return structuralIssue;
+  }
+
+  return null;
+}
+
+function getKlines(payload) {
+  if (Object.prototype.hasOwnProperty.call(payload, "klines")) {
+    return { exists: true, value: payload.klines };
+  }
+
+  if (payload.data && Object.prototype.hasOwnProperty.call(payload.data, "klines")) {
+    return { exists: true, value: payload.data.klines };
+  }
+
+  return { exists: false, value: null };
+}
+
+function inspectKlineRows(rows) {
+  const seenDates = new Set();
+  let previousDate = null;
+
+  for (const row of rows) {
+    if (typeof row !== "string") {
+      return "invalid_kline_row";
+    }
+
+    const fields = row.split(",");
+    if (fields.length !== 11) {
+      return "invalid_field_count";
+    }
+
+    const date = fields[0];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return "invalid_date";
+    }
+
+    if (previousDate && date < previousDate) {
+      return "date_not_ascending";
+    }
+    previousDate = date;
+
+    if (seenDates.has(date)) {
+      return "duplicate_date";
+    }
+    seenDates.add(date);
+
+    const open = Number(fields[1]);
+    const close = Number(fields[2]);
+    const high = Number(fields[3]);
+    const low = Number(fields[4]);
+    const volume = Number(fields[5]);
+    const turnover = Number(fields[6]);
+
+    if (![open, close, high, low, volume, turnover].every(Number.isFinite)) {
+      return "invalid_numeric_field";
+    }
+
+    if (high < open || high < close || high < low || low > open || low > close || low > high) {
+      return "invalid_ohlc";
+    }
+
+    if (volume < 0 || turnover < 0) {
+      return "negative_volume_or_turnover";
+    }
   }
 
   return null;
@@ -132,7 +199,7 @@ async function inspectFile(filePath) {
   return {
     file: filePath,
     issue,
-    code: payload?.data?.code ?? path.basename(filePath, ".json"),
+    code: payload?.code ?? payload?.data?.code ?? path.basename(filePath, ".json"),
     period: inferPeriodFromPath(filePath),
   };
 }
@@ -161,6 +228,8 @@ async function main() {
     target_path: targetPath,
     total_files: files.length,
     empty_count: issues.length,
+    issue_count: issues.length,
+    status: issues.length > 0 ? "failed" : "ok",
     issues,
   };
 
