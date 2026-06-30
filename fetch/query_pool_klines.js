@@ -626,7 +626,8 @@ function summarizeFinalResults(summary, results) {
 }
 
 function finalizeSummary(summary, options) {
-  summary.success_rate = summary.total_codes === 0 ? 1 : summary.success / summary.total_codes;
+  const completed = summary.success + summary.migrated_existing + summary.skipped_existing;
+  summary.success_rate = summary.total_codes === 0 ? 1 : completed / summary.total_codes;
 
   if (summary.failed > 0) {
     summary.failure_reasons.push("failed_items");

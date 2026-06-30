@@ -93,7 +93,7 @@ test("queryPoolKlines handles concurrent success, failure, and skipped files", a
   assert.equal(summary.success, 2);
   assert.equal(summary.failed, 1);
   assert.equal(summary.skipped_existing, 1);
-  assert.equal(summary.success_rate, 0.5);
+  assert.equal(summary.success_rate, 0.75);
   assert.deepEqual(summary.engine_counts, { aws: 1, local: 1 });
   assert.deepEqual(summary.region_counts, { "ap-northeast-1": 1 });
   assert.equal(summary.aws_region_strategy, "round_robin_start_index");
