@@ -20,6 +20,13 @@ npm install
 bin/x doctor
 ```
 
+配置 AWS 密钥后检查 AWS 维护状态：
+
+```bash
+aws configure --profile default
+bin/x aws status --profile default --region ap-northeast-1
+```
+
 ## 目录地图
 
 - `bin/x`：统一 CLI。
@@ -84,6 +91,16 @@ bin/x kline sync data/pool/20260325 --period daily --limit 10
 bin/x kline validate data/kline --period daily --json
 ```
 
+AWS 密钥维护：
+
+```bash
+bin/x aws status --profile default --region ap-northeast-1
+bin/x aws sync-github-secrets --profile default --region ap-northeast-1
+bin/x kline fetch 600519 --period daily --engine aws --aws-region ap-northeast-1
+```
+
+`sync-github-secrets` 会从本地 AWS profile 读取长期 IAM access key，先用 `config/kline.json` 中的多 region 配置验证 Lambda kline 调用，再写入 GitHub `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY` secrets 和 `AWS_REGION` variable。不要把真实密钥提交到仓库；如果 `origin` 不是 GitHub 仓库，使用 `--repo owner/name` 指定目标仓库。需要单独测试某个 region 时，加 `--preflight-region ap-northeast-1`。
+
 API：
 
 ```bash
@@ -138,5 +155,13 @@ npm run check
 npm test
 bin/x kline validate data/kline --period daily --json
 ```
+
+## GitHub Actions AWS 配置
+
+Daily Action 使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
+
+- 必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
+- 可选 variable：`AWS_REGION`，默认 `ap-northeast-1`
+- IAM 最小权限：允许调用 `config/kline.json` 中配置的 Lambda，默认函数名 `kline`
 
 不要把验证生成的数据、报告或运行记录混入代码提交，除非本次提交目标就是数据刷新。

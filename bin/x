@@ -2,8 +2,23 @@
 
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { execFile } = require("node:child_process");
+const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
+const {
+  AWS_ACCESS_KEY_SECRET,
+  AWS_REGION_VARIABLE,
+  AWS_SECRET_KEY_SECRET,
+  awsProfileEnv,
+  buildGithubSecretSetArgs,
+  buildGithubVariableSetArgs,
+  getAwsCallerIdentity,
+  getToolVersion,
+  normalizeAwsOptions,
+  readAwsProfileCredentials,
+  resolveGitHubRepo,
+  sanitizeError,
+  summarizeCredentials,
+} = require("../src/aws/maintenance");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
 
 const execFileAsync = promisify(execFile);
@@ -29,6 +44,8 @@ function printUsage() {
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
   x stats new-highs [--year YYYY|--date YYYYMMDD] [--db mydb.db]
+  x aws status [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--lambda-name kline]
+  x aws sync-github-secrets [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--repo owner/name] [--lambda-name kline]
   x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy check
@@ -76,13 +93,14 @@ function parseOptions(argv, defaults = {}) {
 async function runNode(scriptPath, args, options = {}) {
   return execFileAsync("node", [path.join(ROOT, scriptPath), ...args], {
     cwd: ROOT,
+    env: options.env ?? process.env,
     maxBuffer: options.maxBuffer ?? 50 * 1024 * 1024,
   });
 }
 
-async function runNodeAllowFailure(scriptPath, args) {
+async function runNodeAllowFailure(scriptPath, args, options = {}) {
   try {
-    const result = await runNode(scriptPath, args);
+    const result = await runNode(scriptPath, args, options);
     return { ...result, exitCode: 0 };
   } catch (error) {
     return {
@@ -91,6 +109,40 @@ async function runNodeAllowFailure(scriptPath, args) {
       exitCode: typeof error.code === "number" ? error.code : 1,
     };
   }
+}
+
+function runCommandWithInput(command, args, input, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd ?? ROOT,
+      env: options.env ?? process.env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+
+      const error = new Error(`${command} ${args.join(" ")} failed with exit code ${code ?? 1}`);
+      error.code = code ?? 1;
+      error.stdout = stdout;
+      error.stderr = stderr;
+      reject(error);
+    });
+
+    child.stdin.end(input);
+  });
 }
 
 async function readJson(filePath, fallback = null) {
@@ -149,6 +201,226 @@ async function commandDoctor() {
   if (failed > 0) {
     process.exitCode = 1;
   }
+}
+
+async function runAwsKlinePreflight({ profile, preflightRegion, lambdaName }) {
+  const args = [
+    "600519",
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--lambda-name",
+    lambdaName,
+  ];
+  if (preflightRegion) {
+    args.push("--aws-region", preflightRegion);
+  }
+
+  const result = await runNodeAllowFailure(
+    "fetch/fetch_kline.js",
+    args,
+    {
+      env: awsProfileEnv(profile, {
+        ...process.env,
+        NODE_NO_WARNINGS: "1",
+      }),
+    }
+  );
+
+  if (result.exitCode !== 0) {
+    return {
+      ok: false,
+      error: sanitizeError({ stderr: result.stderr || result.stdout || "AWS kline preflight failed." }),
+    };
+  }
+
+  try {
+    const payload = JSON.parse(result.stdout);
+    const klines = Array.isArray(payload?.data?.klines)
+      ? payload.data.klines
+      : Array.isArray(payload?.klines)
+        ? payload.klines
+        : [];
+    return {
+      ok: true,
+      code: payload?.data?.code ?? payload?.code ?? "600519",
+      points: klines.length,
+      source_engine: payload?.source_engine ?? null,
+      source_region: payload?.source_region ?? null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: `Failed to parse AWS kline preflight output: ${error.message}`,
+    };
+  }
+}
+
+async function requireTool(command, args) {
+  const tool = await getToolVersion(command, args, execFileAsync);
+  if (!tool.ok) {
+    throw new Error(`${command} CLI is not available: ${tool.error}`);
+  }
+  return tool;
+}
+
+async function commandAwsStatus(rawOptions) {
+  const options = normalizeAwsOptions(rawOptions);
+  const summary = {
+    profile: options.profile,
+    region: options.region,
+    preflight_region: options.preflightRegion ?? "config/default",
+    lambda_name: options.lambdaName,
+    tools: {
+      aws: await getToolVersion("aws", ["--version"], execFileAsync),
+      gh: await getToolVersion("gh", ["--version"], execFileAsync),
+    },
+    credentials: null,
+    identity: null,
+    lambda_preflight: null,
+    status: "ok",
+  };
+
+  let credentialsOk = false;
+  if (summary.tools.aws.ok) {
+    try {
+      const credentials = await readAwsProfileCredentials({
+        profile: options.profile,
+        execFileAsync,
+      });
+      summary.credentials = {
+        ok: true,
+        ...summarizeCredentials(credentials),
+      };
+      credentialsOk = true;
+    } catch (error) {
+      summary.credentials = {
+        ok: false,
+        error: sanitizeError(error),
+      };
+    }
+
+    try {
+      summary.identity = {
+        ok: true,
+        ...(await getAwsCallerIdentity({
+          profile: options.profile,
+          execFileAsync,
+        })),
+      };
+    } catch (error) {
+      summary.identity = {
+        ok: false,
+        error: sanitizeError(error),
+      };
+    }
+  } else {
+    summary.credentials = {
+      ok: false,
+      error: "aws CLI is unavailable.",
+    };
+    summary.identity = {
+      ok: false,
+      error: "aws CLI is unavailable.",
+    };
+  }
+
+  if (credentialsOk) {
+    summary.lambda_preflight = await runAwsKlinePreflight(options);
+  } else {
+    summary.lambda_preflight = {
+      ok: false,
+      error: "Static AWS profile credentials are required before Lambda preflight.",
+    };
+  }
+
+  const failed =
+    !summary.tools.aws.ok ||
+    !summary.tools.gh.ok ||
+    !summary.credentials.ok ||
+    !summary.identity.ok ||
+    !summary.lambda_preflight.ok;
+  if (failed) {
+    summary.status = "failed";
+    process.exitCode = 1;
+  }
+
+  printJson(summary);
+}
+
+async function commandAwsSyncGithubSecrets(rawOptions) {
+  const options = normalizeAwsOptions(rawOptions);
+  const awsTool = await requireTool("aws", ["--version"]);
+  const ghTool = await requireTool("gh", ["--version"]);
+  const credentials = await readAwsProfileCredentials({
+    profile: options.profile,
+    execFileAsync,
+  });
+  const identity = await getAwsCallerIdentity({
+    profile: options.profile,
+    execFileAsync,
+  });
+  const preflight = await runAwsKlinePreflight(options);
+  if (!preflight.ok) {
+    throw new Error(`AWS kline preflight failed: ${preflight.error}`);
+  }
+
+  const repo = await resolveGitHubRepo({
+    repo: rawOptions.repo,
+    execFileAsync,
+    cwd: ROOT,
+  });
+  await runCommandWithInput(
+    "gh",
+    buildGithubSecretSetArgs(AWS_ACCESS_KEY_SECRET, repo),
+    `${credentials.accessKeyId}\n`
+  );
+  await runCommandWithInput(
+    "gh",
+    buildGithubSecretSetArgs(AWS_SECRET_KEY_SECRET, repo),
+    `${credentials.secretAccessKey}\n`
+  );
+  await execFileAsync("gh", buildGithubVariableSetArgs(AWS_REGION_VARIABLE, options.region, repo), {
+    cwd: ROOT,
+    maxBuffer: 20 * 1024 * 1024,
+  });
+
+  printJson({
+    status: "ok",
+    profile: options.profile,
+    region: options.region,
+    preflight_region: options.preflightRegion ?? "config/default",
+    lambda_name: options.lambdaName,
+    repo,
+    tools: {
+      aws: awsTool.version,
+      gh: ghTool.version,
+    },
+    identity,
+    lambda_preflight: preflight,
+    github: {
+      secrets: [AWS_ACCESS_KEY_SECRET, AWS_SECRET_KEY_SECRET],
+      variables: [AWS_REGION_VARIABLE],
+    },
+  });
+}
+
+async function commandAws(argv) {
+  const subcommand = argv[0];
+  const options = parseOptions(argv.slice(1));
+
+  if (subcommand === "status") {
+    await commandAwsStatus(options);
+    return;
+  }
+
+  if (subcommand === "sync-github-secrets") {
+    await commandAwsSyncGithubSecrets(options);
+    return;
+  }
+
+  throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
 }
 
 async function commandKlineFetch(argv) {
@@ -950,6 +1222,10 @@ async function main() {
   }
   if (command === "stats") {
     await commandStats([subcommand, ...rest]);
+    return;
+  }
+  if (command === "aws") {
+    await commandAws([subcommand, ...rest]);
     return;
   }
   if (command === "proxy") {
