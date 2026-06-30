@@ -21,6 +21,15 @@ const {
   summarizeCredentials,
 } = require("../src/aws/maintenance");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
+const {
+  applyProgressResults,
+  calculateMaxChainDepth,
+  initializeProgress,
+  normalizeJobId,
+  normalizeProgress,
+  selectProgressBatch,
+  uniqueCodes,
+} = require("../src/jobs/progress");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -28,6 +37,7 @@ const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
+const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
 
 function rel(filePath) {
   return path.relative(ROOT, filePath).replaceAll(path.sep, "/");
@@ -47,7 +57,7 @@ function printUsage() {
   x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -747,6 +757,131 @@ async function hasCompleteMarketUniverse(date, outputDir, market = "hs-a") {
   }
 }
 
+function parsePositiveIntegerOption(value, fallback) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
+function parseNonNegativeIntegerOption(value, fallback) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : fallback;
+}
+
+function defaultDailyBatchSize(period) {
+  return period === "yearly" ? 200 : 500;
+}
+
+async function loadCodesJson(inputDir) {
+  const payload = await readJson(path.join(inputDir, "codes.json"));
+  if (!Array.isArray(payload?.codes)) {
+    throw new Error(`Missing codes array: ${rel(path.join(inputDir, "codes.json"))}`);
+  }
+  return uniqueCodes(payload.codes);
+}
+
+function defaultDailyJobId({ date, market, period, universe }) {
+  const parts = [date, period, universe];
+  if (universe === "market") {
+    parts.push(market);
+  }
+  return parts.join("-");
+}
+
+function progressPathFor(date, period, jobId) {
+  return path.join(DEFAULT_JOBS_DIR, date, period, jobId, "progress.json");
+}
+
+function parseKlineSummaryPath(stdout, period) {
+  const expected = `summary.${period}.json`;
+  const line = String(stdout ?? "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .reverse()
+    .find((item) => item.endsWith(expected));
+  return line ? rootPath(line) : null;
+}
+
+async function prepareDailyJobProgress(options, { date, inputDir }) {
+  if ((options.jobMode ?? "single") !== "batch") {
+    return null;
+  }
+
+  const batchSize = parsePositiveIntegerOption(options.batchSize, defaultDailyBatchSize(options.period));
+  const chainDepth = parseNonNegativeIntegerOption(options.chainDepth, 0);
+  let fallbackJobId = defaultDailyJobId({
+    date,
+    market: options.universe === "market" ? options.market : null,
+    period: options.period,
+    universe: options.universe,
+  });
+  if (options.limit) {
+    fallbackJobId = `${fallbackJobId}-limit-${options.limit}`;
+  }
+  if (options.offset) {
+    fallbackJobId = `${fallbackJobId}-offset-${options.offset}`;
+  }
+  const jobId = normalizeJobId(options.jobId, fallbackJobId);
+  const progressPath = progressPathFor(date, options.period, jobId);
+  const existingProgress = await readExistingJson(progressPath);
+  let progress;
+
+  if (existingProgress) {
+    progress = normalizeProgress(existingProgress);
+    progress.chain_depth = chainDepth;
+    if (options.maxChainDepth) {
+      progress.max_chain_depth = parsePositiveIntegerOption(options.maxChainDepth, progress.max_chain_depth);
+    }
+  } else {
+    let codes = await loadCodesJson(inputDir);
+    const offset = parseNonNegativeIntegerOption(options.offset, 0);
+    const limit = options.limit ? parsePositiveIntegerOption(options.limit, null) : null;
+    codes = codes.slice(offset);
+    if (limit !== null) {
+      codes = codes.slice(0, limit);
+    }
+    progress = initializeProgress({
+      batchSize,
+      chainDepth,
+      codes,
+      date,
+      jobId,
+      market: options.universe === "market" ? options.market : null,
+      maxChainDepth: options.maxChainDepth
+        ? parsePositiveIntegerOption(options.maxChainDepth, null)
+        : calculateMaxChainDepth(codes.length, batchSize),
+      period: options.period,
+      universe: options.universe,
+    });
+  }
+
+  const selection = selectProgressBatch(progress);
+  progress.last_batch_codes = selection.codes;
+  progress.last_batch_source = selection.source;
+  progress.updated_at = isoNow();
+  await writeJson(progressPath, progress);
+
+  const batchCodesPath = path.join(path.dirname(progressPath), "current.codes.json");
+  await writeJson(batchCodesPath, {
+    job_id: jobId,
+    date,
+    period: options.period,
+    chain_depth: chainDepth,
+    batch_size: progress.batch_size,
+    selection_source: selection.source,
+    codes: selection.codes,
+  });
+
+  return {
+    batchCodesPath,
+    chainDepth,
+    jobId,
+    progress,
+    progressPath,
+    selection,
+  };
+}
+
 async function commandDaily(argv) {
   const options = parseOptions(argv, {
     engine: "auto",
@@ -765,6 +900,9 @@ async function commandDaily(argv) {
   }
   if (!["market", "pool"].includes(options.universe)) {
     throw new Error(`Invalid universe: ${options.universe}`);
+  }
+  if (!["batch", "single"].includes(options.jobMode ?? "single")) {
+    throw new Error(`Invalid job mode: ${options.jobMode}`);
   }
 
   let date = options.date ? normalizeDate(options.date) : null;
@@ -830,14 +968,21 @@ async function commandDaily(argv) {
   process.stdout.write(codesResult.stdout);
   process.stderr.write(codesResult.stderr);
 
-  const klineArgs = [rel(inputDir), "--period", options.period, "--engine", options.engine];
-  appendKlineSyncOptions(klineArgs, options, { includeOutputDir: false });
+  const jobContext = await prepareDailyJobProgress(options, { date, inputDir });
+  const klineInputPath = jobContext ? jobContext.batchCodesPath : inputDir;
+  const klineOptions = jobContext
+    ? { ...options, batchSize: null, limit: null, offset: null }
+    : options;
+  const klineArgs = [rel(klineInputPath), "--period", options.period, "--engine", options.engine];
+  appendKlineSyncOptions(klineArgs, klineOptions, { includeOutputDir: false });
   const klineResult = await runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs);
   process.stdout.write(klineResult.stdout);
   process.stderr.write(klineResult.stderr);
 
-  const summaryPath = path.join(DEFAULT_KLINE_DIR, options.period, `summary.${options.period}.json`);
-  const klineSummary = await readJson(summaryPath, {
+  const defaultSummaryPath = path.join(DEFAULT_KLINE_DIR, options.period, `summary.${options.period}.json`);
+  const emittedSummaryPath = parseKlineSummaryPath(klineResult.stdout, options.period);
+  const summaryPath = emittedSummaryPath ?? defaultSummaryPath;
+  const emptyKlineSummary = {
     period: options.period,
     total_codes: 0,
     success: 0,
@@ -845,7 +990,18 @@ async function commandDaily(argv) {
     skipped_existing: 0,
     failed: 0,
     files: {},
-  });
+  };
+  const klineSummary = emittedSummaryPath
+    ? await readJson(summaryPath, emptyKlineSummary)
+    : emptyKlineSummary;
+
+  let progress = jobContext?.progress ?? null;
+  if (jobContext) {
+    progress = applyProgressResults(progress, klineSummary, {
+      chainDepth: jobContext.chainDepth,
+    });
+    await writeJson(jobContext.progressPath, progress);
+  }
 
   const validateResult = await runNodeAllowFailure("fetch/check_kline_empty.js", [
     "data/kline",
@@ -864,15 +1020,20 @@ async function commandDaily(argv) {
   const klineFailed = Number(klineSummary.failed ?? 0);
   const unexpectedKlineFailure = klineResult.exitCode !== 0 && klineFailed === 0;
   const klineFailureReasons = Array.isArray(klineSummary.failure_reasons) ? klineSummary.failure_reasons : [];
+  const hardKlineReasons = jobContext
+    ? ["aws_success_zero"]
+    : ["success_rate_below_minimum", "aws_success_zero"];
   const hardKlineFailure = klineFailureReasons.some((reason) =>
-    ["success_rate_below_minimum", "aws_success_zero"].includes(reason)
+    hardKlineReasons.includes(reason)
   );
+  const progressBlocked = progress?.status === "blocked";
   const hardFailed =
     poolResult.exitCode !== 0 ||
     codesResult.exitCode !== 0 ||
     quality.status === "failed" ||
     unexpectedKlineFailure ||
-    hardKlineFailure;
+    hardKlineFailure ||
+    progressBlocked;
   const failed =
     klineFailed +
     (poolResult.exitCode === 0 ? 0 : 1) +
@@ -884,6 +1045,11 @@ async function commandDaily(argv) {
     hardFailed || failed > 0 || quality.status === "failed"
       ? "completed_with_failures"
       : "completed";
+  const shouldDispatchNext =
+    Boolean(jobContext) &&
+    progress?.status === "running" &&
+    !hardFailed &&
+    jobContext.chainDepth < progress.max_chain_depth;
 
   const run = {
     run_id: runId,
@@ -891,17 +1057,36 @@ async function commandDaily(argv) {
     date,
     period: options.period,
     engine: options.engine,
+    aws_region: options.awsRegion ?? null,
+    lambda_name: options.lambdaName ?? null,
+    config: options.config ?? null,
+    concurrency: options.concurrency ?? null,
+    retry_attempts: options.retryAttempts ?? null,
+    retry_concurrency: options.retryConcurrency ?? null,
+    min_success_rate: options.minSuccessRate ?? null,
+    force: Boolean(options.force),
     universe: options.universe,
     market: options.universe === "market" ? options.market : null,
     universe_total_codes: universeSummary?.total_codes ?? null,
     input: rel(path.join(inputDir, "codes.json")),
+    kline_input: rel(klineInputPath),
     status,
     total,
     success,
     skipped,
     failed,
-    batch_size: klineSummary.batch_size ?? null,
+    batch_size: jobContext ? progress.batch_size : (klineSummary.batch_size ?? null),
     selection_mode: klineSummary.selection_mode ?? null,
+    job_mode: jobContext ? "batch" : (options.jobMode ?? "single"),
+    job_id: jobContext?.jobId ?? null,
+    job_status: progress?.status ?? null,
+    chain_depth: progress?.chain_depth ?? null,
+    max_chain_depth: progress?.max_chain_depth ?? null,
+    should_dispatch_next: shouldDispatchNext,
+    progress_counts: progress?.counts ?? null,
+    progress_file: jobContext ? rel(jobContext.progressPath) : null,
+    progress_batch_source: jobContext?.selection.source ?? null,
+    progress_batch_codes: jobContext?.selection.codes.length ?? null,
     initial_failed: klineSummary.initial_failed ?? 0,
     retried: klineSummary.retried ?? 0,
     retry_success: klineSummary.retry_success ?? 0,
@@ -916,6 +1101,8 @@ async function commandDaily(argv) {
     artifacts: {
       pool_dir: rel(poolDir),
       universe_dir: options.universe === "market" ? rel(inputDir) : null,
+      job_progress: jobContext ? rel(jobContext.progressPath) : null,
+      job_batch_codes: jobContext ? rel(jobContext.batchCodesPath) : null,
       kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),
       kline_summary: rel(summaryPath),
       run: rel(path.join(runDir, "run.json")),
@@ -1272,6 +1459,13 @@ function commitMessage(run, quality) {
     `skipped: ${run.skipped}`,
     `batch_size: ${run.batch_size ?? "n/a"}`,
     `selection_mode: ${run.selection_mode ?? "n/a"}`,
+    `job_mode: ${run.job_mode ?? "single"}`,
+    `job_id: ${run.job_id ?? "n/a"}`,
+    `job_status: ${run.job_status ?? "n/a"}`,
+    `chain_depth: ${run.chain_depth ?? "n/a"}`,
+    `max_chain_depth: ${run.max_chain_depth ?? "n/a"}`,
+    `progress_counts: ${JSON.stringify(run.progress_counts ?? {})}`,
+    `should_dispatch_next: ${run.should_dispatch_next ?? false}`,
     `initial_failed: ${run.initial_failed ?? 0}`,
     `retried: ${run.retried ?? 0}`,
     `retry_success: ${run.retry_success ?? 0}`,
@@ -1297,6 +1491,10 @@ function printDailyRunSummary(run, quality, failures) {
       `universe_total_codes=${run.universe_total_codes ?? "n/a"}`,
       `batch_size=${run.batch_size ?? "n/a"}`,
       `selection_mode=${run.selection_mode ?? "n/a"}`,
+      `job_mode=${run.job_mode ?? "single"}`,
+      `job_status=${run.job_status ?? "n/a"}`,
+      `progress_counts=${JSON.stringify(run.progress_counts ?? {})}`,
+      `dispatch_next=${run.should_dispatch_next ?? false}`,
       `initial_failed=${run.initial_failed ?? 0}`,
       `retried=${run.retried ?? 0}`,
       `retry_success=${run.retry_success ?? 0}`,

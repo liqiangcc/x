@@ -22,6 +22,7 @@ function buildDailyArgs(env = process.env) {
   const limit = String(env.LIMIT_INPUT ?? "").trim();
   const engine = valueOrDefault(env.ENGINE_INPUT, "aws");
   const universe = valueOrDefault(env.UNIVERSE_INPUT, "market");
+  const jobMode = valueOrDefault(env.JOB_MODE_INPUT, "batch");
   const concurrency = valueOrDefault(
     env.CONCURRENCY_INPUT,
     engine === "local" ? "4" : "1"
@@ -34,6 +35,12 @@ function buildDailyArgs(env = process.env) {
   const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, period === "yearly" ? "200" : "500");
   const minSuccessRate = valueOrDefault(env.MIN_SUCCESS_RATE_INPUT, "0.95");
   const date = String(env.DATE_INPUT ?? "").trim();
+  const jobId = String(env.JOB_ID_INPUT ?? "").trim();
+  const chainDepth = String(env.CHAIN_DEPTH_INPUT ?? "").trim();
+  const maxChainDepth = String(env.MAX_CHAIN_DEPTH_INPUT ?? "").trim();
+  const awsRegion = String(env.AWS_REGION_INPUT ?? "").trim();
+  const lambdaName = String(env.LAMBDA_NAME_INPUT ?? "").trim();
+  const config = String(env.CONFIG_INPUT ?? "").trim();
   const args = [
     "daily",
     "--period",
@@ -42,6 +49,8 @@ function buildDailyArgs(env = process.env) {
     engine,
     "--universe",
     universe,
+    "--job-mode",
+    jobMode,
     "--commit",
     "--allow-partial",
     "--concurrency",
@@ -55,6 +64,30 @@ function buildDailyArgs(env = process.env) {
     "--min-success-rate",
     minSuccessRate,
   ];
+
+  if (jobId) {
+    args.push("--job-id", jobId);
+  }
+
+  if (chainDepth) {
+    args.push("--chain-depth", chainDepth);
+  }
+
+  if (maxChainDepth) {
+    args.push("--max-chain-depth", maxChainDepth);
+  }
+
+  if (awsRegion) {
+    args.push("--aws-region", awsRegion);
+  }
+
+  if (lambdaName) {
+    args.push("--lambda-name", lambdaName);
+  }
+
+  if (config) {
+    args.push("--config", config);
+  }
 
   if (isTruthy(env.FORCE_INPUT)) {
     args.push("--force");
@@ -103,7 +136,7 @@ function formatCounts(counts) {
   return entries.map(([key, value]) => `${key}: ${value}`).join(", ");
 }
 
-async function writeGithubStepSummary(args) {
+async function writeGithubStepSummary(args, run = null) {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryFile) {
     return;
@@ -156,6 +189,24 @@ async function writeGithubStepSummary(args) {
     "",
   ];
 
+  const latestRun = run ?? await findLatestRun();
+  if (latestRun?.job_mode === "batch") {
+    lines.push(
+      "## Progress",
+      "",
+      `- job_id: ${latestRun.job_id}`,
+      `- job_status: ${latestRun.job_status}`,
+      `- progress_file: ${latestRun.progress_file}`,
+      `- progress_counts: ${formatCounts(latestRun.progress_counts)}`,
+      `- batch_codes: ${latestRun.progress_batch_codes}`,
+      `- batch_source: ${latestRun.progress_batch_source}`,
+      `- chain_depth: ${latestRun.chain_depth}`,
+      `- max_chain_depth: ${latestRun.max_chain_depth}`,
+      `- should_dispatch_next: ${latestRun.should_dispatch_next}`,
+      ""
+    );
+  }
+
   await fs.appendFile(summaryFile, lines.join("\n"), "utf8");
 }
 
@@ -166,17 +217,103 @@ async function runChecked(command, args) {
   }
 }
 
+async function findLatestRun({ sinceMs = null } = {}) {
+  const runsDir = path.join(ROOT, "runs");
+  let entries;
+  try {
+    entries = await fs.readdir(runsDir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const runPath = path.join(runsDir, entry.name, "run.json");
+    try {
+      const stats = await fs.stat(runPath);
+      if (sinceMs !== null && stats.mtimeMs < sinceMs) {
+        continue;
+      }
+      candidates.push({ runPath, mtimeMs: stats.mtimeMs });
+    } catch {}
+  }
+
+  candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
+  if (candidates.length === 0) {
+    return null;
+  }
+  return JSON.parse(await fs.readFile(candidates[0].runPath, "utf8"));
+}
+
+function shouldDispatchNextRun(run, env = process.env) {
+  if (String(env.GITHUB_ACTIONS ?? "").toLowerCase() !== "true") {
+    return false;
+  }
+  if (isTruthy(env.DISABLE_CHAIN_DISPATCH)) {
+    return false;
+  }
+  return Boolean(
+    run?.should_dispatch_next &&
+      run.job_mode === "batch" &&
+      run.job_status === "running" &&
+      Number(run.chain_depth) < Number(run.max_chain_depth)
+  );
+}
+
+function addDispatchInput(args, name, value) {
+  if (value === null || value === undefined || value === "") {
+    return;
+  }
+  args.push("-f", `${name}=${value}`);
+}
+
+function buildDispatchArgs(run, env = process.env) {
+  const workflowName = env.GITHUB_WORKFLOW || "Daily Data Commit";
+  const ref = env.GITHUB_REF_NAME || "master";
+  const nextChainDepth = Number(run.chain_depth ?? 0) + 1;
+  const args = ["workflow", "run", workflowName, "--ref", ref];
+
+  addDispatchInput(args, "date", run.date);
+  addDispatchInput(args, "period", run.period);
+  addDispatchInput(args, "universe", run.universe);
+  addDispatchInput(args, "engine", run.engine);
+  addDispatchInput(args, "batch_size", run.batch_size);
+  addDispatchInput(args, "concurrency", run.concurrency ?? "1");
+  addDispatchInput(args, "retry_attempts", run.retry_attempts);
+  addDispatchInput(args, "retry_concurrency", run.retry_concurrency ?? "1");
+  addDispatchInput(args, "min_success_rate", run.min_success_rate);
+  addDispatchInput(args, "force", run.force ? "true" : "false");
+  addDispatchInput(args, "job_mode", "batch");
+  addDispatchInput(args, "job_id", run.job_id);
+  addDispatchInput(args, "chain_depth", nextChainDepth);
+  addDispatchInput(args, "max_chain_depth", run.max_chain_depth);
+  addDispatchInput(args, "aws_region", run.aws_region);
+  addDispatchInput(args, "lambda_name", run.lambda_name);
+  addDispatchInput(args, "config", run.config);
+  return args;
+}
+
 async function main() {
   await runChecked("git", ["pull", "--rebase"]);
 
   const dailyArgs = buildDailyArgs();
+  const startedAtMs = Date.now();
   const dailyCode = await run(process.execPath, [path.join(ROOT, "bin/x"), ...dailyArgs]);
-  await writeGithubStepSummary(dailyArgs);
-  if (dailyCode !== 0) {
-    process.exit(dailyCode);
+  const latestRun = await findLatestRun({ sinceMs: startedAtMs - 1000 });
+  await writeGithubStepSummary(dailyArgs, latestRun);
+  await runChecked("git", ["push"]);
+
+  const dispatchNext = shouldDispatchNextRun(latestRun);
+  if (dispatchNext) {
+    await runChecked("gh", buildDispatchArgs(latestRun));
   }
 
-  await runChecked("git", ["push"]);
+  if (dailyCode !== 0 && !dispatchNext) {
+    process.exit(dailyCode);
+  }
 }
 
 if (require.main === module) {
@@ -188,4 +325,6 @@ if (require.main === module) {
 
 module.exports = {
   buildDailyArgs,
+  buildDispatchArgs,
+  shouldDispatchNextRun,
 };

@@ -35,6 +35,10 @@ on:
         description: "Retry concurrency. Empty uses stable defaults."
         required: false
         default: ""
+      min_success_rate:
+        description: "Minimum kline success rate for each batch. Empty uses stable default."
+        required: false
+        default: ""
       force:
         description: "Force refresh existing kline files."
         required: false
@@ -57,10 +61,43 @@ on:
           - auto
           - local
           - aws
+      aws_region:
+        description: "Comma-separated AWS Lambda regions. Empty uses config rotation."
+        required: false
+        default: ""
+      lambda_name:
+        description: "Lambda function name. Empty uses kline."
+        required: false
+        default: ""
+      config:
+        description: "Optional kline config file."
+        required: false
+        default: ""
+      job_mode:
+        description: "Batch mode chains workflow runs until the market universe is complete."
+        required: false
+        default: "batch"
+        type: choice
+        options:
+          - batch
+          - single
+      job_id:
+        description: "Existing job id to resume. Empty creates a deterministic job id."
+        required: false
+        default: ""
+      chain_depth:
+        description: "Internal chained run depth. Leave empty for manual first run."
+        required: false
+        default: ""
+      max_chain_depth:
+        description: "Internal chained run limit. Empty computes from universe size and batch size."
+        required: false
+        default: ""
   schedule:
     - cron: "30 8 * * 1-5"
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -111,7 +148,16 @@ jobs:
           CONCURRENCY_INPUT: ${{ github.event.inputs.concurrency }}
           RETRY_ATTEMPTS_INPUT: ${{ github.event.inputs.retry_attempts }}
           RETRY_CONCURRENCY_INPUT: ${{ github.event.inputs.retry_concurrency }}
+          MIN_SUCCESS_RATE_INPUT: ${{ github.event.inputs.min_success_rate }}
           FORCE_INPUT: ${{ github.event.inputs.force }}
           UNIVERSE_INPUT: ${{ github.event.inputs.universe }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
+          AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}
+          LAMBDA_NAME_INPUT: ${{ github.event.inputs.lambda_name }}
+          CONFIG_INPUT: ${{ github.event.inputs.config }}
+          JOB_MODE_INPUT: ${{ github.event.inputs.job_mode }}
+          JOB_ID_INPUT: ${{ github.event.inputs.job_id }}
+          CHAIN_DEPTH_INPUT: ${{ github.event.inputs.chain_depth }}
+          MAX_CHAIN_DEPTH_INPUT: ${{ github.event.inputs.max_chain_depth }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/github-daily-workflow.js
