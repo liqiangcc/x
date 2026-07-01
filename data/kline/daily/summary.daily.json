@@ -9,7 +9,7 @@
   "expected_latest_date": "2026-07-01",
   "force": false,
   "freshness_codes": 5191,
-  "freshness_codes_path": "/home/runner/work/x/x/runs/20260701T150800Z_daily/freshness.codes.json",
+  "freshness_codes_path": "/home/runner/work/x/x/runs/20260701T150938Z_daily/freshness.codes.json",
   "huaweicloud_regions": null,
   "huaweicloud_region_strategy": "none",
   "input_path": "/home/runner/work/x/x/data/jobs/20260701/daily/20260701-daily-market-refresh/current.codes.json",
