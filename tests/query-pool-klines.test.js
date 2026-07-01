@@ -206,6 +206,122 @@ test("queryPoolKlines defers empty fetched klines without writing files", async 
   assert.equal(summary.retried, 0);
 });
 
+test("queryPoolKlines falls back to local when remote returns empty klines", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "yearly",
+    "--engine",
+    "huaweicloud",
+    "--output-dir",
+    outputDir,
+    "--expected-latest-date",
+    "20260701",
+  ]);
+  options.freshnessCodes = new Set(["600001"]);
+  const engines = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    engines.push(fetchOptions.engine);
+    if (fetchOptions.engine === "local") {
+      return klinePayload(secid.split(".")[1], "local", null, { latestDate: "2026-07-01" });
+    }
+    return {
+      source_engine: "huaweicloud",
+      source_region: "cn-east-3",
+      data: {
+        code: secid.split(".")[1],
+        market: 1,
+        klines: [],
+      },
+    };
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(engines, ["huaweicloud", "local"]);
+  assert.equal(summary.success, 1);
+  assert.equal(summary.failed, 0);
+  assert.deepEqual(summary.engine_counts, { local: 1 });
+  assert.equal(summary.files["600001"].fallback_from, "huaweicloud");
+});
+
+test("queryPoolKlines falls back to local when remote throws empty klines", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "yearly",
+    "--engine",
+    "huaweicloud",
+    "--output-dir",
+    outputDir,
+    "--expected-latest-date",
+    "20260701",
+  ]);
+  options.freshnessCodes = new Set(["600001"]);
+  const engines = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    engines.push(fetchOptions.engine);
+    if (fetchOptions.engine === "local") {
+      return klinePayload(secid.split(".")[1], "local", null, { latestDate: "2026-07-01" });
+    }
+    throw new Error(
+      `All Huawei Cloud regions failed for secid ${secid}. Last error: huaweicloud cn-east-3 returned empty_klines`
+    );
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(engines, ["huaweicloud", "local"]);
+  assert.equal(summary.success, 1);
+  assert.equal(summary.failed, 0);
+  assert.deepEqual(summary.engine_counts, { local: 1 });
+  assert.equal(summary.files["600001"].fallback_from, "huaweicloud");
+});
+
+test("queryPoolKlines reports remote empty when local fallback also fails", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "yearly",
+    "--engine",
+    "huaweicloud",
+    "--output-dir",
+    outputDir,
+  ]);
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    if (fetchOptions.engine === "local") {
+      throw new Error("local unavailable");
+    }
+    return {
+      source_engine: "huaweicloud",
+      source_region: "cn-east-3",
+      data: {
+        code: secid.split(".")[1],
+        market: 1,
+        klines: [],
+      },
+    };
+  });
+
+  assert.equal(exitCode, 1);
+  assert.equal(summary.failed, 1);
+  assert.equal(summary.files["600001"].error_class, "empty_klines");
+  assert.equal(summary.files["600001"].fallback_error, "local unavailable");
+});
+
 test("queryPoolKlines refetches existing empty output instead of skipping it", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");

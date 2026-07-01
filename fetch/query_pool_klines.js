@@ -580,6 +580,15 @@ function percentile(sortedValues, percentileValue) {
 
 function classifyFailure(error) {
   const message = String(error?.message ?? error ?? "");
+  if (/blank_klines/i.test(message)) {
+    return "blank_klines";
+  }
+  if (/empty_klines/i.test(message)) {
+    return "empty_klines";
+  }
+  if (/stale_kline/i.test(message)) {
+    return "stale_kline";
+  }
   if (/Unable to infer (market|secid)|Invalid/.test(message)) {
     return "invalid_code";
   }
@@ -829,6 +838,17 @@ function validateNormalizedKline(normalized, code, secid, options) {
   );
 }
 
+function isLocalFallbackFailureClass(errorClass) {
+  return ["empty_klines", "blank_klines", "stale_kline"].includes(errorClass);
+}
+
+function shouldFallbackToLocal(failure, options) {
+  if (!failure || options.engine === "local") {
+    return false;
+  }
+  return isLocalFallbackFailureClass(failure.file?.error_class);
+}
+
 async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
   let secid;
   let code;
@@ -861,13 +881,54 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
     }
   }
 
+  let data;
+  let normalized;
+  let validationFailure;
+  let fallbackFrom = null;
+
   try {
-    const data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
-    const normalized = normalizeKlinePayload(data, code, secid, options.period);
-    const validationFailure = validateNormalizedKline(normalized, code, secid, options);
-    if (validationFailure) {
+    data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
+    normalized = normalizeKlinePayload(data, code, secid, options.period);
+    validationFailure = validateNormalizedKline(normalized, code, secid, options);
+  } catch (error) {
+    const errorClass = classifyFailure(error);
+    validationFailure = createFailureResult(
+      code,
+      secid,
+      error.message,
+      errorClass,
+      isLocalFallbackFailureClass(errorClass) ? { deferred: true } : {}
+    );
+    if (!shouldFallbackToLocal(validationFailure, options)) {
       return validationFailure;
     }
+  }
+
+  if (shouldFallbackToLocal(validationFailure, options)) {
+    try {
+      const localData = await fetchKline(secid, { ...options, engine: "local" });
+      const localNormalized = normalizeKlinePayload(localData, code, secid, options.period);
+      const localFailure = validateNormalizedKline(localNormalized, code, secid, options);
+      if (!localFailure) {
+        fallbackFrom = options.engine;
+        data = localData;
+        normalized = localNormalized;
+        validationFailure = null;
+      } else {
+        validationFailure.file.fallback_error = localFailure.file.error;
+        validationFailure.file.fallback_error_class = localFailure.file.error_class;
+      }
+    } catch (fallbackError) {
+      validationFailure.file.fallback_error = fallbackError.message;
+      validationFailure.file.fallback_error_class = classifyFailure(fallbackError);
+    }
+  }
+
+  if (validationFailure) {
+    return validationFailure;
+  }
+
+  try {
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
     return {
@@ -881,6 +942,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         eastmoney_duration_ms: Number.isFinite(data.eastmoney_duration_ms) ? data.eastmoney_duration_ms : null,
         total_duration_ms: Number.isFinite(data.total_duration_ms) ? data.total_duration_ms : null,
         fallback_count: Number.isFinite(data.fallback_count) ? data.fallback_count : null,
+        fallback_from: fallbackFrom,
         attempted_regions: Array.isArray(data.attempted_regions) ? data.attempted_regions : null,
         status: "success",
         file: outputPath,
@@ -956,7 +1018,8 @@ function finalizeSummary(summary, options) {
     options.minSuccessRate !== null &&
     options.engine === "aws" &&
     summary.total_codes > 0 &&
-    summary.success + summary.failed > 0 &&
+    summary.failed > 0 &&
+    summary.success === 0 &&
     (summary.engine_counts.aws ?? 0) === 0
   ) {
     summary.failure_reasons.push("aws_success_zero");

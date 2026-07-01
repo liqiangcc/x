@@ -387,12 +387,31 @@ function normalizeKlineData(rawData, secid, sourceEngine, sourceRegion = null) {
   };
 }
 
+function klineCount(payload) {
+  if (Array.isArray(payload?.data?.klines)) {
+    return payload.data.klines.length;
+  }
+  return null;
+}
+
+function assertRemoteKlinesAvailable(payload, sourceEngine, sourceRegion) {
+  const count = klineCount(payload);
+  if (count === 0) {
+    throw new Error(`${sourceEngine} ${sourceRegion ?? "unknown"} returned empty_klines`);
+  }
+  return payload;
+}
+
 async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
   let lastError;
   for (const region of awsRegions) {
     try {
       const rawData = await invokeAwsRegion(secid, klt, region, lambdaName);
-      return normalizeKlineData(rawData, secid, "aws", region);
+      return assertRemoteKlinesAvailable(
+        normalizeKlineData(rawData, secid, "aws", region),
+        "aws",
+        region
+      );
     } catch (error) {
       lastError = error;
     }
@@ -436,13 +455,17 @@ async function fetchHuaweiCloudKline(secid, klt, options, env = process.env, fet
         throw new Error(`Huawei Cloud target returned ${resultPayload.error_class ?? "error"}: ${resultPayload.error ?? ""}`);
       }
       const totalDurationMs = Date.now() - startedAt;
-      return normalizeKlineData({
-        ...resultPayload,
-        request_id: resultPayload?.request_id ?? requestId,
-        total_duration_ms: Number.isFinite(resultPayload?.total_duration_ms)
-          ? resultPayload.total_duration_ms
-          : totalDurationMs,
-      }, secid, "huaweicloud", resultPayload?.source_region ?? region);
+      return assertRemoteKlinesAvailable(
+        normalizeKlineData({
+          ...resultPayload,
+          request_id: resultPayload?.request_id ?? requestId,
+          total_duration_ms: Number.isFinite(resultPayload?.total_duration_ms)
+            ? resultPayload.total_duration_ms
+            : totalDurationMs,
+        }, secid, "huaweicloud", resultPayload?.source_region ?? region),
+        "huaweicloud",
+        resultPayload?.source_region ?? region
+      );
     } catch (error) {
       lastError = error;
     }
