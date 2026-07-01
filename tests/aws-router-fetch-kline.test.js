@@ -187,6 +187,95 @@ test("fetchHuaweiCloudKline invokes FunctionGraph and preserves metrics", async 
   assert.equal(payload.data.klines.length, 1);
 });
 
+test("fetchHuaweiCloudKline skips empty region results", async () => {
+  const requests = [];
+  const payload = await fetchHuaweiCloudKline(
+    "1.600519",
+    "106",
+    {
+      huaweiCloudAccessKeyEnv: "HUAWEICLOUD_ACCESS_KEY",
+      huaweiCloudRegionStartIndex: 0,
+      huaweiCloudRegionValue: "cn-east-3,cn-north-4",
+      huaweiCloudSecretKeyEnv: "HUAWEICLOUD_SECRET_KEY",
+      huaweiCloudTargets: {
+        "cn-east-3": {
+          project_id: "project-east",
+          function_urn: "urn:fss:cn-east-3:project-east:function:default:x-kline-target",
+        },
+        "cn-north-4": {
+          project_id: "project-north",
+          function_urn: "urn:fss:cn-north-4:project-north:function:default:x-kline-target",
+        },
+      },
+    },
+    {
+      HUAWEICLOUD_ACCESS_KEY: "ak",
+      HUAWEICLOUD_SECRET_KEY: "sk",
+    },
+    async (url, request) => {
+      requests.push({ url, body: JSON.parse(request.body) });
+      const region = url.includes("cn-east-3") ? "cn-east-3" : "cn-north-4";
+      return jsonResponse({
+        request_id: `request-${region}`,
+        result: JSON.stringify({
+          ok: true,
+          source_region: region,
+          data: {
+            code: "600519",
+            market: 1,
+            klines: region === "cn-east-3" ? [] : ["2026-07-01,1,2,3,1,100,1000,1,1,1,1"],
+          },
+        }),
+        status: 200,
+      });
+    }
+  );
+
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests.map((item) => item.body.klt), [106, 106]);
+  assert.equal(payload.source_region, "cn-north-4");
+  assert.equal(payload.data.klines.at(-1).startsWith("2026-07-01,"), true);
+});
+
+test("fetchHuaweiCloudKline reports all-empty regions", async () => {
+  await assert.rejects(
+    () => fetchHuaweiCloudKline(
+      "1.600519",
+      "106",
+      {
+        huaweiCloudAccessKeyEnv: "HUAWEICLOUD_ACCESS_KEY",
+        huaweiCloudRegionStartIndex: 0,
+        huaweiCloudRegionValue: "cn-east-3",
+        huaweiCloudSecretKeyEnv: "HUAWEICLOUD_SECRET_KEY",
+        huaweiCloudTargets: {
+          "cn-east-3": {
+            project_id: "project-east",
+            function_urn: "urn:fss:cn-east-3:project-east:function:default:x-kline-target",
+          },
+        },
+      },
+      {
+        HUAWEICLOUD_ACCESS_KEY: "ak",
+        HUAWEICLOUD_SECRET_KEY: "sk",
+      },
+      async () => jsonResponse({
+        request_id: "request-cn-east-3",
+        result: JSON.stringify({
+          ok: true,
+          source_region: "cn-east-3",
+          data: {
+            code: "600519",
+            market: 1,
+            klines: [],
+          },
+        }),
+        status: 200,
+      })
+    ),
+    /empty_klines/
+  );
+});
+
 test("resolveKline auto tries Huawei Cloud before AWS and local", async () => {
   const calls = [];
   const payload = await resolveKline(

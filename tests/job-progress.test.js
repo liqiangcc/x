@@ -135,6 +135,69 @@ test("applyProgressResults blocks incomplete jobs at max chain depth", () => {
   assert.deepEqual(updated.failed_codes, ["600001"]);
 });
 
+test("applyProgressResults completes failed-only retry batches with no progress", () => {
+  const progress = initializeProgress({
+    batchSize: 2,
+    codes: ["600001", "600002"],
+    date: "20260630",
+    jobId: "daily-market",
+    period: "daily",
+    universe: "market",
+  });
+  const updated = applyProgressResults({
+    ...progress,
+    pending_codes: [],
+    completed_codes: ["600001"],
+    failed_codes: ["600002"],
+    last_batch_codes: ["600002"],
+    last_batch_source: "failed",
+  }, {
+    total_codes: 1,
+    failed: 1,
+    files: {
+      "600002": { status: "failed", error_class: "empty_klines" },
+    },
+  }, { chainDepth: 2 });
+
+  assert.equal(updated.status, "completed");
+  assert.deepEqual(updated.pending_codes, []);
+  assert.deepEqual(updated.completed_codes, ["600001"]);
+  assert.deepEqual(updated.failed_codes, ["600002"]);
+  assert.equal(updated.counts.remaining, 1);
+});
+
+test("applyProgressResults keeps failed-only retry batches running when progress is made", () => {
+  const progress = initializeProgress({
+    batchSize: 2,
+    codes: ["600001", "600002", "600003"],
+    date: "20260630",
+    jobId: "daily-market",
+    period: "daily",
+    universe: "market",
+  });
+  const updated = applyProgressResults({
+    ...progress,
+    pending_codes: [],
+    completed_codes: ["600001"],
+    failed_codes: ["600002", "600003"],
+    last_batch_codes: ["600002", "600003"],
+    last_batch_source: "failed",
+  }, {
+    total_codes: 2,
+    success: 1,
+    failed: 1,
+    files: {
+      "600002": { status: "success", engine: "aws-router" },
+      "600003": { status: "failed", error_class: "transient_network" },
+    },
+  }, { chainDepth: 2 });
+
+  assert.equal(updated.status, "running");
+  assert.deepEqual(updated.pending_codes, []);
+  assert.deepEqual(updated.completed_codes, ["600001", "600002"]);
+  assert.deepEqual(updated.failed_codes, ["600003"]);
+});
+
 test("markProgressCodesFailed retries completed invalid outputs without moving pending codes", () => {
   const progress = initializeProgress({
     batchSize: 2,

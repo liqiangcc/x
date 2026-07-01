@@ -957,8 +957,8 @@ async function readFreshnessCodesFromMarketUniverse(inputDir) {
   }
 }
 
-async function buildDailyFreshnessContext({ date, inputDir, options, runDir }) {
-  if (options.period !== "daily") {
+async function buildKlineFreshnessContext({ date, inputDir, options, runDir }) {
+  if (!["daily", "yearly"].includes(options.period)) {
     return null;
   }
 
@@ -996,7 +996,7 @@ async function buildDailyFreshnessContext({ date, inputDir, options, runDir }) {
 }
 
 async function findStaleKlineCodes({ expectedLatestDate, freshnessCodes, period }) {
-  if (period !== "daily" || !expectedLatestDate || !freshnessCodes || freshnessCodes.size === 0) {
+  if (!["daily", "yearly"].includes(period) || !expectedLatestDate || !freshnessCodes || freshnessCodes.size === 0) {
     return [];
   }
 
@@ -1244,7 +1244,7 @@ async function commandDaily(argv) {
   process.stdout.write(codesResult.stdout);
   process.stderr.write(codesResult.stderr);
 
-  const freshnessContext = await buildDailyFreshnessContext({
+  const freshnessContext = await buildKlineFreshnessContext({
     date,
     inputDir,
     options,
