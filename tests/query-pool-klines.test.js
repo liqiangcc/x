@@ -167,7 +167,7 @@ test("queryPoolKlines force refreshes existing output files", async (t) => {
   assert.equal(summary.files["600004"].status, "success");
 });
 
-test("queryPoolKlines treats empty fetched klines as retryable failures without writing files", async (t) => {
+test("queryPoolKlines defers empty fetched klines without writing files", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
   const outputDir = path.join(dir, "kline");
@@ -199,7 +199,10 @@ test("queryPoolKlines treats empty fetched klines as retryable failures without 
   assert.equal(summary.failed, 1);
   assert.equal(summary.files["600001"].status, "failed");
   assert.equal(summary.files["600001"].error_class, "empty_klines");
-  assert.equal(summary.files["600001"].retriable, true);
+  assert.equal(summary.files["600001"].retriable, false);
+  assert.equal(summary.files["600001"].deferred, true);
+  assert.equal(summary.initial_failed, 1);
+  assert.equal(summary.retried, 0);
 });
 
 test("queryPoolKlines refetches existing empty output instead of skipping it", async (t) => {

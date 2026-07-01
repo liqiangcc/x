@@ -498,28 +498,8 @@ function classifyFailure(error) {
   return "unknown";
 }
 
-const RETRIABLE_VALIDATION_FAILURES = new Set([
-  "blank_klines",
-  "date_not_ascending",
-  "duplicate_date",
-  "empty_file",
-  "empty_klines",
-  "invalid_date",
-  "invalid_field_count",
-  "invalid_json",
-  "invalid_kline_row",
-  "invalid_klines",
-  "invalid_numeric_field",
-  "invalid_ohlc",
-  "invalid_payload",
-  "missing_klines",
-  "negative_volume_or_turnover",
-  "read_error",
-]);
-
 function isRetriableFailure(errorClass) {
-  return ["rate_limited", "transient_network"].includes(errorClass) ||
-    RETRIABLE_VALIDATION_FAILURES.has(errorClass);
+  return ["rate_limited", "transient_network"].includes(errorClass);
 }
 
 function createSummary(options, selection) {
@@ -632,7 +612,7 @@ async function inspectExistingKline(filePath) {
   };
 }
 
-function createFailureResult(code, secid, error, errorClass) {
+function createFailureResult(code, secid, error, errorClass, extra = {}) {
   return {
     code,
     countKey: "failed",
@@ -642,6 +622,7 @@ function createFailureResult(code, secid, error, errorClass) {
       error,
       error_class: errorClass,
       retriable: isRetriableFailure(errorClass),
+      ...extra,
     },
   };
 }
@@ -717,7 +698,8 @@ function validateNormalizedKline(normalized, code, secid) {
     code,
     secid,
     `kline payload is invalid: ${issue}`,
-    issue
+    issue,
+    { deferred: true }
   );
 }
 
