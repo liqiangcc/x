@@ -1,0 +1,206 @@
+{
+  "run_id": "20260630T002119Z_daily",
+  "failed": 25,
+  "items": [
+    {
+      "target": "0.000013",
+      "code": "000013",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000013 --period daily --engine aws --lambda-name kline --aws-region-start-index 312\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":33256,\"remoteAddress\":\"103.220.167.80\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000013\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000018",
+      "code": "000018",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000018 --period daily --engine aws --lambda-name kline --aws-region-start-index 318\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":37812,\"remoteAddress\":\"140.207.67.156\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000018\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000024",
+      "code": "000024",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000024 --period daily --engine aws --lambda-name kline --aws-region-start-index 324\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":55050,\"remoteAddress\":\"140.207.67.156\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000024\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000025",
+      "code": "000025",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000025 --period daily --engine aws --lambda-name kline --aws-region-start-index 326\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":38326,\"remoteAddress\":\"117.184.38.143\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000025\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000031",
+      "code": "000031",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000031 --period daily --engine aws --lambda-name kline --aws-region-start-index 333\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":41078,\"remoteAddress\":\"101.226.30.221\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14976:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000031\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000033",
+      "code": "000033",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000033 --period daily --engine aws --lambda-name kline --aws-region-start-index 336\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":38486,\"remoteAddress\":\"103.220.167.80\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000033\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000038",
+      "code": "000038",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000038 --period daily --engine aws --lambda-name kline --aws-region-start-index 342\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":33118,\"remoteAddress\":\"117.184.40.129\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000038\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000046",
+      "code": "000046",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000046 --period daily --engine aws --lambda-name kline --aws-region-start-index 348\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":36380,\"remoteAddress\":\"120.79.243.12\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000046\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000050",
+      "code": "000050",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000050 --period daily --engine aws --lambda-name kline --aws-region-start-index 353\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":37566,\"remoteAddress\":\"101.42.128.173\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000050\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000058",
+      "code": "000058",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000058 --period daily --engine aws --lambda-name kline --aws-region-start-index 357\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":48358,\"remoteAddress\":\"61.129.129.199\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000058\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000061",
+      "code": "000061",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000061 --period daily --engine aws --lambda-name kline --aws-region-start-index 361\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":50548,\"remoteAddress\":\"101.42.128.173\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000061\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000063",
+      "code": "000063",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000063 --period daily --engine aws --lambda-name kline --aws-region-start-index 364\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":53592,\"remoteAddress\":\"117.184.38.143\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000063\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000068",
+      "code": "000068",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000068 --period daily --engine aws --lambda-name kline --aws-region-start-index 368\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":59294,\"remoteAddress\":\"120.79.243.12\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000068\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000069",
+      "code": "000069",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000069 --period daily --engine aws --lambda-name kline --aws-region-start-index 370\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":34310,\"remoteAddress\":\"101.42.128.173\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000069\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000159",
+      "code": "000159",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000159 --period daily --engine aws --lambda-name kline --aws-region-start-index 393\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":40694,\"remoteAddress\":\"120.79.123.125\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000159\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000301",
+      "code": "000301",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000301 --period daily --engine aws --lambda-name kline --aws-region-start-index 396\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":48954,\"remoteAddress\":\"140.207.67.156\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000301\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000333",
+      "code": "000333",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000333 --period daily --engine aws --lambda-name kline --aws-region-start-index 398\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":49194,\"remoteAddress\":\"101.42.128.173\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000333\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000401",
+      "code": "000401",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000401 --period daily --engine aws --lambda-name kline --aws-region-start-index 402\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":44480,\"remoteAddress\":\"101.226.30.221\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000401\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000403",
+      "code": "000403",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000403 --period daily --engine aws --lambda-name kline --aws-region-start-index 405\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":53574,\"remoteAddress\":\"103.220.167.80\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000403\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000406",
+      "code": "000406",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000406 --period daily --engine aws --lambda-name kline --aws-region-start-index 409\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":34946,\"remoteAddress\":\"120.79.243.12\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000406\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000408",
+      "code": "000408",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000408 --period daily --engine aws --lambda-name kline --aws-region-start-index 412\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":51930,\"remoteAddress\":\"103.220.167.80\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000408\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000409",
+      "code": "000409",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000409 --period daily --engine aws --lambda-name kline --aws-region-start-index 414\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":37610,\"remoteAddress\":\"101.42.128.173\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000409\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000416",
+      "code": "000416",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000416 --period daily --engine aws --lambda-name kline --aws-region-start-index 422\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":48522,\"remoteAddress\":\"120.79.243.12\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000416\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000417",
+      "code": "000417",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000417 --period daily --engine aws --lambda-name kline --aws-region-start-index 424\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":45438,\"remoteAddress\":\"61.129.129.199\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000417\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000421",
+      "code": "000421",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000421 --period daily --engine aws --lambda-name kline --aws-region-start-index 429\nLambda returned statusCode 500: {\"error\":\"fetch failed\",\"cause\":{\"name\":\"SocketError\",\"code\":\"UND_ERR_SOCKET\",\"socket\":{\"localAddress\":\"169.254.100.6\",\"localPort\":60960,\"remoteAddress\":\"103.220.167.80\",\"remotePort\":80,\"remoteFamily\":\"IPv4\",\"bytesWritten\":565,\"bytesRead\":0}},\"stack\":\"TypeError: fetch failed\\n    at node:internal/deps/undici/undici:14902:13\\n    at async exports.handler (/var/task/index.js:39:26)\",\"stats\":{\"pk\":\"0.000421\",\"klt\":101,\"table\":\"kline\",\"fetched\":0,\"saved\":0,\"mode\":\"DryRun\",\"errors\":[]}}\n",
+      "retry_count": 0
+    }
+  ]
+}
