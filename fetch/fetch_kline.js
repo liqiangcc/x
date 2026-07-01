@@ -4,6 +4,13 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { getKline } = require("../src/sources/eastmoney/client");
 const { inferSecid, splitSecid } = require("../src/core/secid");
+const {
+  ACCESS_KEY_ENV: HUAWEICLOUD_ACCESS_KEY_ENV,
+  SECRET_KEY_ENV: HUAWEICLOUD_SECRET_KEY_ENV,
+  invokeFunctionGraph,
+  loadHuaweiCloudTargets,
+  normalizeHuaweiCloudTarget,
+} = require("../src/huaweicloud/functiongraph");
 
 const CONFIG_FILE = path.resolve(__dirname, "../config/kline.json");
 const PERIOD_MAP = {
@@ -29,11 +36,11 @@ const DEFAULT_AWS_REGIONS = [
   "us-west-1",
   "us-west-2",
 ];
-const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--lambda-name <name>] [--config <file>] [--output <file>]"
+    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output <file>]"
   );
 }
 
@@ -52,6 +59,17 @@ function rotateRegions(regions, startIndex) {
   return [...regions.slice(offset), ...regions.slice(0, offset)];
 }
 
+function parseRegionList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((region) => region.trim())
+    .filter(Boolean);
+}
+
+function uniqueRegions(regions) {
+  return [...new Set(regions)];
+}
+
 function parseArguments(argv) {
   const options = {
     awsRegions: [...DEFAULT_AWS_REGIONS],
@@ -59,6 +77,12 @@ function parseArguments(argv) {
     awsRegionStartIndex: 0,
     configFile: CONFIG_FILE,
     engine: "auto",
+    huaweiCloudAccessKeyEnv: HUAWEICLOUD_ACCESS_KEY_ENV,
+    huaweiCloudRegionStartIndex: 0,
+    huaweiCloudRegionValue: "all",
+    huaweiCloudSecretKeyEnv: HUAWEICLOUD_SECRET_KEY_ENV,
+    huaweiCloudTargets: null,
+    huaweiCloudTargetsFile: null,
     input: null,
     lambdaName: "kline",
     lambdaNameOverridden: false,
@@ -112,6 +136,33 @@ function parseArguments(argv) {
     if (arg === "--aws-region-start-index") {
       const nextArg = argv[index + 1];
       options.awsRegionStartIndex = parseNonNegativeInteger(nextArg, "--aws-region-start-index");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-region") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --huaweicloud-region.");
+      }
+      options.huaweiCloudRegionValue = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-region-start-index") {
+      const nextArg = argv[index + 1];
+      options.huaweiCloudRegionStartIndex = parseNonNegativeInteger(nextArg, "--huaweicloud-region-start-index");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-targets") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --huaweicloud-targets.");
+      }
+      options.huaweiCloudTargetsFile = path.resolve(nextArg);
       index += 1;
       continue;
     }
@@ -184,6 +235,18 @@ async function applyConfigDefaults(options) {
     if (typeof config?.aws_router_token_env === "string" && config.aws_router_token_env.trim()) {
       options.routerTokenEnv = config.aws_router_token_env.trim();
     }
+
+    if (config?.huaweicloud_targets && typeof config.huaweicloud_targets === "object" && !Array.isArray(config.huaweicloud_targets)) {
+      options.huaweiCloudTargets = config.huaweicloud_targets;
+    }
+
+    if (typeof config?.huaweicloud_access_key_env === "string" && config.huaweicloud_access_key_env.trim()) {
+      options.huaweiCloudAccessKeyEnv = config.huaweicloud_access_key_env.trim();
+    }
+
+    if (typeof config?.huaweicloud_secret_key_env === "string" && config.huaweicloud_secret_key_env.trim()) {
+      options.huaweiCloudSecretKeyEnv = config.huaweicloud_secret_key_env.trim();
+    }
   } catch (error) {
     if (error.code === "ENOENT") {
       return options;
@@ -193,6 +256,25 @@ async function applyConfigDefaults(options) {
 
   options.awsRegions = rotateRegions(options.awsRegions, options.awsRegionStartIndex);
   return options;
+}
+
+function resolveHuaweiCloudTargets(options, env = process.env) {
+  return options.huaweiCloudTargets ?? loadHuaweiCloudTargets({
+    env,
+    targetsFile: options.huaweiCloudTargetsFile,
+  });
+}
+
+function resolveHuaweiCloudRegions(value, targets) {
+  const targetRegions = Object.keys(targets ?? {}).sort();
+  if (!value || value === "all") {
+    return targetRegions;
+  }
+  const regions = parseRegionList(value);
+  if (regions.length === 0) {
+    throw new Error("No Huawei Cloud regions were provided.");
+  }
+  return uniqueRegions(regions);
 }
 
 async function fetchLocalKline(secid, klt) {
@@ -318,6 +400,56 @@ async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
   throw lastError;
 }
 
+async function fetchHuaweiCloudKline(secid, klt, options, env = process.env, fetchImpl = fetch) {
+  const targets = resolveHuaweiCloudTargets(options, env);
+  const regions = rotateRegions(
+    resolveHuaweiCloudRegions(options.huaweiCloudRegionValue, targets),
+    options.huaweiCloudRegionStartIndex
+  );
+  if (regions.length === 0) {
+    throw new Error("No Huawei Cloud FunctionGraph regions were resolved.");
+  }
+
+  const accessKey = String(env[options.huaweiCloudAccessKeyEnv] ?? "").trim();
+  const secretKey = String(env[options.huaweiCloudSecretKeyEnv] ?? "").trim();
+  let lastError;
+  for (const region of regions) {
+    const startedAt = Date.now();
+    try {
+      const target = normalizeHuaweiCloudTarget(region, targets[region]);
+      if (!target.ok) {
+        throw new Error(target.error);
+      }
+      const { requestId, resultPayload } = await invokeFunctionGraph({
+        accessKey,
+        fetchImpl,
+        payload: {
+          end: "20991231",
+          klt: Number(klt),
+          lmt: 100000,
+          secid,
+        },
+        secretKey,
+        target,
+      });
+      if (resultPayload?.ok === false) {
+        throw new Error(`Huawei Cloud target returned ${resultPayload.error_class ?? "error"}: ${resultPayload.error ?? ""}`);
+      }
+      const totalDurationMs = Date.now() - startedAt;
+      return normalizeKlineData({
+        ...resultPayload,
+        request_id: resultPayload?.request_id ?? requestId,
+        total_duration_ms: Number.isFinite(resultPayload?.total_duration_ms)
+          ? resultPayload.total_duration_ms
+          : totalDurationMs,
+      }, secid, "huaweicloud", resultPayload?.source_region ?? region);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 function appendPath(baseUrl, pathname) {
   return `${String(baseUrl).replace(/\/+$/, "")}${pathname}`;
 }
@@ -362,36 +494,52 @@ async function fetchAwsRouterKline(secid, klt, options, env = process.env, fetch
   return normalizeKlineData(payload, secid, "aws-router", payload.source_region ?? null);
 }
 
-async function resolveKline(options) {
+async function resolveKline(options, deps = {}) {
+  const fetchAws = deps.fetchAwsKline ?? fetchAwsKline;
+  const fetchHuaweiCloud = deps.fetchHuaweiCloudKline ?? fetchHuaweiCloudKline;
+  const fetchLocal = deps.fetchLocalKline ?? fetchLocalKline;
+  const fetchRouter = deps.fetchAwsRouterKline ?? fetchAwsRouterKline;
   const secid = inferSecid(options.input);
   const klt = PERIOD_MAP[options.period];
 
   if (options.engine === "local") {
-    const rawData = await fetchLocalKline(secid, klt);
+    const rawData = await fetchLocal(secid, klt);
     return normalizeKlineData(rawData, secid, "local");
   }
 
   if (options.engine === "aws") {
-    return fetchAwsKline(secid, klt, options.awsRegions, options.lambdaName);
+    return fetchAws(secid, klt, options.awsRegions, options.lambdaName);
   }
 
   if (options.engine === "aws-router") {
-    return fetchAwsRouterKline(secid, klt, options);
+    return fetchRouter(secid, klt, options);
+  }
+
+  if (options.engine === "huaweicloud") {
+    return fetchHuaweiCloud(secid, klt, options);
+  }
+
+  let huaweiCloudError = null;
+  try {
+    return await fetchHuaweiCloud(secid, klt, options);
+  } catch (error) {
+    huaweiCloudError = error;
   }
 
   let awsError = null;
   try {
-    return await fetchAwsKline(secid, klt, options.awsRegions, options.lambdaName);
+    return await fetchAws(secid, klt, options.awsRegions, options.lambdaName);
   } catch (error) {
     awsError = error;
   }
 
   try {
-    const rawData = await fetchLocalKline(secid, klt);
+    const rawData = await fetchLocal(secid, klt);
     return normalizeKlineData(rawData, secid, "local");
   } catch (localError) {
     throw new Error(
       [
+        `Huawei Cloud failed: ${huaweiCloudError?.message ?? "unknown error"}`,
         `AWS failed: ${awsError?.message ?? "unknown error"}`,
         `Local failed: ${localError.message}`,
       ].join(" | ")
@@ -430,6 +578,7 @@ module.exports = {
   applyConfigDefaults,
   fetchAwsKline,
   fetchAwsRouterKline,
+  fetchHuaweiCloudKline,
   fetchLocalKline,
   normalizeKlineData,
   parseArguments,

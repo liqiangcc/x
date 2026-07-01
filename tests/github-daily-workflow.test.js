@@ -124,6 +124,18 @@ test("buildDailyArgs gives aws-router the same remote retry defaults", () => {
   assert.equal(args[args.indexOf("--retry-concurrency") + 1], "1");
 });
 
+test("buildDailyArgs forwards Huawei Cloud engine and region", () => {
+  const args = buildDailyArgs({
+    ENGINE_INPUT: "huaweicloud",
+    HUAWEICLOUD_REGION_INPUT: "cn-east-3,cn-north-4",
+    PERIOD_INPUT: "yearly",
+  });
+
+  assert.equal(args[args.indexOf("--engine") + 1], "huaweicloud");
+  assert.equal(args[args.indexOf("--huaweicloud-region") + 1], "cn-east-3,cn-north-4");
+  assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");
+});
+
 test("buildDailyArgs lets manual batch and concurrency inputs override defaults", () => {
   const args = buildDailyArgs({
     BATCH_SIZE_INPUT: "50",
@@ -164,6 +176,7 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
       date: "20260630",
       engine: "aws",
       force: false,
+      huaweicloud_region: "cn-east-3",
       job_id: "20260630-daily-market-hs-a",
       lambda_name: "kline",
       max_chain_depth: 20,
@@ -184,6 +197,7 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
   assert.equal(args.includes("chain_depth=3"), true);
   assert.equal(args.includes("job_id=20260630-daily-market-hs-a"), true);
   assert.equal(args.includes("aws_region=ap-northeast-1,ap-southeast-1"), true);
+  assert.equal(args.includes("huaweicloud_region=cn-east-3"), true);
 });
 
 function sampleRun(overrides = {}) {

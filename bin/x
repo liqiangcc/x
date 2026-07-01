@@ -63,11 +63,11 @@ function printUsage() {
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
-  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router] [--aws-region r1,r2] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
-  x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -555,6 +555,15 @@ async function commandKlineFetch(argv) {
   if (options.awsRegion) {
     args.push("--aws-region", options.awsRegion);
   }
+  if (options.huaweicloudRegion) {
+    args.push("--huaweicloud-region", options.huaweicloudRegion);
+  }
+  if (options.huaweicloudRegionStartIndex) {
+    args.push("--huaweicloud-region-start-index", String(options.huaweicloudRegionStartIndex));
+  }
+  if (options.huaweicloudTargets) {
+    args.push("--huaweicloud-targets", options.huaweicloudTargets);
+  }
   if (options.lambdaName) {
     args.push("--lambda-name", options.lambdaName);
   }
@@ -600,6 +609,15 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   }
   if (options.awsRegion) {
     args.push("--aws-region", options.awsRegion);
+  }
+  if (options.huaweicloudRegion) {
+    args.push("--huaweicloud-region", options.huaweicloudRegion);
+  }
+  if (options.huaweicloudRegionStartIndex) {
+    args.push("--huaweicloud-region-start-index", String(options.huaweicloudRegionStartIndex));
+  }
+  if (options.huaweicloudTargets) {
+    args.push("--huaweicloud-targets", options.huaweicloudTargets);
   }
   if (options.lambdaName) {
     args.push("--lambda-name", options.lambdaName);
@@ -1145,6 +1163,7 @@ async function commandDaily(argv) {
     period: options.period,
     engine: options.engine,
     aws_region: options.awsRegion ?? null,
+    huaweicloud_region: options.huaweicloudRegion ?? null,
     lambda_name: options.lambdaName ?? null,
     config: options.config ?? null,
     concurrency: options.concurrency ?? null,

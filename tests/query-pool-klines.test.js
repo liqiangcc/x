@@ -36,6 +36,25 @@ function klinePayload(code, engine = "aws", region = "ap-northeast-1", metrics =
   };
 }
 
+test("queryPoolKlines parses Huawei Cloud engine options", () => {
+  const options = parseArguments([
+    "codes.json",
+    "--engine",
+    "huaweicloud",
+    "--huaweicloud-region",
+    "cn-east-3,cn-north-4",
+    "--huaweicloud-region-start-index",
+    "2",
+    "--huaweicloud-targets",
+    "/tmp/huaweicloud-targets.json",
+  ]);
+
+  assert.equal(options.engine, "huaweicloud");
+  assert.equal(options.huaweiCloudRegions, "cn-east-3,cn-north-4");
+  assert.equal(options.huaweiCloudRegionStartIndex, 2);
+  assert.equal(options.huaweiCloudTargetsFile, "/tmp/huaweicloud-targets.json");
+});
+
 test("queryPoolKlines handles concurrent success, failure, and skipped files", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -348,4 +367,45 @@ test("queryPoolKlines records aws-router regions and duration metrics", async (t
   assert.equal(summary.p95_duration_ms, 60);
   assert.equal(summary.files["600001"].fallback_count, 1);
   assert.deepEqual(summary.files["600001"].attempted_regions, ["ap-northeast-2", "us-east-1"]);
+});
+
+test("queryPoolKlines records Huawei Cloud regions and duration metrics", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001", "600002"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "huaweicloud",
+    "--huaweicloud-region",
+    "cn-east-3,cn-north-4",
+    "--output-dir",
+    outputDir,
+    "--force",
+  ]);
+  const startIndexes = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    startIndexes.push(fetchOptions.huaweiCloudRegionStartIndex);
+    const region = fetchOptions.huaweiCloudRegionStartIndex % 2 === 0 ? "cn-east-3" : "cn-north-4";
+    return klinePayload(secid.split(".")[1], "huaweicloud", region, {
+      target_duration_ms: 20,
+      eastmoney_duration_ms: 15,
+      total_duration_ms: secid === "1.600001" ? 35 : 55,
+    });
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(summary.aws_region_strategy, "none");
+  assert.equal(summary.huaweicloud_region_strategy, "round_robin_start_index");
+  assert.deepEqual(startIndexes, [0, 1]);
+  assert.deepEqual(summary.engine_counts, { huaweicloud: 2 });
+  assert.deepEqual(summary.region_counts, { "cn-east-3": 1, "cn-north-4": 1 });
+  assert.deepEqual(summary.duration_ms_by_code, {
+    "600001": 35,
+    "600002": 55,
+  });
 });

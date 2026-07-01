@@ -20,5 +20,7 @@
   ],
   "lambda_name": "kline",
   "aws_router_url_env": "AWS_ROUTER_URL",
-  "aws_router_token_env": "AWS_ROUTER_TOKEN"
+  "aws_router_token_env": "AWS_ROUTER_TOKEN",
+  "huaweicloud_access_key_env": "HUAWEICLOUD_ACCESS_KEY",
+  "huaweicloud_secret_key_env": "HUAWEICLOUD_SECRET_KEY"
 }

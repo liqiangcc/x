@@ -7,12 +7,12 @@ const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
-const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud"]);
 const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
   );
 }
 
@@ -50,6 +50,9 @@ function parseArguments(argv) {
     configFile: null,
     engine: "auto",
     force: false,
+    huaweiCloudRegionStartIndex: null,
+    huaweiCloudRegions: null,
+    huaweiCloudTargetsFile: null,
     inputPath: null,
     lambdaName: "kline",
     limit: null,
@@ -91,6 +94,33 @@ function parseArguments(argv) {
         throw new Error("Missing value for --aws-region.");
       }
       options.awsRegions = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-region") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --huaweicloud-region.");
+      }
+      options.huaweiCloudRegions = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-region-start-index") {
+      const nextArg = argv[index + 1];
+      options.huaweiCloudRegionStartIndex = parseNonNegativeInteger(nextArg, "--huaweicloud-region-start-index");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--huaweicloud-targets") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --huaweicloud-targets.");
+      }
+      options.huaweiCloudTargetsFile = path.resolve(nextArg);
       index += 1;
       continue;
     }
@@ -397,6 +427,18 @@ async function fetchSingleKline(secid, options) {
     args.push("--aws-region-start-index", String(options.awsRegionStartIndex));
   }
 
+  if (options.huaweiCloudRegions) {
+    args.push("--huaweicloud-region", options.huaweiCloudRegions);
+  }
+
+  if (options.huaweiCloudTargetsFile) {
+    args.push("--huaweicloud-targets", options.huaweiCloudTargetsFile);
+  }
+
+  if (Number.isInteger(options.huaweiCloudRegionStartIndex)) {
+    args.push("--huaweicloud-region-start-index", String(options.huaweiCloudRegionStartIndex));
+  }
+
   const { stdout } = await execFileAsync("node", args, {
     maxBuffer: 25 * 1024 * 1024,
   });
@@ -449,7 +491,7 @@ function classifyFailure(error) {
     return "rate_limited";
   }
   if (
-    /Lambda returned statusCode 5\d\d|aws-router returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
+    /Lambda returned statusCode 5\d\d|aws-router returned statusCode 5\d\d|FunctionGraph returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
   ) {
     return "transient_network";
   }
@@ -467,13 +509,19 @@ function createSummary(options, selection) {
       ? "none"
       : options.engine === "aws-router"
         ? "router_auto"
-        : "round_robin_start_index",
+        : options.engine === "huaweicloud"
+          ? "none"
+          : "round_robin_start_index",
     available_codes: selection.availableCodes,
     batch_size: options.batchSize,
     candidate_codes: selection.candidateCodes,
     concurrency: options.concurrency,
     engine: options.engine,
     force: options.force,
+    huaweicloud_regions: options.huaweiCloudRegions,
+    huaweicloud_region_strategy: options.engine === "huaweicloud" || options.engine === "auto"
+      ? "round_robin_start_index"
+      : "none",
     input_path: options.inputPath,
     lambda_name: options.lambdaName,
     min_success_rate: options.minSuccessRate,
@@ -512,9 +560,13 @@ function fetchOptionsForIndex(options, itemIndex) {
   if (options.engine === "local" || options.engine === "aws-router") {
     return options;
   }
+  const huaweiCloudStartIndex = Number.isInteger(options.huaweiCloudRegionStartIndex)
+    ? options.huaweiCloudRegionStartIndex
+    : 0;
   return {
     ...options,
     awsRegionStartIndex: itemIndex,
+    huaweiCloudRegionStartIndex: huaweiCloudStartIndex + itemIndex,
   };
 }
 
@@ -700,6 +752,9 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     configFile: options.configFile ?? null,
     engine: options.engine ?? "auto",
     force: Boolean(options.force),
+    huaweiCloudRegionStartIndex: options.huaweiCloudRegionStartIndex ?? null,
+    huaweiCloudRegions: options.huaweiCloudRegions ?? null,
+    huaweiCloudTargetsFile: options.huaweiCloudTargetsFile ?? null,
     inputPath: options.inputPath,
     lambdaName: options.lambdaName ?? "kline",
     limit: options.limit ?? null,

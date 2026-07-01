@@ -27,7 +27,7 @@ function isTruthy(value) {
 }
 
 function isRemoteKlineEngine(engine) {
-  return engine === "aws" || engine === "aws-router";
+  return engine === "auto" || engine === "aws" || engine === "aws-router" || engine === "huaweicloud";
 }
 
 function buildDailyArgs(env = process.env) {
@@ -49,6 +49,7 @@ function buildDailyArgs(env = process.env) {
   const chainDepth = String(env.CHAIN_DEPTH_INPUT ?? "").trim();
   const maxChainDepth = String(env.MAX_CHAIN_DEPTH_INPUT ?? "").trim();
   const awsRegion = String(env.AWS_REGION_INPUT ?? "").trim();
+  const huaweiCloudRegion = String(env.HUAWEICLOUD_REGION_INPUT ?? "").trim();
   const lambdaName = String(env.LAMBDA_NAME_INPUT ?? "").trim();
   const config = String(env.CONFIG_INPUT ?? "").trim();
   const args = [
@@ -89,6 +90,10 @@ function buildDailyArgs(env = process.env) {
 
   if (awsRegion) {
     args.push("--aws-region", awsRegion);
+  }
+
+  if (huaweiCloudRegion) {
+    args.push("--huaweicloud-region", huaweiCloudRegion);
   }
 
   if (lambdaName) {
@@ -218,6 +223,7 @@ async function writeGithubStepSummary(args, run = null) {
 
   const awsSuccesses = Number(summary.engine_counts?.aws ?? 0);
   const awsRouterSuccesses = Number(summary.engine_counts?.["aws-router"] ?? 0);
+  const huaweiCloudSuccesses = Number(summary.engine_counts?.huaweicloud ?? 0);
   const universe = argValue(args, "--universe", "market");
   const lines = [
     "## Daily data summary",
@@ -244,6 +250,7 @@ async function writeGithubStepSummary(args, run = null) {
     `- region_counts: ${formatCounts(summary.region_counts)}`,
     `- aws_successes: ${awsSuccesses}`,
     `- aws_router_successes: ${awsRouterSuccesses}`,
+    `- huaweicloud_successes: ${huaweiCloudSuccesses}`,
     `- avg_duration_ms: ${summary.avg_duration_ms ?? "n/a"}`,
     `- p50_duration_ms: ${summary.p50_duration_ms ?? "n/a"}`,
     `- p95_duration_ms: ${summary.p95_duration_ms ?? "n/a"}`,
@@ -361,6 +368,7 @@ function buildDispatchArgs(run, env = process.env) {
   addDispatchInput(args, "chain_depth", nextChainDepth);
   addDispatchInput(args, "max_chain_depth", run.max_chain_depth);
   addDispatchInput(args, "aws_region", run.aws_region);
+  addDispatchInput(args, "huaweicloud_region", run.huaweicloud_region);
   addDispatchInput(args, "lambda_name", run.lambda_name);
   addDispatchInput(args, "config", run.config);
   return args;

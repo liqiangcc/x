@@ -7,6 +7,7 @@
 - Node.js 22+，数据库命令依赖 Node 内置 SQLite。
 - Git，用于数据账本提交。
 - 可选 AWS 凭证，用于 `--engine aws` 的 Lambda kline 获取。
+- 可选 Huawei Cloud AK/SK 和 targets JSON，用于 `--engine huaweicloud` 或 `--engine auto` 的 FunctionGraph kline 获取。
 
 安装依赖：
 
@@ -140,9 +141,20 @@ HUAWEICLOUD_ACCESS_KEY='...' HUAWEICLOUD_SECRET_KEY='...' \
   --huaweicloud-targets /tmp/huaweicloud-targets.json \
   --huaweicloud-region all \
   --attempts 1 --json
+
+HUAWEICLOUD_ACCESS_KEY='...' HUAWEICLOUD_SECRET_KEY='...' \
+  bin/x kline fetch 600519 --period daily --engine huaweicloud \
+  --huaweicloud-targets /tmp/huaweicloud-targets.json \
+  --huaweicloud-region cn-east-3
+
+HUAWEICLOUD_ACCESS_KEY='...' HUAWEICLOUD_SECRET_KEY='...' \
+  bin/x kline sync data/universe/20260325 --period daily --engine huaweicloud \
+  --huaweicloud-targets /tmp/huaweicloud-targets.json \
+  --huaweicloud-region all \
+  --limit 10
 ```
 
-`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 作用于当前 engine 选中的云函数入口，也可分别用 `--aws-region`、`--target-region`、`--huaweicloud-region` 覆盖。`both` 仍只跑 AWS Lambda 直连和 AWS Router；`all` 才会额外跑 Huawei Cloud FunctionGraph。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。Huawei Cloud latency 需要 `HUAWEICLOUD_ACCESS_KEY`、`HUAWEICLOUD_SECRET_KEY` 和 `HUAWEICLOUD_TARGETS_JSON`；targets JSON 由 `scripts/deploy-huaweicloud-functiongraph.sh --targets-output` 生成，格式是按 region 映射 `project_id` 和 `function_urn`。AWS Router 部署脚本会输出 GitHub secret 设置命令；Huawei Cloud secrets/targets 统一手动写入 GitHub Secrets 或 Variables。不要提交真实 URL、token、密钥、targets JSON 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为；旧 `aws` engine 仍可手动选择作为直连 Lambda 回退。
+`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 作用于当前 engine 选中的云函数入口，也可分别用 `--aws-region`、`--target-region`、`--huaweicloud-region` 覆盖。`both` 仍只跑 AWS Lambda 直连和 AWS Router；`all` 才会额外跑 Huawei Cloud FunctionGraph。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。Huawei Cloud latency 和 kline 抓取需要 `HUAWEICLOUD_ACCESS_KEY`、`HUAWEICLOUD_SECRET_KEY` 和 `HUAWEICLOUD_TARGETS_JSON`；targets JSON 由 `scripts/deploy-huaweicloud-functiongraph.sh --targets-output` 生成，格式是按 region 映射 `project_id` 和 `function_urn`。AWS Router 部署脚本会输出 GitHub secret 设置命令；Huawei Cloud secrets/targets 统一手动写入 GitHub Secrets 或 Variables。不要提交真实 URL、token、密钥、targets JSON 或 zip 包。`auto` engine 会按 `huaweicloud -> aws -> local` 回退；旧 `aws` engine 仍可手动选择作为直连 Lambda 回退。
 
 Eastmoney 超时调大只作为实验配置执行，不作为默认部署值。验证命令：
 
@@ -212,18 +224,20 @@ npm test
 bin/x kline validate data/kline --period daily --json
 ```
 
-## GitHub Actions AWS 配置
+## GitHub Actions 云端抓取配置
 
-Daily Action 默认使用 `aws-router`，只依赖 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN` secrets；手动选择 `aws` 或 `auto` 时才使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
+Daily Action 默认使用 `aws-router`，只依赖 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN` secrets；手动选择 `huaweicloud` 时使用 Huawei Cloud Secrets；手动选择 `aws` 或 `auto` 时才使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
 
 默认配置不传 `limit`，会先确保 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单存在，再通过 `aws-router` 同步全部 kline。同一交易日已有完整 market universe 时会复用；手动触发时可用 `force_universe=true` 强制刷新，用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
 Action job 显式设置 `timeout-minutes: 360`，这是 GitHub-hosted runner 单 job 的 6 小时上限。默认不强制刷新已有 kline，而是按下一批缺失代码续跑。Latency Benchmark Action 不写数据、不提交，只上传 `latency-results.json` artifact。
 
 - 默认 `aws-router` engine 必需 secrets：`AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`
+- 手动选择 `huaweicloud` 时必需 secrets：`HUAWEICLOUD_ACCESS_KEY`、`HUAWEICLOUD_SECRET_KEY`、`HUAWEICLOUD_TARGETS_JSON`
 - 手动选择 `aws` 或 `auto` 时必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
 - 可选 variable：`AWS_REGION`，默认 `ap-northeast-1`
 - IAM 最小权限：允许调用 `config/kline.json` 中配置的 Lambda，默认函数名 `kline`
 - 批量 AWS kline 会按代码索引轮询起始 region，并在失败时继续 fallback 到其余 region。
+- 批量 Huawei Cloud kline 会按 targets JSON 中的区域轮询，手动触发可用 `huaweicloud_region` 限定区域。
 - 批量 `aws-router` kline 会通过 Router Function URL 访问白名单 Target Lambda，并记录 `region_counts`、`fallback_count` 和 duration 指标。
 - 批量失败后会对 transient 网络错误串行重试；仍失败时可用 `bin/x kline retry <summary.json|failures.json>` 只重跑失败项。
 - 默认 Action 参数：`batch_size=100`、`concurrency=4`、daily `retry_attempts=3`、yearly `retry_attempts=5`、`retry_concurrency=1`；yearly 建议手动分批运行。
