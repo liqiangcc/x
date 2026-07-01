@@ -1,0 +1,466 @@
+{
+  "run_id": "20260701T122438Z_daily",
+  "target": "/home/runner/work/x/x/data/kline/daily",
+  "period": "daily",
+  "total_files": 1622,
+  "issue_count": 76,
+  "status": "failed",
+  "issues": [
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000508.json",
+      "issue": "empty_klines",
+      "code": "000508",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000725.json",
+      "issue": "empty_klines",
+      "code": "000725",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000726.json",
+      "issue": "empty_klines",
+      "code": "000726",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000728.json",
+      "issue": "empty_klines",
+      "code": "000728",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000729.json",
+      "issue": "empty_klines",
+      "code": "000729",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000730.json",
+      "issue": "empty_klines",
+      "code": "000730",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000731.json",
+      "issue": "empty_klines",
+      "code": "000731",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000732.json",
+      "issue": "empty_klines",
+      "code": "000732",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000733.json",
+      "issue": "empty_klines",
+      "code": "000733",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000735.json",
+      "issue": "empty_klines",
+      "code": "000735",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000736.json",
+      "issue": "empty_klines",
+      "code": "000736",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000737.json",
+      "issue": "empty_klines",
+      "code": "000737",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000738.json",
+      "issue": "empty_klines",
+      "code": "000738",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000739.json",
+      "issue": "empty_klines",
+      "code": "000739",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000748.json",
+      "issue": "empty_klines",
+      "code": "000748",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000750.json",
+      "issue": "empty_klines",
+      "code": "000750",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000751.json",
+      "issue": "empty_klines",
+      "code": "000751",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000752.json",
+      "issue": "empty_klines",
+      "code": "000752",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000755.json",
+      "issue": "empty_klines",
+      "code": "000755",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000756.json",
+      "issue": "empty_klines",
+      "code": "000756",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000757.json",
+      "issue": "empty_klines",
+      "code": "000757",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000758.json",
+      "issue": "empty_klines",
+      "code": "000758",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000759.json",
+      "issue": "empty_klines",
+      "code": "000759",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000760.json",
+      "issue": "empty_klines",
+      "code": "000760",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000761.json",
+      "issue": "empty_klines",
+      "code": "000761",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000763.json",
+      "issue": "empty_klines",
+      "code": "000763",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000765.json",
+      "issue": "empty_klines",
+      "code": "000765",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000766.json",
+      "issue": "empty_klines",
+      "code": "000766",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000768.json",
+      "issue": "empty_klines",
+      "code": "000768",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000769.json",
+      "issue": "empty_klines",
+      "code": "000769",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000776.json",
+      "issue": "empty_klines",
+      "code": "000776",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000777.json",
+      "issue": "empty_klines",
+      "code": "000777",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000778.json",
+      "issue": "empty_klines",
+      "code": "000778",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000779.json",
+      "issue": "empty_klines",
+      "code": "000779",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000780.json",
+      "issue": "empty_klines",
+      "code": "000780",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000782.json",
+      "issue": "empty_klines",
+      "code": "000782",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000783.json",
+      "issue": "empty_klines",
+      "code": "000783",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000785.json",
+      "issue": "empty_klines",
+      "code": "000785",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000786.json",
+      "issue": "empty_klines",
+      "code": "000786",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000787.json",
+      "issue": "empty_klines",
+      "code": "000787",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000793.json",
+      "issue": "empty_klines",
+      "code": "000793",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000795.json",
+      "issue": "empty_klines",
+      "code": "000795",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000796.json",
+      "issue": "empty_klines",
+      "code": "000796",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000797.json",
+      "issue": "empty_klines",
+      "code": "000797",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000799.json",
+      "issue": "empty_klines",
+      "code": "000799",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000800.json",
+      "issue": "empty_klines",
+      "code": "000800",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000801.json",
+      "issue": "empty_klines",
+      "code": "000801",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000802.json",
+      "issue": "empty_klines",
+      "code": "000802",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000805.json",
+      "issue": "empty_klines",
+      "code": "000805",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000806.json",
+      "issue": "empty_klines",
+      "code": "000806",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000807.json",
+      "issue": "empty_klines",
+      "code": "000807",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000810.json",
+      "issue": "empty_klines",
+      "code": "000810",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000812.json",
+      "issue": "empty_klines",
+      "code": "000812",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000813.json",
+      "issue": "empty_klines",
+      "code": "000813",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000816.json",
+      "issue": "empty_klines",
+      "code": "000816",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000817.json",
+      "issue": "empty_klines",
+      "code": "000817",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000819.json",
+      "issue": "empty_klines",
+      "code": "000819",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000820.json",
+      "issue": "empty_klines",
+      "code": "000820",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000821.json",
+      "issue": "empty_klines",
+      "code": "000821",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000825.json",
+      "issue": "empty_klines",
+      "code": "000825",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000826.json",
+      "issue": "empty_klines",
+      "code": "000826",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000827.json",
+      "issue": "empty_klines",
+      "code": "000827",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000828.json",
+      "issue": "empty_klines",
+      "code": "000828",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000829.json",
+      "issue": "empty_klines",
+      "code": "000829",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000831.json",
+      "issue": "empty_klines",
+      "code": "000831",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000832.json",
+      "issue": "empty_klines",
+      "code": "000832",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000835.json",
+      "issue": "empty_klines",
+      "code": "000835",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000836.json",
+      "issue": "empty_klines",
+      "code": "000836",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000838.json",
+      "issue": "empty_klines",
+      "code": "000838",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000848.json",
+      "issue": "empty_klines",
+      "code": "000848",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000850.json",
+      "issue": "empty_klines",
+      "code": "000850",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000851.json",
+      "issue": "empty_klines",
+      "code": "000851",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000852.json",
+      "issue": "empty_klines",
+      "code": "000852",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000858.json",
+      "issue": "empty_klines",
+      "code": "000858",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000860.json",
+      "issue": "empty_klines",
+      "code": "000860",
+      "period": "daily"
+    },
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000861.json",
+      "issue": "empty_klines",
+      "code": "000861",
+      "period": "daily"
+    }
+  ]
+}
