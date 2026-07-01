@@ -30,6 +30,7 @@ const {
   selectProgressBatch,
   uniqueCodes,
 } = require("../src/jobs/progress");
+const { inferSecid } = require("../src/core/secid");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -53,17 +54,18 @@ function printUsage() {
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
-  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws] [--aws-region r1,r2] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
-  x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router] [--aws-region r1,r2] [--lambda-name name] [--config file]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
   x stats new-highs [--year YYYY|--date YYYYMMDD] [--db mydb.db]
   x aws status [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--lambda-name kline]
   x aws sync-github-secrets [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--repo owner/name] [--lambda-name kline]
+  x aws probe-router --secid 1.600519 [--period daily|yearly] [--target-region all|region]
   x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy check
@@ -424,6 +426,66 @@ async function commandAwsSyncGithubSecrets(rawOptions) {
   });
 }
 
+function periodToKlt(period = "daily") {
+  if (period === "daily") {
+    return 101;
+  }
+  if (period === "yearly") {
+    return 106;
+  }
+  throw new Error(`Invalid period: ${period}`);
+}
+
+function requiredEnv(name) {
+  const value = String(process.env[name] ?? "").trim();
+  if (!value) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
+}
+
+function appendUrlPath(baseUrl, pathname) {
+  return `${String(baseUrl).replace(/\/+$/, "")}${pathname}`;
+}
+
+async function postRouterJson(pathname, body) {
+  const routerUrl = requiredEnv("AWS_ROUTER_URL");
+  const routerToken = requiredEnv("AWS_ROUTER_TOKEN");
+  const response = await fetch(appendUrlPath(routerUrl, pathname), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-router-token": routerToken,
+    },
+    body: JSON.stringify(body),
+  });
+  const rawText = await response.text();
+  let payload;
+  try {
+    payload = rawText ? JSON.parse(rawText) : {};
+  } catch (error) {
+    throw new Error(`Failed to parse Router response: ${error.message}`);
+  }
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(`Router returned statusCode ${response.status}: ${payload?.error ?? rawText}`);
+  }
+  return payload;
+}
+
+async function commandAwsProbeRouter(rawOptions) {
+  if (!rawOptions.secid) {
+    throw new Error("aws probe-router requires --secid <secid_or_code>.");
+  }
+  const payload = await postRouterJson("/probe", {
+    region: rawOptions.targetRegion ?? "all",
+    secid: inferSecid(rawOptions.secid),
+    klt: periodToKlt(rawOptions.period ?? "daily"),
+    lmt: rawOptions.lmt ? Number(rawOptions.lmt) : 1,
+    end: rawOptions.end ?? "20991231",
+  });
+  printJson(payload);
+}
+
 async function commandAws(argv) {
   const subcommand = argv[0];
   const options = parseOptions(argv.slice(1));
@@ -435,6 +497,11 @@ async function commandAws(argv) {
 
   if (subcommand === "sync-github-secrets") {
     await commandAwsSyncGithubSecrets(options);
+    return;
+  }
+
+  if (subcommand === "probe-router") {
+    await commandAwsProbeRouter(options);
     return;
   }
 

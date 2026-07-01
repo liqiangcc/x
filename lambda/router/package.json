@@ -1,0 +1,10 @@
+{
+  "name": "x-kline-router-lambda",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.600.0"
+  }
+}

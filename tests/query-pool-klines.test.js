@@ -23,10 +23,11 @@ async function writeCodes(filePath, codes) {
   await fs.writeFile(filePath, `${JSON.stringify({ codes }, null, 2)}\n`, "utf8");
 }
 
-function klinePayload(code, engine = "aws", region = "ap-northeast-1") {
+function klinePayload(code, engine = "aws", region = "ap-northeast-1", metrics = {}) {
   return {
     source_engine: engine,
     source_region: region,
+    ...metrics,
     data: {
       code,
       market: code.startsWith("6") ? 1 : 0,
@@ -305,4 +306,46 @@ test("queryPoolKlines fails AWS min-rate runs with zero AWS fetch successes", as
   assert.equal(summary.status, "failed_aws_unavailable");
   assert.deepEqual(summary.failure_reasons, ["failed_items", "aws_success_zero"]);
   assert.deepEqual(summary.failure_reason_counts, { transient_network: 1 });
+});
+
+test("queryPoolKlines records aws-router regions and duration metrics", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001", "600002"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws-router",
+    "--output-dir",
+    outputDir,
+    "--force",
+  ]);
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid) =>
+    klinePayload(secid.split(".")[1], "aws-router", "us-east-1", {
+      router_duration_ms: 5,
+      target_duration_ms: 20,
+      eastmoney_duration_ms: 15,
+      total_duration_ms: secid === "1.600001" ? 40 : 60,
+      fallback_count: 1,
+      attempted_regions: ["ap-northeast-2", "us-east-1"],
+    })
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(summary.aws_region_strategy, "router_auto");
+  assert.deepEqual(summary.engine_counts, { "aws-router": 2 });
+  assert.deepEqual(summary.region_counts, { "us-east-1": 2 });
+  assert.deepEqual(summary.duration_ms_by_code, {
+    "600001": 40,
+    "600002": 60,
+  });
+  assert.equal(summary.avg_duration_ms, 50);
+  assert.equal(summary.p50_duration_ms, 40);
+  assert.equal(summary.p95_duration_ms, 60);
+  assert.equal(summary.files["600001"].fallback_count, 1);
+  assert.deepEqual(summary.files["600001"].attempted_regions, ["ap-northeast-2", "us-east-1"]);
 });

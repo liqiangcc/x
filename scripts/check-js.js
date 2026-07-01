@@ -7,7 +7,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-const SEARCH_DIRS = ["api", "bin", "fetch", "process", "scripts", "src", "tests", "utils"];
+const SEARCH_DIRS = ["api", "bin", "fetch", "lambda", "process", "scripts", "src", "tests", "utils"];
 
 function walk(dir, files = []) {
   if (!fs.existsSync(dir)) {
@@ -21,7 +21,7 @@ function walk(dir, files = []) {
     const entryPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walk(entryPath, files);
-    } else if (entry.isFile() && entry.name.endsWith(".js")) {
+    } else if (entry.isFile() && (entry.name.endsWith(".js") || entry.name.endsWith(".mjs"))) {
       files.push(entryPath);
     }
   }

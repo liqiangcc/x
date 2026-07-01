@@ -156,4 +156,7 @@ test("daily workflow uses maintained AWS access key secrets", () => {
   assert.equal(workflow.includes("secrets.AWS_ACCESS_KEY_ID"), true);
   assert.equal(workflow.includes("secrets.AWS_SECRET_ACCESS_KEY"), true);
   assert.equal(workflow.includes("vars.AWS_REGION || 'ap-northeast-1'"), true);
+  assert.equal(workflow.includes("- aws-router"), true);
+  assert.equal(workflow.includes("secrets.AWS_ROUTER_URL"), true);
+  assert.equal(workflow.includes("secrets.AWS_ROUTER_TOKEN"), true);
 });

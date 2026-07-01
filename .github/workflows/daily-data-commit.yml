@@ -61,6 +61,7 @@ on:
           - auto
           - local
           - aws
+          - aws-router
       aws_region:
         description: "高级：AWS 区域列表，逗号分隔；一般留空使用配置轮询。"
         required: false
@@ -156,6 +157,8 @@ jobs:
           AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}
           LAMBDA_NAME_INPUT: ${{ github.event.inputs.lambda_name }}
           CONFIG_INPUT: ${{ github.event.inputs.config }}
+          AWS_ROUTER_URL: ${{ secrets.AWS_ROUTER_URL }}
+          AWS_ROUTER_TOKEN: ${{ secrets.AWS_ROUTER_TOKEN }}
           JOB_MODE_INPUT: ${{ github.event.inputs.job_mode }}
           JOB_ID_INPUT: ${{ github.event.inputs.job_id }}
           CHAIN_DEPTH_INPUT: ${{ github.event.inputs.chain_depth }}

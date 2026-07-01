@@ -26,6 +26,10 @@ function isTruthy(value) {
   return ["1", "true", "yes", "on"].includes(String(value ?? "").trim().toLowerCase());
 }
 
+function isRemoteKlineEngine(engine) {
+  return engine === "aws" || engine === "aws-router";
+}
+
 function buildDailyArgs(env = process.env) {
   const period = valueOrDefault(env.PERIOD_INPUT, "daily");
   const limit = String(env.LIMIT_INPUT ?? "").trim();
@@ -35,7 +39,7 @@ function buildDailyArgs(env = process.env) {
   const concurrency = valueOrDefault(env.CONCURRENCY_INPUT, "4");
   const retryAttempts = valueOrDefault(
     env.RETRY_ATTEMPTS_INPUT,
-    engine === "aws" ? (period === "yearly" ? "5" : "3") : "0"
+    isRemoteKlineEngine(engine) ? (period === "yearly" ? "5" : "3") : "0"
   );
   const retryConcurrency = valueOrDefault(env.RETRY_CONCURRENCY_INPUT, "1");
   const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, "100");
@@ -209,6 +213,7 @@ async function writeGithubStepSummary(args, run = null) {
   }
 
   const awsSuccesses = Number(summary.engine_counts?.aws ?? 0);
+  const awsRouterSuccesses = Number(summary.engine_counts?.["aws-router"] ?? 0);
   const universe = argValue(args, "--universe", "market");
   const lines = [
     "## Daily data summary",
@@ -234,6 +239,10 @@ async function writeGithubStepSummary(args, run = null) {
     `- engine_counts: ${formatCounts(summary.engine_counts)}`,
     `- region_counts: ${formatCounts(summary.region_counts)}`,
     `- aws_successes: ${awsSuccesses}`,
+    `- aws_router_successes: ${awsRouterSuccesses}`,
+    `- avg_duration_ms: ${summary.avg_duration_ms ?? "n/a"}`,
+    `- p50_duration_ms: ${summary.p50_duration_ms ?? "n/a"}`,
+    `- p95_duration_ms: ${summary.p95_duration_ms ?? "n/a"}`,
     `- status: ${summary.status}`,
     "",
   ];

@@ -114,6 +114,14 @@ test("buildDailyArgs uses the same stable daily and yearly AWS defaults", () => 
   assert.equal(args[args.indexOf("--batch-size") + 1], "100");
 });
 
+test("buildDailyArgs gives aws-router the same remote retry defaults", () => {
+  const args = buildDailyArgs({ PERIOD_INPUT: "yearly", ENGINE_INPUT: "aws-router" });
+
+  assert.equal(args[args.indexOf("--engine") + 1], "aws-router");
+  assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");
+  assert.equal(args[args.indexOf("--retry-concurrency") + 1], "1");
+});
+
 test("buildDailyArgs lets manual batch and concurrency inputs override defaults", () => {
   const args = buildDailyArgs({
     BATCH_SIZE_INPUT: "50",

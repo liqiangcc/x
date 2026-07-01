@@ -29,11 +29,11 @@ const DEFAULT_AWS_REGIONS = [
   "us-west-1",
   "us-west-2",
 ];
-const VALID_ENGINES = new Set(["auto", "local", "aws"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--lambda-name <name>] [--config <file>] [--output <file>]"
+    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--lambda-name <name>] [--config <file>] [--output <file>]"
   );
 }
 
@@ -64,6 +64,8 @@ function parseArguments(argv) {
     lambdaNameOverridden: false,
     outputFile: null,
     period: "daily",
+    routerTokenEnv: "AWS_ROUTER_TOKEN",
+    routerUrlEnv: "AWS_ROUTER_URL",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -173,6 +175,14 @@ async function applyConfigDefaults(options) {
 
     if (!options.lambdaNameOverridden && typeof config?.lambda_name === "string" && config.lambda_name.trim()) {
       options.lambdaName = config.lambda_name.trim();
+    }
+
+    if (typeof config?.aws_router_url_env === "string" && config.aws_router_url_env.trim()) {
+      options.routerUrlEnv = config.aws_router_url_env.trim();
+    }
+
+    if (typeof config?.aws_router_token_env === "string" && config.aws_router_token_env.trim()) {
+      options.routerTokenEnv = config.aws_router_token_env.trim();
     }
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -308,6 +318,50 @@ async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
   throw lastError;
 }
 
+function appendPath(baseUrl, pathname) {
+  return `${String(baseUrl).replace(/\/+$/, "")}${pathname}`;
+}
+
+async function fetchAwsRouterKline(secid, klt, options, env = process.env, fetchImpl = fetch) {
+  const routerUrl = String(env[options.routerUrlEnv] ?? "").trim();
+  const routerToken = String(env[options.routerTokenEnv] ?? "").trim();
+  if (!routerUrl) {
+    throw new Error(`${options.routerUrlEnv} is required for aws-router engine.`);
+  }
+  if (!routerToken) {
+    throw new Error(`${options.routerTokenEnv} is required for aws-router engine.`);
+  }
+
+  const response = await fetchImpl(appendPath(routerUrl, "/kline"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-router-token": routerToken,
+    },
+    body: JSON.stringify({
+      region: "auto",
+      secid,
+      klt: Number(klt),
+      lmt: 100000,
+      end: "20991231",
+    }),
+  });
+
+  const rawText = await response.text();
+  let payload;
+  try {
+    payload = rawText ? JSON.parse(rawText) : {};
+  } catch (error) {
+    throw new Error(`Failed to parse aws-router response: ${error.message}`);
+  }
+
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(`aws-router returned statusCode ${response.status}: ${payload?.error ?? rawText}`);
+  }
+
+  return normalizeKlineData(payload, secid, "aws-router", payload.source_region ?? null);
+}
+
 async function resolveKline(options) {
   const secid = inferSecid(options.input);
   const klt = PERIOD_MAP[options.period];
@@ -319,6 +373,10 @@ async function resolveKline(options) {
 
   if (options.engine === "aws") {
     return fetchAwsKline(secid, klt, options.awsRegions, options.lambdaName);
+  }
+
+  if (options.engine === "aws-router") {
+    return fetchAwsRouterKline(secid, klt, options);
   }
 
   let awsError = null;
@@ -361,7 +419,19 @@ async function main() {
   process.stdout.write(output);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  applyConfigDefaults,
+  fetchAwsKline,
+  fetchAwsRouterKline,
+  fetchLocalKline,
+  normalizeKlineData,
+  parseArguments,
+  resolveKline,
+};

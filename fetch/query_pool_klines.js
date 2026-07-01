@@ -7,12 +7,12 @@ const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
-const VALID_ENGINES = new Set(["auto", "local", "aws"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router"]);
 const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router>] [--aws-region <r1,r2,...>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
   );
 }
 
@@ -432,6 +432,14 @@ function incrementCount(counts, key) {
   counts[key] = (counts[key] ?? 0) + 1;
 }
 
+function percentile(sortedValues, percentileValue) {
+  if (!Array.isArray(sortedValues) || sortedValues.length === 0) {
+    return null;
+  }
+  const index = Math.ceil(sortedValues.length * percentileValue) - 1;
+  return sortedValues[Math.max(0, Math.min(index, sortedValues.length - 1))];
+}
+
 function classifyFailure(error) {
   const message = String(error?.message ?? error ?? "");
   if (/Unable to infer (market|secid)|Invalid/.test(message)) {
@@ -441,7 +449,7 @@ function classifyFailure(error) {
     return "rate_limited";
   }
   if (
-    /Lambda returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
+    /Lambda returned statusCode 5\d\d|aws-router returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
   ) {
     return "transient_network";
   }
@@ -455,7 +463,11 @@ function isRetriableFailure(errorClass) {
 function createSummary(options, selection) {
   return {
     aws_regions: options.awsRegions,
-    aws_region_strategy: options.engine === "local" ? "none" : "round_robin_start_index",
+    aws_region_strategy: options.engine === "local"
+      ? "none"
+      : options.engine === "aws-router"
+        ? "router_auto"
+        : "round_robin_start_index",
     available_codes: selection.availableCodes,
     batch_size: options.batchSize,
     candidate_codes: selection.candidateCodes,
@@ -483,6 +495,10 @@ function createSummary(options, selection) {
     success_rate: selection.selectedCodes.length === 0 ? 1 : 0,
     attempts_by_code: {},
     engine_counts: {},
+    duration_ms_by_code: {},
+    avg_duration_ms: null,
+    p50_duration_ms: null,
+    p95_duration_ms: null,
     failure_reason_counts: {},
     region_counts: {},
     retriable_failure_counts: {},
@@ -493,7 +509,7 @@ function createSummary(options, selection) {
 }
 
 function fetchOptionsForIndex(options, itemIndex) {
-  if (options.engine === "local") {
+  if (options.engine === "local" || options.engine === "aws-router") {
     return options;
   }
   return {
@@ -571,6 +587,12 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
       file: {
         engine: data.source_engine ?? options.engine,
         region: data.source_region ?? null,
+        router_duration_ms: Number.isFinite(data.router_duration_ms) ? data.router_duration_ms : null,
+        target_duration_ms: Number.isFinite(data.target_duration_ms) ? data.target_duration_ms : null,
+        eastmoney_duration_ms: Number.isFinite(data.eastmoney_duration_ms) ? data.eastmoney_duration_ms : null,
+        total_duration_ms: Number.isFinite(data.total_duration_ms) ? data.total_duration_ms : null,
+        fallback_count: Number.isFinite(data.fallback_count) ? data.fallback_count : null,
+        attempted_regions: Array.isArray(data.attempted_regions) ? data.attempted_regions : null,
         status: "success",
         file: outputPath,
         secid,
@@ -609,6 +631,10 @@ function summarizeFinalResults(summary, results) {
   summary.failed = 0;
   summary.engine_counts = {};
   summary.region_counts = {};
+  summary.duration_ms_by_code = {};
+  summary.avg_duration_ms = null;
+  summary.p50_duration_ms = null;
+  summary.p95_duration_ms = null;
   summary.failure_reason_counts = {};
   summary.files = {};
 
@@ -618,10 +644,20 @@ function summarizeFinalResults(summary, results) {
     if (result.countKey === "success") {
       incrementCount(summary.engine_counts, result.file.engine);
       incrementCount(summary.region_counts, result.file.region);
+      if (Number.isFinite(result.file.total_duration_ms)) {
+        summary.duration_ms_by_code[result.code] = result.file.total_duration_ms;
+      }
     }
     if (result.countKey === "failed") {
       incrementCount(summary.failure_reason_counts, result.file.error_class ?? "unknown");
     }
+  }
+
+  const durations = Object.values(summary.duration_ms_by_code).sort((left, right) => left - right);
+  if (durations.length > 0) {
+    summary.avg_duration_ms = durations.reduce((total, value) => total + value, 0) / durations.length;
+    summary.p50_duration_ms = percentile(durations, 0.5);
+    summary.p95_duration_ms = percentile(durations, 0.95);
   }
 }
 

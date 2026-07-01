@@ -18,5 +18,7 @@
     "us-west-1",
     "us-west-2"
   ],
-  "lambda_name": "kline"
+  "lambda_name": "kline",
+  "aws_router_url_env": "AWS_ROUTER_URL",
+  "aws_router_token_env": "AWS_ROUTER_TOKEN"
 }
