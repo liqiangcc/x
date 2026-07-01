@@ -1,15 +1,18 @@
 {
   "aws_regions": null,
-  "aws_region_strategy": "none",
-  "available_codes": 100,
+  "aws_region_strategy": "router_auto",
+  "available_codes": 300,
   "batch_size": null,
-  "candidate_codes": 100,
+  "candidate_codes": 300,
   "concurrency": 4,
-  "engine": "huaweicloud",
+  "engine": "aws-router",
+  "expected_latest_date": "2026-07-01",
   "force": false,
+  "freshness_codes": 5191,
+  "freshness_codes_path": "/home/runner/work/x/x/runs/20260701T140101Z_daily/freshness.codes.json",
   "huaweicloud_regions": null,
-  "huaweicloud_region_strategy": "round_robin_start_index",
-  "input_path": "/home/runner/work/x/x/data/jobs/20260701/daily/20260701-daily-market-hs-a/current.codes.json",
+  "huaweicloud_region_strategy": "none",
+  "input_path": "/home/runner/work/x/x/data/jobs/20260701/daily/20260701-daily-market-refresh/current.codes.json",
   "lambda_name": "kline",
   "min_success_rate": 0.95,
   "offset": 0,
@@ -18,1100 +21,2726 @@
   "retry_concurrency": 1,
   "retry_delay_ms": 1000,
   "selection_mode": "all",
-  "total_codes": 100,
-  "success": 0,
-  "migrated_existing": 31,
-  "skipped_existing": 0,
-  "failed": 69,
-  "initial_failed": 69,
+  "total_codes": 300,
+  "success": 24,
+  "migrated_existing": 0,
+  "skipped_existing": 275,
+  "failed": 1,
+  "initial_failed": 1,
   "retried": 0,
   "retry_success": 0,
   "retry_failed": 0,
-  "success_rate": 0.31,
+  "success_rate": 0.9966666666666667,
   "attempts_by_code": {
-    "002579": 1,
-    "002580": 1,
-    "002581": 1,
-    "002582": 1,
-    "002583": 1,
-    "002584": 1,
-    "002585": 1,
-    "002586": 1,
-    "002587": 1,
-    "002588": 1,
-    "002589": 1,
-    "002590": 1,
-    "002591": 1,
-    "002592": 1,
-    "002593": 1,
-    "002594": 1,
-    "002595": 1,
-    "002596": 1,
-    "002597": 1,
-    "002598": 1,
-    "002599": 1,
-    "002600": 1,
-    "002601": 1,
-    "002602": 1,
-    "002603": 1,
-    "002604": 1,
-    "002605": 1,
-    "002606": 1,
-    "002607": 1,
-    "002608": 1,
-    "002609": 1,
-    "002610": 1,
-    "002611": 1,
-    "002612": 1,
-    "002613": 1,
-    "002614": 1,
-    "002615": 1,
-    "002616": 1,
-    "002617": 1,
-    "002618": 1,
-    "002619": 1,
-    "002620": 1,
-    "002621": 1,
-    "002622": 1,
-    "002623": 1,
-    "002624": 1,
-    "002625": 1,
-    "002626": 1,
-    "002627": 1,
-    "002628": 1,
-    "002629": 1,
-    "002630": 1,
-    "002631": 1,
-    "002632": 1,
-    "002633": 1,
-    "002634": 1,
-    "002635": 1,
-    "002636": 1,
-    "002637": 1,
-    "002638": 1,
-    "002639": 1,
-    "002640": 1,
-    "002641": 1,
-    "002642": 1,
-    "002643": 1,
-    "002644": 1,
-    "002645": 1,
-    "002646": 1,
-    "002647": 1,
-    "002648": 1,
-    "002649": 1,
-    "002650": 1,
-    "002651": 1,
-    "002652": 1,
-    "002653": 1,
-    "002654": 1,
-    "002655": 1,
-    "002656": 1,
-    "002657": 1,
-    "002658": 1,
-    "002659": 1,
-    "002660": 1,
-    "002661": 1,
-    "002662": 1,
-    "002663": 1,
-    "002664": 1,
-    "002665": 1,
-    "002666": 1,
-    "002667": 1,
-    "002668": 1,
-    "002669": 1,
-    "002670": 1,
-    "002671": 1,
-    "002672": 1,
-    "002673": 1,
-    "002674": 1,
-    "002675": 1,
-    "002676": 1,
-    "002677": 1,
-    "002678": 1
+    "000001": 1,
+    "000002": 1,
+    "000003": 1,
+    "000004": 1,
+    "000005": 1,
+    "000006": 1,
+    "000007": 1,
+    "000008": 1,
+    "000009": 1,
+    "000010": 1,
+    "000011": 1,
+    "000012": 1,
+    "000013": 1,
+    "000014": 1,
+    "000015": 1,
+    "000016": 1,
+    "000017": 1,
+    "000018": 1,
+    "000019": 1,
+    "000020": 1,
+    "000021": 1,
+    "000023": 1,
+    "000024": 1,
+    "000025": 1,
+    "000026": 1,
+    "000027": 1,
+    "000028": 1,
+    "000029": 1,
+    "000030": 1,
+    "000031": 1,
+    "000032": 1,
+    "000033": 1,
+    "000034": 1,
+    "000035": 1,
+    "000036": 1,
+    "000037": 1,
+    "000038": 1,
+    "000039": 1,
+    "000040": 1,
+    "000042": 1,
+    "000045": 1,
+    "000046": 1,
+    "000047": 1,
+    "000048": 1,
+    "000049": 1,
+    "000050": 1,
+    "000055": 1,
+    "000056": 1,
+    "000058": 1,
+    "000059": 1,
+    "000060": 1,
+    "000061": 1,
+    "000062": 1,
+    "000063": 1,
+    "000065": 1,
+    "000066": 1,
+    "000068": 1,
+    "000069": 1,
+    "000070": 1,
+    "000078": 1,
+    "000088": 1,
+    "000089": 1,
+    "000090": 1,
+    "000096": 1,
+    "000099": 1,
+    "000100": 1,
+    "000150": 1,
+    "000151": 1,
+    "000153": 1,
+    "000155": 1,
+    "000156": 1,
+    "000157": 1,
+    "000158": 1,
+    "000159": 1,
+    "000166": 1,
+    "000301": 1,
+    "000333": 1,
+    "000338": 1,
+    "000400": 1,
+    "000401": 1,
+    "000402": 1,
+    "000403": 1,
+    "000404": 1,
+    "000405": 1,
+    "000406": 1,
+    "000407": 1,
+    "000408": 1,
+    "000409": 1,
+    "000410": 1,
+    "000411": 1,
+    "000412": 1,
+    "000413": 1,
+    "000415": 1,
+    "000416": 1,
+    "000417": 1,
+    "000418": 1,
+    "000419": 1,
+    "000420": 1,
+    "000421": 1,
+    "000422": 1,
+    "000423": 1,
+    "000425": 1,
+    "000426": 1,
+    "000428": 1,
+    "000429": 1,
+    "000430": 1,
+    "000488": 1,
+    "000498": 1,
+    "000501": 1,
+    "000502": 1,
+    "000503": 1,
+    "000504": 1,
+    "000505": 1,
+    "000506": 1,
+    "000507": 1,
+    "000508": 1,
+    "000509": 1,
+    "000510": 1,
+    "000511": 1,
+    "000513": 1,
+    "000514": 1,
+    "000515": 1,
+    "000516": 1,
+    "000517": 1,
+    "000518": 1,
+    "000519": 1,
+    "000520": 1,
+    "000521": 1,
+    "000522": 1,
+    "000523": 1,
+    "000524": 1,
+    "000525": 1,
+    "000526": 1,
+    "000527": 1,
+    "000528": 1,
+    "000529": 1,
+    "000530": 1,
+    "000531": 1,
+    "000532": 1,
+    "000533": 1,
+    "000534": 1,
+    "000535": 1,
+    "000536": 1,
+    "000537": 1,
+    "000538": 1,
+    "000539": 1,
+    "000540": 1,
+    "000541": 1,
+    "000542": 1,
+    "000543": 1,
+    "000544": 1,
+    "000545": 1,
+    "000546": 1,
+    "000547": 1,
+    "000548": 1,
+    "000549": 1,
+    "000550": 1,
+    "000551": 1,
+    "000552": 1,
+    "000553": 1,
+    "000554": 1,
+    "000555": 1,
+    "000556": 1,
+    "000557": 1,
+    "000558": 1,
+    "000559": 1,
+    "000560": 1,
+    "000561": 1,
+    "000562": 1,
+    "000563": 1,
+    "000564": 1,
+    "000565": 1,
+    "000566": 1,
+    "000567": 1,
+    "000568": 1,
+    "000569": 1,
+    "000570": 1,
+    "000571": 1,
+    "000572": 1,
+    "000573": 1,
+    "000576": 1,
+    "000578": 1,
+    "000581": 1,
+    "000582": 1,
+    "000583": 1,
+    "000584": 1,
+    "000585": 1,
+    "000586": 1,
+    "000587": 1,
+    "000588": 1,
+    "000589": 1,
+    "000590": 1,
+    "000591": 1,
+    "000592": 1,
+    "000593": 1,
+    "000594": 1,
+    "000595": 1,
+    "000596": 1,
+    "000597": 1,
+    "000598": 1,
+    "000599": 1,
+    "000600": 1,
+    "000601": 1,
+    "000602": 1,
+    "000603": 1,
+    "000605": 1,
+    "000606": 1,
+    "000607": 1,
+    "000608": 1,
+    "000609": 1,
+    "000610": 1,
+    "000611": 1,
+    "000612": 1,
+    "000613": 1,
+    "000615": 1,
+    "000616": 1,
+    "000617": 1,
+    "000618": 1,
+    "000619": 1,
+    "000620": 1,
+    "000621": 1,
+    "000622": 1,
+    "000623": 1,
+    "000625": 1,
+    "000626": 1,
+    "000627": 1,
+    "000628": 1,
+    "000629": 1,
+    "000630": 1,
+    "000631": 1,
+    "000632": 1,
+    "000633": 1,
+    "000635": 1,
+    "000636": 1,
+    "000637": 1,
+    "000638": 1,
+    "000639": 1,
+    "000650": 1,
+    "000651": 1,
+    "000652": 1,
+    "000653": 1,
+    "000655": 1,
+    "000656": 1,
+    "000657": 1,
+    "000658": 1,
+    "000659": 1,
+    "000660": 1,
+    "000661": 1,
+    "000662": 1,
+    "000663": 1,
+    "000665": 1,
+    "000666": 1,
+    "000667": 1,
+    "000668": 1,
+    "000669": 1,
+    "000670": 1,
+    "000671": 1,
+    "000672": 1,
+    "000673": 1,
+    "000675": 1,
+    "000676": 1,
+    "000677": 1,
+    "000678": 1,
+    "000679": 1,
+    "000680": 1,
+    "000681": 1,
+    "000682": 1,
+    "000683": 1,
+    "000685": 1,
+    "000686": 1,
+    "000687": 1,
+    "000688": 1,
+    "000689": 1,
+    "000690": 1,
+    "000691": 1,
+    "000692": 1,
+    "000693": 1,
+    "000695": 1,
+    "000697": 1,
+    "000698": 1,
+    "000699": 1,
+    "000700": 1,
+    "000701": 1,
+    "000702": 1,
+    "000703": 1,
+    "000705": 1,
+    "000707": 1,
+    "000708": 1,
+    "000709": 1,
+    "000710": 1,
+    "000711": 1,
+    "000712": 1,
+    "000713": 1,
+    "000715": 1,
+    "000716": 1,
+    "000717": 1,
+    "000718": 1,
+    "000719": 1,
+    "000720": 1,
+    "000721": 1
   },
-  "engine_counts": {},
-  "duration_ms_by_code": {},
-  "avg_duration_ms": null,
-  "p50_duration_ms": null,
-  "p95_duration_ms": null,
+  "engine_counts": {
+    "aws-router": 24
+  },
+  "duration_ms_by_code": {
+    "000600": 3743,
+    "000601": 3962,
+    "000603": 3950,
+    "000605": 1329,
+    "000617": 1140,
+    "000620": 1740,
+    "000626": 1320,
+    "000631": 580,
+    "000632": 1036,
+    "000639": 985,
+    "000657": 835,
+    "000659": 1455,
+    "000670": 919,
+    "000677": 621,
+    "000682": 587,
+    "000683": 575,
+    "000688": 459,
+    "000690": 600,
+    "000692": 651,
+    "000695": 464,
+    "000703": 529,
+    "000707": 537,
+    "000717": 740,
+    "000720": 1000
+  },
+  "avg_duration_ms": 1239.875,
+  "p50_duration_ms": 835,
+  "p95_duration_ms": 3950,
   "failure_reason_counts": {
-    "empty_klines": 69
+    "empty_klines": 1
   },
-  "region_counts": {},
+  "region_counts": {
+    "ap-northeast-1": 24
+  },
   "retriable_failure_counts": {},
   "failure_reasons": [
-    "failed_items",
-    "success_rate_below_minimum"
+    "failed_items"
   ],
-  "status": "failed_success_rate",
+  "status": "completed_with_failures",
   "files": {
-    "002579": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002579.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002579.json",
-      "secid": "0.002579",
-      "points": 3344,
+    "000001": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000001.json",
+      "secid": "0.000001",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002580": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002580.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002580.json",
-      "secid": "0.002580",
-      "points": 3459,
+    "000002": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000002.json",
+      "secid": "0.000002",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002581": {
+    "000003": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000003.json",
+      "secid": "0.000003",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000004": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000004.json",
+      "secid": "0.000004",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000005": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000005.json",
+      "secid": "0.000005",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000006": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000006.json",
+      "secid": "0.000006",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000007": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000007.json",
+      "secid": "0.000007",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000008": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000008.json",
+      "secid": "0.000008",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000009": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000009.json",
+      "secid": "0.000009",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000010": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000010.json",
+      "secid": "0.000010",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000011": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000011.json",
+      "secid": "0.000011",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000012": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000012.json",
+      "secid": "0.000012",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000013": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000013.json",
+      "secid": "0.000013",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000014": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000014.json",
+      "secid": "0.000014",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000015": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000015.json",
+      "secid": "0.000015",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000016": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000016.json",
+      "secid": "0.000016",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000017": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000017.json",
+      "secid": "0.000017",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000018": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000018.json",
+      "secid": "0.000018",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000019": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000019.json",
+      "secid": "0.000019",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000020": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000020.json",
+      "secid": "0.000020",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000021": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000021.json",
+      "secid": "0.000021",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000023": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000023.json",
+      "secid": "0.000023",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000024": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000024.json",
+      "secid": "0.000024",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000025": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000025.json",
+      "secid": "0.000025",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000026": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000026.json",
+      "secid": "0.000026",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000027": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000027.json",
+      "secid": "0.000027",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000028": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000028.json",
+      "secid": "0.000028",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000029": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000029.json",
+      "secid": "0.000029",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000030": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000030.json",
+      "secid": "0.000030",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000031": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000031.json",
+      "secid": "0.000031",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000032": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000032.json",
+      "secid": "0.000032",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000033": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000033.json",
+      "secid": "0.000033",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000034": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000034.json",
+      "secid": "0.000034",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000035": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000035.json",
+      "secid": "0.000035",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000036": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000036.json",
+      "secid": "0.000036",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000037": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000037.json",
+      "secid": "0.000037",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000038": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000038.json",
+      "secid": "0.000038",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000039": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000039.json",
+      "secid": "0.000039",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000040": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000040.json",
+      "secid": "0.000040",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000042": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000042.json",
+      "secid": "0.000042",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000045": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000045.json",
+      "secid": "0.000045",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000046": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000046.json",
+      "secid": "0.000046",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000047": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000047.json",
+      "secid": "0.000047",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000048": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000048.json",
+      "secid": "0.000048",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000049": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000049.json",
+      "secid": "0.000049",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000050": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000050.json",
+      "secid": "0.000050",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000055": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000055.json",
+      "secid": "0.000055",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000056": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000056.json",
+      "secid": "0.000056",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000058": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000058.json",
+      "secid": "0.000058",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000059": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000059.json",
+      "secid": "0.000059",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000060": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000060.json",
+      "secid": "0.000060",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000061": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000061.json",
+      "secid": "0.000061",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000062": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000062.json",
+      "secid": "0.000062",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000063": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000063.json",
+      "secid": "0.000063",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000065": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000065.json",
+      "secid": "0.000065",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000066": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000066.json",
+      "secid": "0.000066",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000068": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000068.json",
+      "secid": "0.000068",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000069": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000069.json",
+      "secid": "0.000069",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000070": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000070.json",
+      "secid": "0.000070",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000078": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000078.json",
+      "secid": "0.000078",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000088": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000088.json",
+      "secid": "0.000088",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000089": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000089.json",
+      "secid": "0.000089",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000090": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000090.json",
+      "secid": "0.000090",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000096": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000096.json",
+      "secid": "0.000096",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000099": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000099.json",
+      "secid": "0.000099",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000100": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000100.json",
+      "secid": "0.000100",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000150": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000150.json",
+      "secid": "0.000150",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000151": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000151.json",
+      "secid": "0.000151",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000153": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000153.json",
+      "secid": "0.000153",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000155": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000155.json",
+      "secid": "0.000155",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000156": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000156.json",
+      "secid": "0.000156",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000157": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000157.json",
+      "secid": "0.000157",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000158": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000158.json",
+      "secid": "0.000158",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000159": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000159.json",
+      "secid": "0.000159",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000166": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000166.json",
+      "secid": "0.000166",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000301": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000301.json",
+      "secid": "0.000301",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000333": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000333.json",
+      "secid": "0.000333",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000338": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000338.json",
+      "secid": "0.000338",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000400": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000400.json",
+      "secid": "0.000400",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000401": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000401.json",
+      "secid": "0.000401",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000402": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000402.json",
+      "secid": "0.000402",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000403": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000403.json",
+      "secid": "0.000403",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000404": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000404.json",
+      "secid": "0.000404",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000405": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000405.json",
+      "secid": "0.000405",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000406": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000406.json",
+      "secid": "0.000406",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000407": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000407.json",
+      "secid": "0.000407",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000408": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000408.json",
+      "secid": "0.000408",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000409": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000409.json",
+      "secid": "0.000409",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000410": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000410.json",
+      "secid": "0.000410",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000411": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000411.json",
+      "secid": "0.000411",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000412": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000412.json",
+      "secid": "0.000412",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000413": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000413.json",
+      "secid": "0.000413",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000415": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000415.json",
+      "secid": "0.000415",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000416": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000416.json",
+      "secid": "0.000416",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000417": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000417.json",
+      "secid": "0.000417",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000418": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000418.json",
+      "secid": "0.000418",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000419": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000419.json",
+      "secid": "0.000419",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000420": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000420.json",
+      "secid": "0.000420",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000421": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000421.json",
+      "secid": "0.000421",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000422": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000422.json",
+      "secid": "0.000422",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000423": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000423.json",
+      "secid": "0.000423",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000425": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000425.json",
+      "secid": "0.000425",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000426": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000426.json",
+      "secid": "0.000426",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000428": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000428.json",
+      "secid": "0.000428",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000429": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000429.json",
+      "secid": "0.000429",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000430": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000430.json",
+      "secid": "0.000430",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000488": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000488.json",
+      "secid": "0.000488",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000498": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000498.json",
+      "secid": "0.000498",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000501": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000501.json",
+      "secid": "0.000501",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000502": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000502.json",
+      "secid": "0.000502",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000503": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000503.json",
+      "secid": "0.000503",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000504": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000504.json",
+      "secid": "0.000504",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000505": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000505.json",
+      "secid": "0.000505",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000506": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000506.json",
+      "secid": "0.000506",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000507": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000507.json",
+      "secid": "0.000507",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000508": {
       "status": "failed",
-      "secid": "0.002581",
+      "secid": "0.000508",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
       "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000509": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000509.json",
+      "secid": "0.000509",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000510": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000510.json",
+      "secid": "0.000510",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000511": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000511.json",
+      "secid": "0.000511",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000513": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000513.json",
+      "secid": "0.000513",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000514": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000514.json",
+      "secid": "0.000514",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000515": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000515.json",
+      "secid": "0.000515",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000516": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000516.json",
+      "secid": "0.000516",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000517": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000517.json",
+      "secid": "0.000517",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000518": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000518.json",
+      "secid": "0.000518",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000519": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000519.json",
+      "secid": "0.000519",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000520": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000520.json",
+      "secid": "0.000520",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000521": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000521.json",
+      "secid": "0.000521",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000522": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000522.json",
+      "secid": "0.000522",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000523": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000523.json",
+      "secid": "0.000523",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000524": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000524.json",
+      "secid": "0.000524",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000525": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000525.json",
+      "secid": "0.000525",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000526": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000526.json",
+      "secid": "0.000526",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000527": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000527.json",
+      "secid": "0.000527",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000528": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000528.json",
+      "secid": "0.000528",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000529": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000529.json",
+      "secid": "0.000529",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000530": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000530.json",
+      "secid": "0.000530",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000531": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000531.json",
+      "secid": "0.000531",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000532": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000532.json",
+      "secid": "0.000532",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000533": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000533.json",
+      "secid": "0.000533",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000534": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000534.json",
+      "secid": "0.000534",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000535": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000535.json",
+      "secid": "0.000535",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000536": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000536.json",
+      "secid": "0.000536",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000537": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000537.json",
+      "secid": "0.000537",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000538": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000538.json",
+      "secid": "0.000538",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002582": {
-      "status": "failed",
-      "secid": "0.002582",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000539": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000539.json",
+      "secid": "0.000539",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002583": {
-      "status": "failed",
-      "secid": "0.002583",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000540": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000540.json",
+      "secid": "0.000540",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002584": {
-      "status": "failed",
-      "secid": "0.002584",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000541": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000541.json",
+      "secid": "0.000541",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002585": {
-      "status": "failed",
-      "secid": "0.002585",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000542": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000542.json",
+      "secid": "0.000542",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002586": {
-      "status": "failed",
-      "secid": "0.002586",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000543": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000543.json",
+      "secid": "0.000543",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002587": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002587.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002587.json",
-      "secid": "0.002587",
-      "points": 3465,
+    "000544": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000544.json",
+      "secid": "0.000544",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002588": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002588.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002588.json",
-      "secid": "0.002588",
-      "points": 3584,
+    "000545": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000545.json",
+      "secid": "0.000545",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002589": {
-      "status": "failed",
-      "secid": "0.002589",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000546": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000546.json",
+      "secid": "0.000546",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002590": {
-      "status": "failed",
-      "secid": "0.002590",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000547": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000547.json",
+      "secid": "0.000547",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002591": {
-      "status": "failed",
-      "secid": "0.002591",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000548": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000548.json",
+      "secid": "0.000548",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002592": {
-      "status": "failed",
-      "secid": "0.002592",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000549": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000549.json",
+      "secid": "0.000549",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002593": {
-      "status": "failed",
-      "secid": "0.002593",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000550": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000550.json",
+      "secid": "0.000550",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002594": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002594.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002594.json",
-      "secid": "0.002594",
-      "points": 3566,
+    "000551": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000551.json",
+      "secid": "0.000551",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002595": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002595.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002595.json",
-      "secid": "0.002595",
-      "points": 3576,
+    "000552": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000552.json",
+      "secid": "0.000552",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002596": {
-      "status": "failed",
-      "secid": "0.002596",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000553": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000553.json",
+      "secid": "0.000553",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002597": {
-      "status": "failed",
-      "secid": "0.002597",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000554": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000554.json",
+      "secid": "0.000554",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002598": {
-      "status": "failed",
-      "secid": "0.002598",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000555": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000555.json",
+      "secid": "0.000555",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002599": {
-      "status": "failed",
-      "secid": "0.002599",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000556": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000556.json",
+      "secid": "0.000556",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002600": {
-      "status": "failed",
-      "secid": "0.002600",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000557": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000557.json",
+      "secid": "0.000557",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002601": {
-      "status": "failed",
-      "secid": "0.002601",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000558": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000558.json",
+      "secid": "0.000558",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002602": {
-      "status": "failed",
-      "secid": "0.002602",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000559": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000559.json",
+      "secid": "0.000559",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000560": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000560.json",
+      "secid": "0.000560",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000561": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000561.json",
+      "secid": "0.000561",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000562": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000562.json",
+      "secid": "0.000562",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000563": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000563.json",
+      "secid": "0.000563",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000564": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000564.json",
+      "secid": "0.000564",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000565": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000565.json",
+      "secid": "0.000565",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000566": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000566.json",
+      "secid": "0.000566",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000567": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000567.json",
+      "secid": "0.000567",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000568": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000568.json",
+      "secid": "0.000568",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000569": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000569.json",
+      "secid": "0.000569",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000570": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000570.json",
+      "secid": "0.000570",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000571": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000571.json",
+      "secid": "0.000571",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000572": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000572.json",
+      "secid": "0.000572",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000573": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000573.json",
+      "secid": "0.000573",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000576": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000576.json",
+      "secid": "0.000576",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000578": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000578.json",
+      "secid": "0.000578",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000581": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000581.json",
+      "secid": "0.000581",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000582": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000582.json",
+      "secid": "0.000582",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000583": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000583.json",
+      "secid": "0.000583",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000584": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000584.json",
+      "secid": "0.000584",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000585": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000585.json",
+      "secid": "0.000585",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000586": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000586.json",
+      "secid": "0.000586",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000587": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000587.json",
+      "secid": "0.000587",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000588": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000588.json",
+      "secid": "0.000588",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000589": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000589.json",
+      "secid": "0.000589",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000590": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000590.json",
+      "secid": "0.000590",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000591": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000591.json",
+      "secid": "0.000591",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000592": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000592.json",
+      "secid": "0.000592",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000593": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000593.json",
+      "secid": "0.000593",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000594": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000594.json",
+      "secid": "0.000594",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000595": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000595.json",
+      "secid": "0.000595",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000596": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000596.json",
+      "secid": "0.000596",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000597": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000597.json",
+      "secid": "0.000597",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000598": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000598.json",
+      "secid": "0.000598",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000599": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000599.json",
+      "secid": "0.000599",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000600": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 1368,
+      "target_duration_ms": 2375,
+      "eastmoney_duration_ms": 2335,
+      "total_duration_ms": 3743,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000600.json",
+      "secid": "0.000600",
+      "points": 7017,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000601": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 1451,
+      "target_duration_ms": 2511,
+      "eastmoney_duration_ms": 2443,
+      "total_duration_ms": 3962,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000601.json",
+      "secid": "0.000601",
+      "points": 7097,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000602": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000602.json",
+      "secid": "0.000602",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000603": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 1445,
+      "target_duration_ms": 2505,
+      "eastmoney_duration_ms": 2502,
+      "total_duration_ms": 3950,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000603.json",
+      "secid": "0.000603",
+      "points": 6400,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000605": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 428,
+      "target_duration_ms": 901,
+      "eastmoney_duration_ms": 863,
+      "total_duration_ms": 1329,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000605.json",
+      "secid": "0.000605",
+      "points": 6460,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000606": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000606.json",
+      "secid": "0.000606",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000607": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000607.json",
+      "secid": "0.000607",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000608": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000608.json",
+      "secid": "0.000608",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000609": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000609.json",
+      "secid": "0.000609",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000610": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000610.json",
+      "secid": "0.000610",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000611": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000611.json",
+      "secid": "0.000611",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000612": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000612.json",
+      "secid": "0.000612",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000613": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000613.json",
+      "secid": "0.000613",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000615": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000615.json",
+      "secid": "0.000615",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000616": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000616.json",
+      "secid": "0.000616",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000617": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 176,
+      "target_duration_ms": 964,
+      "eastmoney_duration_ms": 962,
+      "total_duration_ms": 1140,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000617.json",
+      "secid": "0.000617",
+      "points": 6979,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000618": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000618.json",
+      "secid": "0.000618",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000619": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000619.json",
+      "secid": "0.000619",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000620": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 443,
+      "target_duration_ms": 1297,
+      "eastmoney_duration_ms": 1260,
+      "total_duration_ms": 1740,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000620.json",
+      "secid": "0.000620",
+      "points": 5807,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000621": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000621.json",
+      "secid": "0.000621",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000622": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000622.json",
+      "secid": "0.000622",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000623": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000623.json",
+      "secid": "0.000623",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000625": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000625.json",
+      "secid": "0.000625",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002603": {
-      "status": "failed",
-      "secid": "0.002603",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000626": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 426,
+      "target_duration_ms": 894,
+      "eastmoney_duration_ms": 892,
+      "total_duration_ms": 1320,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000626.json",
+      "secid": "0.000626",
+      "points": 6912,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002604": {
-      "status": "failed",
-      "secid": "0.002604",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000627": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000627.json",
+      "secid": "0.000627",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002605": {
-      "status": "failed",
-      "secid": "0.002605",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000628": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000628.json",
+      "secid": "0.000628",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002606": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002606.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002606.json",
-      "secid": "0.002606",
-      "points": 3335,
+    "000629": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000629.json",
+      "secid": "0.000629",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002607": {
-      "status": "failed",
-      "secid": "0.002607",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000630": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000630.json",
+      "secid": "0.000630",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002608": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002608.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002608.json",
-      "secid": "0.002608",
-      "points": 3153,
+    "000631": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 240,
+      "target_duration_ms": 340,
+      "eastmoney_duration_ms": 339,
+      "total_duration_ms": 580,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000631.json",
+      "secid": "0.000631",
+      "points": 6388,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002609": {
-      "status": "failed",
-      "secid": "0.002609",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000632": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 171,
+      "target_duration_ms": 865,
+      "eastmoney_duration_ms": 807,
+      "total_duration_ms": 1036,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000632.json",
+      "secid": "0.000632",
+      "points": 7099,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002610": {
-      "status": "failed",
-      "secid": "0.002610",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000633": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000633.json",
+      "secid": "0.000633",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002611": {
-      "status": "failed",
-      "secid": "0.002611",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000635": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000635.json",
+      "secid": "0.000635",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002612": {
-      "status": "failed",
-      "secid": "0.002612",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000636": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000636.json",
+      "secid": "0.000636",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002613": {
-      "status": "failed",
-      "secid": "0.002613",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000637": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000637.json",
+      "secid": "0.000637",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002614": {
-      "status": "failed",
-      "secid": "0.002614",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000638": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000638.json",
+      "secid": "0.000638",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002615": {
-      "status": "failed",
-      "secid": "0.002615",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000639": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 197,
+      "target_duration_ms": 788,
+      "eastmoney_duration_ms": 787,
+      "total_duration_ms": 985,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000639.json",
+      "secid": "0.000639",
+      "points": 6858,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002616": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002616.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002616.json",
-      "secid": "0.002616",
-      "points": 3414,
+    "000650": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000650.json",
+      "secid": "0.000650",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002617": {
-      "status": "failed",
-      "secid": "0.002617",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000651": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000651.json",
+      "secid": "0.000651",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002618": {
-      "status": "failed",
-      "secid": "0.002618",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000652": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000652.json",
+      "secid": "0.000652",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002619": {
-      "status": "failed",
-      "secid": "0.002619",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000653": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000653.json",
+      "secid": "0.000653",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002620": {
-      "status": "failed",
-      "secid": "0.002620",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000655": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000655.json",
+      "secid": "0.000655",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002621": {
-      "status": "failed",
-      "secid": "0.002621",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000656": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000656.json",
+      "secid": "0.000656",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002622": {
-      "status": "failed",
-      "secid": "0.002622",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000657": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 136,
+      "target_duration_ms": 699,
+      "eastmoney_duration_ms": 642,
+      "total_duration_ms": 835,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000657.json",
+      "secid": "0.000657",
+      "points": 6107,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002623": {
-      "status": "failed",
-      "secid": "0.002623",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000658": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000658.json",
+      "secid": "0.000658",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002624": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002624.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002624.json",
-      "secid": "0.002624",
-      "points": 3117,
+    "000659": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 437,
+      "target_duration_ms": 982,
+      "eastmoney_duration_ms": 979,
+      "total_duration_ms": 1455,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000659.json",
+      "secid": "0.000659",
+      "points": 6967,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002625": {
-      "status": "failed",
-      "secid": "0.002625",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000660": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000660.json",
+      "secid": "0.000660",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002626": {
-      "status": "failed",
-      "secid": "0.002626",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000661": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000661.json",
+      "secid": "0.000661",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002627": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002627.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002627.json",
-      "secid": "0.002627",
-      "points": 3462,
+    "000662": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000662.json",
+      "secid": "0.000662",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002628": {
-      "status": "failed",
-      "secid": "0.002628",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000663": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000663.json",
+      "secid": "0.000663",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002629": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002629.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002629.json",
-      "secid": "0.002629",
-      "points": 3171,
+    "000665": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000665.json",
+      "secid": "0.000665",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002630": {
-      "status": "failed",
-      "secid": "0.002630",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000666": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000666.json",
+      "secid": "0.000666",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002631": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002631.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002631.json",
-      "secid": "0.002631",
-      "points": 3327,
+    "000667": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000667.json",
+      "secid": "0.000667",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002632": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002632.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002632.json",
-      "secid": "0.002632",
-      "points": 3350,
+    "000668": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000668.json",
+      "secid": "0.000668",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002633": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002633.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002633.json",
-      "secid": "0.002633",
-      "points": 3165,
+    "000669": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000669.json",
+      "secid": "0.000669",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002634": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002634.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002634.json",
-      "secid": "0.002634",
-      "points": 3456,
+    "000670": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 308,
+      "target_duration_ms": 611,
+      "eastmoney_duration_ms": 610,
+      "total_duration_ms": 919,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000670.json",
+      "secid": "0.000670",
+      "points": 4808,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002635": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002635.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002635.json",
-      "secid": "0.002635",
-      "points": 3376,
+    "000671": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000671.json",
+      "secid": "0.000671",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002636": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002636.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002636.json",
-      "secid": "0.002636",
-      "points": 3362,
+    "000672": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000672.json",
+      "secid": "0.000672",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002637": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002637.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002637.json",
-      "secid": "0.002637",
-      "points": 3399,
+    "000673": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000673.json",
+      "secid": "0.000673",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002638": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002638.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002638.json",
-      "secid": "0.002638",
-      "points": 3109,
+    "000675": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000675.json",
+      "secid": "0.000675",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002639": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002639.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002639.json",
-      "secid": "0.002639",
-      "points": 3267,
+    "000676": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000676.json",
+      "secid": "0.000676",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002640": {
-      "status": "failed",
-      "secid": "0.002640",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000677": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 133,
+      "target_duration_ms": 488,
+      "eastmoney_duration_ms": 487,
+      "total_duration_ms": 621,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000677.json",
+      "secid": "0.000677",
+      "points": 6489,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002641": {
-      "status": "failed",
-      "secid": "0.002641",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000678": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000678.json",
+      "secid": "0.000678",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002642": {
-      "status": "failed",
-      "secid": "0.002642",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000679": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000679.json",
+      "secid": "0.000679",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002643": {
-      "status": "failed",
-      "secid": "0.002643",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000680": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000680.json",
+      "secid": "0.000680",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002644": {
-      "status": "failed",
-      "secid": "0.002644",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000681": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000681.json",
+      "secid": "0.000681",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002645": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002645.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002645.json",
-      "secid": "0.002645",
-      "points": 3309,
+    "000682": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 185,
+      "target_duration_ms": 402,
+      "eastmoney_duration_ms": 401,
+      "total_duration_ms": 587,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000682.json",
+      "secid": "0.000682",
+      "points": 6804,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002646": {
-      "status": "failed",
-      "secid": "0.002646",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000683": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 211,
+      "target_duration_ms": 364,
+      "eastmoney_duration_ms": 307,
+      "total_duration_ms": 575,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000683.json",
+      "secid": "0.000683",
+      "points": 6891,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002647": {
-      "status": "failed",
-      "secid": "0.002647",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000685": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000685.json",
+      "secid": "0.000685",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002648": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002648.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002648.json",
-      "secid": "0.002648",
-      "points": 3429,
+    "000686": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000686.json",
+      "secid": "0.000686",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002649": {
-      "status": "failed",
-      "secid": "0.002649",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000687": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000687.json",
+      "secid": "0.000687",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002650": {
-      "status": "failed",
-      "secid": "0.002650",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000688": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 137,
+      "target_duration_ms": 322,
+      "eastmoney_duration_ms": 321,
+      "total_duration_ms": 459,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000688.json",
+      "secid": "0.000688",
+      "points": 5371,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002651": {
-      "status": "failed",
-      "secid": "0.002651",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000689": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000689.json",
+      "secid": "0.000689",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002652": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002652.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002652.json",
-      "secid": "0.002652",
-      "points": 3156,
+    "000690": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 166,
+      "target_duration_ms": 434,
+      "eastmoney_duration_ms": 377,
+      "total_duration_ms": 600,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000690.json",
+      "secid": "0.000690",
+      "points": 7015,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002653": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002653.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002653.json",
-      "secid": "0.002653",
-      "points": 3443,
+    "000691": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000691.json",
+      "secid": "0.000691",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002654": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002654.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002654.json",
-      "secid": "0.002654",
-      "points": 3102,
+    "000692": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 166,
+      "target_duration_ms": 485,
+      "eastmoney_duration_ms": 428,
+      "total_duration_ms": 651,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000692.json",
+      "secid": "0.000692",
+      "points": 6963,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002655": {
-      "status": "failed",
-      "secid": "0.002655",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000693": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000693.json",
+      "secid": "0.000693",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002656": {
-      "status": "failed",
-      "secid": "0.002656",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000695": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 219,
+      "target_duration_ms": 245,
+      "eastmoney_duration_ms": 244,
+      "total_duration_ms": 464,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000695.json",
+      "secid": "0.000695",
+      "points": 6540,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002657": {
-      "status": "failed",
-      "secid": "0.002657",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000697": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000697.json",
+      "secid": "0.000697",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002658": {
-      "status": "failed",
-      "secid": "0.002658",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000698": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000698.json",
+      "secid": "0.000698",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002659": {
-      "status": "failed",
-      "secid": "0.002659",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000699": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000699.json",
+      "secid": "0.000699",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002660": {
-      "status": "failed",
-      "secid": "0.002660",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000700": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000700.json",
+      "secid": "0.000700",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002661": {
-      "status": "failed",
-      "secid": "0.002661",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000701": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000701.json",
+      "secid": "0.000701",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002662": {
-      "status": "failed",
-      "secid": "0.002662",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000702": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000702.json",
+      "secid": "0.000702",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002663": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002663.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002663.json",
-      "secid": "0.002663",
-      "points": 3175,
+    "000703": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 169,
+      "target_duration_ms": 360,
+      "eastmoney_duration_ms": 323,
+      "total_duration_ms": 529,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000703.json",
+      "secid": "0.000703",
+      "points": 6912,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002664": {
-      "status": "failed",
-      "secid": "0.002664",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000705": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000705.json",
+      "secid": "0.000705",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002665": {
-      "status": "failed",
-      "secid": "0.002665",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000707": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 128,
+      "target_duration_ms": 409,
+      "eastmoney_duration_ms": 352,
+      "total_duration_ms": 537,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000707.json",
+      "secid": "0.000707",
+      "points": 6902,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002666": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002666.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002666.json",
-      "secid": "0.002666",
-      "points": 3389,
+    "000708": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000708.json",
+      "secid": "0.000708",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002667": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002667.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002667.json",
-      "secid": "0.002667",
-      "points": 3211,
+    "000709": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000709.json",
+      "secid": "0.000709",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002668": {
-      "status": "failed",
-      "secid": "0.002668",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000710": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000710.json",
+      "secid": "0.000710",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002669": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002669.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002669.json",
-      "secid": "0.002669",
-      "points": 3174,
+    "000711": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000711.json",
+      "secid": "0.000711",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002670": {
-      "status": "failed",
-      "secid": "0.002670",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000712": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000712.json",
+      "secid": "0.000712",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002671": {
-      "status": "failed",
-      "secid": "0.002671",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000713": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000713.json",
+      "secid": "0.000713",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002672": {
-      "status": "failed",
-      "secid": "0.002672",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000715": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000715.json",
+      "secid": "0.000715",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002673": {
-      "status": "failed",
-      "secid": "0.002673",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000716": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000716.json",
+      "secid": "0.000716",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002674": {
-      "status": "failed",
-      "secid": "0.002674",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000717": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 142,
+      "target_duration_ms": 598,
+      "eastmoney_duration_ms": 540,
+      "total_duration_ms": 740,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000717.json",
+      "secid": "0.000717",
+      "points": 6902,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002675": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002675.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002675.json",
-      "secid": "0.002675",
-      "points": 2983,
+    "000718": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000718.json",
+      "secid": "0.000718",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002676": {
-      "status": "failed",
-      "secid": "0.002676",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000719": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000719.json",
+      "secid": "0.000719",
       "attempts": 1,
       "last_attempt": 0
     },
-    "002677": {
-      "status": "failed",
-      "secid": "0.002677",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000720": {
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 157,
+      "target_duration_ms": 843,
+      "eastmoney_duration_ms": 842,
+      "total_duration_ms": 1000,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000720.json",
+      "secid": "0.000720",
+      "points": 6725,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002678": {
-      "status": "failed",
-      "secid": "0.002678",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
+    "000721": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000721.json",
+      "secid": "0.000721",
       "attempts": 1,
       "last_attempt": 0
     }
