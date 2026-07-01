@@ -1,0 +1,14 @@
+{
+  "run_id": "20260701T140241Z_daily",
+  "failed": 1,
+  "items": [
+    {
+      "target": "0.001248",
+      "code": "001248",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    }
+  ]
+}
