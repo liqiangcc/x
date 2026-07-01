@@ -204,15 +204,7 @@ async function inspectFile(filePath) {
   };
 }
 
-async function main() {
-  let options;
-  try {
-    options = parseArguments(process.argv.slice(2));
-  } catch (error) {
-    printUsage();
-    throw error;
-  }
-
+async function validateKlinePath(options = {}) {
   const targetPath = options.period ? path.join(options.targetPath, options.period) : options.targetPath;
   const files = await walkJsonFiles(targetPath);
   const issues = [];
@@ -232,10 +224,23 @@ async function main() {
     status: issues.length > 0 ? "failed" : "ok",
     issues,
   };
+  return summary;
+}
+
+async function main() {
+  let options;
+  try {
+    options = parseArguments(process.argv.slice(2));
+  } catch (error) {
+    printUsage();
+    throw error;
+  }
+
+  const summary = await validateKlinePath(options);
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
-    if (issues.length > 0) {
+    if (summary.issue_count > 0) {
       process.exitCode = 1;
     }
     return;
@@ -248,12 +253,25 @@ async function main() {
     console.log(`${issue.issue}\t${issue.file}`);
   }
 
-  if (issues.length > 0) {
+  if (summary.issue_count > 0) {
     process.exitCode = 1;
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  getKlines,
+  inferPeriodFromPath,
+  inspectFile,
+  inspectKlinePayload,
+  inspectKlineRows,
+  parseArguments,
+  validateKlinePath,
+  walkJsonFiles,
+};
