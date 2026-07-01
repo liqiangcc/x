@@ -1,0 +1,15 @@
+{
+  "job_id": "20260701-yearly-market-default-fixed",
+  "date": "20260701",
+  "period": "yearly",
+  "chain_depth": 0,
+  "batch_size": 300,
+  "selection_source": "failed",
+  "codes": [
+    "000508",
+    "001248",
+    "301583",
+    "688072",
+    "688121"
+  ]
+}

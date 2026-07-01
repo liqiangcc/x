@@ -26,6 +26,7 @@ const {
   runLatencyBenchmark,
 } = require("../src/aws/latency");
 const { dataCommitMessage } = require("../src/core/data_commit");
+const { dataCommitPathspecs } = require("../src/core/data_paths");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
 const {
   applyProgressResults,
@@ -38,7 +39,9 @@ const {
   uniqueCodes,
 } = require("../src/jobs/progress");
 const {
+  copyMarketUniverseSnapshot,
   hasCompleteMarketUniverse,
+  marketUniverseRootForRun,
   shouldReuseMarketUniverse,
 } = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
@@ -1055,6 +1058,22 @@ function defaultDailyJobId({ date, market, period, universe }) {
   return parts.join("-");
 }
 
+function dailyJobIdForOptions(options, date) {
+  let fallbackJobId = defaultDailyJobId({
+    date,
+    market: options.universe === "market" ? options.market : null,
+    period: options.period,
+    universe: options.universe,
+  });
+  if (options.limit) {
+    fallbackJobId = `${fallbackJobId}-limit-${options.limit}`;
+  }
+  if (options.offset) {
+    fallbackJobId = `${fallbackJobId}-offset-${options.offset}`;
+  }
+  return normalizeJobId(options.jobId, fallbackJobId);
+}
+
 function progressPathFor(date, period, jobId) {
   return path.join(DEFAULT_JOBS_DIR, date, period, jobId, "progress.json");
 }
@@ -1077,19 +1096,7 @@ async function prepareDailyJobProgress(options, { date, inputDir, preselectFaile
 
   const batchSize = parsePositiveIntegerOption(options.batchSize, defaultDailyBatchSize(options.period));
   const chainDepth = parseNonNegativeIntegerOption(options.chainDepth, 0);
-  let fallbackJobId = defaultDailyJobId({
-    date,
-    market: options.universe === "market" ? options.market : null,
-    period: options.period,
-    universe: options.universe,
-  });
-  if (options.limit) {
-    fallbackJobId = `${fallbackJobId}-limit-${options.limit}`;
-  }
-  if (options.offset) {
-    fallbackJobId = `${fallbackJobId}-offset-${options.offset}`;
-  }
-  const jobId = normalizeJobId(options.jobId, fallbackJobId);
+  const jobId = dailyJobIdForOptions(options, date);
   const progressPath = progressPathFor(date, options.period, jobId);
   const existingProgress = await readExistingJson(progressPath);
   let progress;
@@ -1213,6 +1220,8 @@ async function commandDaily(argv) {
   const poolDir = path.join(ROOT, options.outputDir, date);
   const runId = options.runId ?? runIdFor(date, options.period);
   const runDir = path.join(DEFAULT_RUNS_DIR, runId);
+  const jobMode = options.jobMode ?? "single";
+  const plannedJobId = jobMode === "batch" ? dailyJobIdForOptions(options, date) : null;
 
   let codesResult;
   let inputDir = poolDir;
@@ -1220,12 +1229,31 @@ async function commandDaily(argv) {
   if (options.universe === "pool") {
     codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
   } else {
-    const universeDir = rootPath(options.universeDir);
-    inputDir = path.join(universeDir, date);
-    const completeUniverse = await hasCompleteMarketUniverse(date, universeDir, options.market);
-    if (shouldReuseMarketUniverse({ complete: completeUniverse, forceUniverse: options.forceUniverse })) {
+    const sharedUniverseDir = rootPath(options.universeDir);
+    const privateUniverseRoot = marketUniverseRootForRun({
+      date,
+      jobId: plannedJobId,
+      jobMode,
+      period: options.period,
+      runId,
+    }, {
+      jobsDir: DEFAULT_JOBS_DIR,
+      runsDir: DEFAULT_RUNS_DIR,
+    });
+    inputDir = path.join(privateUniverseRoot, date);
+    const completePrivateUniverse = await hasCompleteMarketUniverse(date, privateUniverseRoot, options.market);
+    const completeSharedUniverse = await hasCompleteMarketUniverse(date, sharedUniverseDir, options.market);
+
+    if (shouldReuseMarketUniverse({ complete: completePrivateUniverse, forceUniverse: options.forceUniverse })) {
       codesResult = {
-        stdout: `Using existing market universe: ${rel(inputDir)}\n`,
+        stdout: `Using existing private market universe: ${rel(inputDir)}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
+    } else if (shouldReuseMarketUniverse({ complete: completeSharedUniverse, forceUniverse: options.forceUniverse })) {
+      await copyMarketUniverseSnapshot(date, sharedUniverseDir, privateUniverseRoot);
+      codesResult = {
+        stdout: `Copied market universe: ${rel(path.join(sharedUniverseDir, date))} -> ${rel(inputDir)}\n`,
         stderr: "",
         exitCode: 0,
       };
@@ -1236,7 +1264,7 @@ async function commandDaily(argv) {
         "--market",
         options.market,
         "--output-dir",
-        options.universeDir,
+        rel(privateUniverseRoot),
       ]);
     }
     universeSummary = await readJson(path.join(inputDir, "summary.json"), null).catch(() => null);
@@ -1748,8 +1776,8 @@ async function commandProxy(argv) {
   throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
 }
 
-async function existingDataPathspecs() {
-  return existingPathspecs(ROOT);
+async function existingDataPathspecs(candidates = ["data", "runs", "reports"]) {
+  return existingPathspecs(ROOT, candidates);
 }
 
 function printDailyRunSummary(run, quality, failures) {
@@ -1799,7 +1827,7 @@ async function commitData(runId) {
   const qualityPath = path.join(DEFAULT_RUNS_DIR, runId, "quality.json");
   const run = await readJson(runPath);
   const quality = await readJson(qualityPath, { status: "recorded" });
-  const pathspec = await existingDataPathspecs();
+  const pathspec = await existingDataPathspecs(dataCommitPathspecs(run));
 
   if (pathspec.length === 0) {
     console.log("No data paths to commit.");

@@ -16,6 +16,7 @@ const ISSUE_LABELS = {
   running: { color: "fbca04", description: "Daily sync job is running." },
 };
 const STATUS_LABELS = ["running", "blocked", "completed", "failed"];
+const SHARED_DATA_PR_PREFIXES = ["data/pool/", "data/universe/"];
 
 function valueOrDefault(value, fallback) {
   const normalized = String(value ?? "").trim();
@@ -288,6 +289,51 @@ function shouldOpenDataPullRequest(run, branchName, env = process.env) {
   );
 }
 
+function selectDataPullRequest(pullRequests) {
+  if (!Array.isArray(pullRequests) || pullRequests.length === 0) {
+    return null;
+  }
+  return pullRequests.find((pr) => pr.state === "OPEN") ??
+    pullRequests.find((pr) => pr.state === "MERGED") ??
+    pullRequests[0];
+}
+
+function buildDataPullRequestMergeArgs(pr) {
+  const target = String(pr?.url ?? pr?.number ?? "").trim();
+  if (!target) {
+    throw new Error("Data pull request is missing a URL or number.");
+  }
+  return ["pr", "merge", target, "--auto", "--squash"];
+}
+
+function shouldEnableDataPullRequestAutoMerge(pr, env = process.env) {
+  if (isTruthy(env.DISABLE_DATA_PR_AUTO_MERGE)) {
+    return false;
+  }
+  return Boolean(pr?.url && (pr.state ?? "OPEN") === "OPEN");
+}
+
+function sharedDataPullRequestFiles(files) {
+  return (files ?? []).filter((file) =>
+    SHARED_DATA_PR_PREFIXES.some((prefix) => String(file).startsWith(prefix))
+  );
+}
+
+async function assertDataPullRequestScope() {
+  const stdout = await runCaptureChecked("git", ["diff", "--name-only", "origin/master...HEAD", "--"]);
+  const files = stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const sharedFiles = sharedDataPullRequestFiles(files);
+  if (sharedFiles.length > 0) {
+    const preview = sharedFiles.slice(0, 10).join(", ");
+    const suffix = sharedFiles.length > 10 ? `, ... (${sharedFiles.length} files)` : "";
+    throw new Error(`Data pull request contains shared data files: ${preview}${suffix}`);
+  }
+  return files;
+}
+
 async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
   if (!shouldOpenDataPullRequest(run, branchName, env)) {
     return null;
@@ -301,13 +347,14 @@ async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
     "--base",
     "master",
     "--state",
-    "open",
+    "all",
     "--json",
-    "number,url",
+    "number,url,state,mergedAt,headRefOid",
   ]);
   const parsed = JSON.parse(existing);
-  if (Array.isArray(parsed) && parsed.length > 0) {
-    return parsed[0];
+  const selected = selectDataPullRequest(parsed);
+  if (selected) {
+    return selected;
   }
 
   const stdout = await runCaptureChecked("gh", [
@@ -322,7 +369,54 @@ async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
     "--body",
     dataPullRequestBody(run, branchName),
   ]);
-  return { url: stdout.trim() };
+  const url = stdout.trim();
+  const match = url.match(/\/pull\/(\d+)/);
+  return {
+    number: match ? Number(match[1]) : null,
+    state: "OPEN",
+    url,
+  };
+}
+
+async function setupDataPullRequest(run, branchName, env = process.env) {
+  if (!shouldOpenDataPullRequest(run, branchName, env)) {
+    return {
+      autoMerge: null,
+      pr: null,
+    };
+  }
+
+  await assertDataPullRequestScope();
+  const pr = await maybeOpenDataPullRequest(run, branchName, env);
+  if (!pr) {
+    return {
+      autoMerge: null,
+      pr: null,
+    };
+  }
+
+  if (pr.state === "CLOSED") {
+    throw new Error(`Data pull request ${pr.url} is closed and cannot be auto-merged.`);
+  }
+
+  if (!shouldEnableDataPullRequestAutoMerge(pr, env)) {
+    return {
+      autoMerge: {
+        enabled: false,
+        reason: pr.state === "MERGED" ? "already_merged" : "disabled",
+      },
+      pr,
+    };
+  }
+
+  await runCaptureChecked("gh", buildDataPullRequestMergeArgs(pr));
+  return {
+    autoMerge: {
+      enabled: true,
+      reason: "enabled",
+    },
+    pr,
+  };
 }
 
 async function writeGithubStepSummary(args, run = null) {
@@ -511,8 +605,8 @@ function runUrl(env = process.env) {
   return `${serverUrl}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`;
 }
 
-function issueStatusForRun(run, { dailyCode = 0, dispatchError = null } = {}) {
-  if (dispatchError) {
+function issueStatusForRun(run, { dailyCode = 0, dataPullRequestError = null, dispatchError = null } = {}) {
+  if (dispatchError || dataPullRequestError) {
     return "failed";
   }
   if (run?.job_status === "completed") {
@@ -538,9 +632,24 @@ function progressCompletionRate(run) {
   return total > 0 ? completed / total : null;
 }
 
-function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext = false, env = process.env } = {}) {
+function formatDataPullRequestAutoMerge(autoMerge) {
+  if (!autoMerge) {
+    return "n/a";
+  }
+  return autoMerge.enabled ? "enabled" : autoMerge.reason ?? "disabled";
+}
+
+function buildIssueBody(run, {
+  dailyCode = 0,
+  dataPullRequest = null,
+  dataPullRequestAutoMerge = null,
+  dataPullRequestError = null,
+  dispatchError = null,
+  dispatchNext = false,
+  env = process.env,
+} = {}) {
   const counts = run?.progress_counts ?? {};
-  const status = issueStatusForRun(run, { dailyCode, dispatchError });
+  const status = issueStatusForRun(run, { dailyCode, dataPullRequestError, dispatchError });
   const actionRunUrl = runUrl(env);
   const resumeCommand = run?.job_status === "completed"
     ? "n/a"
@@ -571,6 +680,10 @@ function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext
     `- dispatch_next: ${dispatchNext}`,
     `- workflow_exit_code: ${dailyCode}`,
     `- dispatch_error: ${dispatchError?.message ?? "n/a"}`,
+    `- data_pr: ${dataPullRequest?.url ?? "n/a"}`,
+    `- data_pr_state: ${dataPullRequest?.state ?? "n/a"}`,
+    `- data_pr_auto_merge: ${formatDataPullRequestAutoMerge(dataPullRequestAutoMerge)}`,
+    `- data_pr_error: ${dataPullRequestError?.message ?? "n/a"}`,
     "",
     "## Failure context",
     "",
@@ -587,15 +700,22 @@ function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext
   ].join("\n");
 }
 
-function buildIssueComment(run, status, { issueCreated = false, dispatchError = null } = {}) {
+function buildIssueComment(run, status, {
+  dataPullRequest = null,
+  dataPullRequestError = null,
+  dispatchError = null,
+  issueCreated = false,
+} = {}) {
   if (status === "blocked") {
     return `Kline sync job \`${run.job_id}\` is blocked. Check the issue body for failed codes and the resume command.`;
   }
   if (status === "failed") {
-    return `Kline sync job \`${run.job_id}\` failed${dispatchError ? `: ${dispatchError.message}` : "."}`;
+    const error = dispatchError ?? dataPullRequestError;
+    return `Kline sync job \`${run.job_id}\` failed${error ? `: ${error.message}` : "."}`;
   }
   if (status === "completed") {
-    return `Kline sync job \`${run.job_id}\` completed.`;
+    const prText = dataPullRequest?.url ? ` Data PR: ${dataPullRequest.url}.` : "";
+    return `Kline sync job \`${run.job_id}\` completed.${prText}`;
   }
   if (issueCreated) {
     return `Started kline sync job \`${run.job_id}\`.`;
@@ -678,15 +798,31 @@ async function updateIssue(number, body, labels) {
   }
 }
 
-async function syncJobIssue(run, { dailyCode = 0, dispatchError = null, dispatchNext = false, env = process.env } = {}) {
+async function syncJobIssue(run, {
+  dailyCode = 0,
+  dataPullRequest = null,
+  dataPullRequestAutoMerge = null,
+  dataPullRequestError = null,
+  dispatchError = null,
+  dispatchNext = false,
+  env = process.env,
+} = {}) {
   if (!shouldSyncJobIssue(run, env)) {
     return null;
   }
 
   await ensureIssueLabels();
-  const status = issueStatusForRun(run, { dailyCode, dispatchError });
+  const status = issueStatusForRun(run, { dailyCode, dataPullRequestError, dispatchError });
   const title = buildIssueTitle(run);
-  const body = buildIssueBody(run, { dailyCode, dispatchError, dispatchNext, env });
+  const body = buildIssueBody(run, {
+    dailyCode,
+    dataPullRequest,
+    dataPullRequestAutoMerge,
+    dataPullRequestError,
+    dispatchError,
+    dispatchNext,
+    env,
+  });
   const labels = issueLabelsForStatus(status);
   let issue = await findIssueByTitle(title);
   let issueCreated = false;
@@ -701,7 +837,12 @@ async function syncJobIssue(run, { dailyCode = 0, dispatchError = null, dispatch
     await updateIssue(issue.number, body, labels);
   }
 
-  const comment = buildIssueComment(run, status, { issueCreated, dispatchError });
+  const comment = buildIssueComment(run, status, {
+    dataPullRequest,
+    dataPullRequestError,
+    dispatchError,
+    issueCreated,
+  });
   if (comment && status !== "completed") {
     await runCaptureChecked("gh", ["issue", "comment", String(issue.number), "--body", comment]);
   }
@@ -740,9 +881,32 @@ async function main() {
     }
   }
 
+  let dataPullRequest = null;
+  let dataPullRequestAutoMerge = null;
+  let dataPullRequestError = null;
+  if (!dispatchNext && !dispatchError) {
+    try {
+      const setup = await setupDataPullRequest(latestRun, dataBranch);
+      dataPullRequest = setup?.pr ?? null;
+      dataPullRequestAutoMerge = setup?.autoMerge ?? null;
+      if (dataPullRequest?.url) {
+        console.log(`Data pull request: ${dataPullRequest.url}`);
+      }
+      if (dataPullRequestAutoMerge?.enabled) {
+        console.log(`Data pull request auto-merge enabled: ${dataPullRequest.url}`);
+      }
+    } catch (error) {
+      dataPullRequestError = error;
+      console.error(`Data PR sync failed: ${error.message}`);
+    }
+  }
+
   try {
     await syncJobIssue(latestRun, {
       dailyCode,
+      dataPullRequest,
+      dataPullRequestAutoMerge,
+      dataPullRequestError,
       dispatchError,
       dispatchNext,
     });
@@ -750,17 +914,12 @@ async function main() {
     console.error(`Issue sync failed: ${error.message}`);
   }
 
-  try {
-    const pr = await maybeOpenDataPullRequest(latestRun, dataBranch);
-    if (pr?.url) {
-      console.log(`Data pull request: ${pr.url}`);
-    }
-  } catch (error) {
-    console.error(`Data PR sync failed: ${error.message}`);
-  }
-
   if (dispatchError) {
     throw dispatchError;
+  }
+
+  if (dataPullRequestError) {
+    throw dataPullRequestError;
   }
 
   if (dailyCode !== 0 && !dispatchNext) {
@@ -776,6 +935,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildDataPullRequestMergeArgs,
   buildIssueBody,
   buildIssueComment,
   buildIssueSearchArgs,
@@ -787,6 +947,9 @@ module.exports = {
   dataPullRequestTitle,
   isDataBranch,
   issueStatusForRun,
+  selectDataPullRequest,
+  sharedDataPullRequestFiles,
+  shouldEnableDataPullRequestAutoMerge,
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,

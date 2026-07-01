@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
+  buildDataPullRequestMergeArgs,
   buildDailyArgs,
   buildDispatchArgs,
   buildIssueBody,
@@ -14,6 +15,9 @@ const {
   dataPullRequestTitle,
   isDataBranch,
   issueStatusForRun,
+  selectDataPullRequest,
+  sharedDataPullRequestFiles,
+  shouldEnableDataPullRequestAutoMerge,
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,
@@ -286,6 +290,12 @@ test("issueStatusForRun maps terminal and dispatch failure states", () => {
   assert.equal(issueStatusForRun(sampleRun({ job_status: "blocked" })), "blocked");
   assert.equal(issueStatusForRun(sampleRun({ should_dispatch_next: false }), { dailyCode: 1 }), "failed");
   assert.equal(issueStatusForRun(sampleRun(), { dispatchError: new Error("dispatch failed") }), "failed");
+  assert.equal(
+    issueStatusForRun(sampleRun({ job_status: "completed" }), {
+      dataPullRequestError: new Error("pr failed"),
+    }),
+    "failed"
+  );
 });
 
 test("shouldSyncJobIssue only enables issue writes for GitHub batch jobs", () => {
@@ -318,6 +328,34 @@ test("buildIssueBody includes progress, run link, and resume command", () => {
   assert.match(body, /--ref data\/daily\/20260630-market-20260630-daily-market-hs-a/);
 });
 
+test("buildIssueBody records data pull request state", () => {
+  const body = buildIssueBody(sampleRun({ job_status: "completed", should_dispatch_next: false }), {
+    dataPullRequest: {
+      state: "OPEN",
+      url: "https://github.com/liqiangcc/x/pull/123",
+    },
+    dataPullRequestAutoMerge: {
+      enabled: true,
+      reason: "enabled",
+    },
+  });
+
+  assert.match(body, /- status: completed/);
+  assert.match(body, /- data_pr: https:\/\/github.com\/liqiangcc\/x\/pull\/123/);
+  assert.match(body, /- data_pr_state: OPEN/);
+  assert.match(body, /- data_pr_auto_merge: enabled/);
+  assert.match(body, /- data_pr_error: n\/a/);
+});
+
+test("buildIssueBody keeps issues open when data pull request setup fails", () => {
+  const body = buildIssueBody(sampleRun({ job_status: "completed", should_dispatch_next: false }), {
+    dataPullRequestError: new Error("createPullRequest denied"),
+  });
+
+  assert.match(body, /- status: failed/);
+  assert.match(body, /- data_pr_error: createPullRequest denied/);
+});
+
 test("buildIssueComment only comments on important states", () => {
   const run = sampleRun();
 
@@ -325,10 +363,20 @@ test("buildIssueComment only comments on important states", () => {
   assert.equal(buildIssueComment(run, "running", { issueCreated: true }), "Started kline sync job `20260630-daily-market-hs-a`.");
   assert.match(buildIssueComment(run, "blocked"), /is blocked/);
   assert.match(buildIssueComment(run, "completed"), /completed/);
+  assert.match(
+    buildIssueComment(run, "completed", {
+      dataPullRequest: { url: "https://github.com/liqiangcc/x/pull/123" },
+    }),
+    /Data PR: https:\/\/github.com\/liqiangcc\/x\/pull\/123/
+  );
   assert.match(buildIssueComment(run, "completed", { issueCreated: true }), /completed/);
   assert.match(
     buildIssueComment(run, "failed", { dispatchError: new Error("dispatch failed") }),
     /dispatch failed/
+  );
+  assert.match(
+    buildIssueComment(run, "failed", { dataPullRequestError: new Error("pr failed") }),
+    /pr failed/
   );
 });
 
@@ -356,4 +404,56 @@ test("data pull request helpers only open completed data branch jobs", () => {
   assert.equal(shouldOpenDataPullRequest(run, "master", { GITHUB_ACTIONS: "true" }), false);
   assert.equal(dataPullRequestTitle(run), "data(daily): 20260630 market kline sync");
   assert.match(dataPullRequestBody(run, branch), /- branch: data\/daily/);
+});
+
+test("data pull request helpers select reusable prs and auto-merge open prs", () => {
+  assert.deepEqual(
+    selectDataPullRequest([
+      { number: 1, state: "CLOSED", url: "https://github.com/liqiangcc/x/pull/1" },
+      { number: 2, state: "OPEN", url: "https://github.com/liqiangcc/x/pull/2" },
+      { number: 3, state: "MERGED", url: "https://github.com/liqiangcc/x/pull/3" },
+    ]),
+    { number: 2, state: "OPEN", url: "https://github.com/liqiangcc/x/pull/2" }
+  );
+  assert.deepEqual(
+    buildDataPullRequestMergeArgs({ url: "https://github.com/liqiangcc/x/pull/2" }),
+    ["pr", "merge", "https://github.com/liqiangcc/x/pull/2", "--auto", "--squash"]
+  );
+  assert.equal(
+    shouldEnableDataPullRequestAutoMerge(
+      { state: "OPEN", url: "https://github.com/liqiangcc/x/pull/2" },
+      {}
+    ),
+    true
+  );
+  assert.equal(
+    shouldEnableDataPullRequestAutoMerge(
+      { state: "OPEN", url: "https://github.com/liqiangcc/x/pull/2" },
+      { DISABLE_DATA_PR_AUTO_MERGE: "true" }
+    ),
+    false
+  );
+  assert.equal(
+    shouldEnableDataPullRequestAutoMerge(
+      { state: "MERGED", url: "https://github.com/liqiangcc/x/pull/2" },
+      {}
+    ),
+    false
+  );
+});
+
+test("sharedDataPullRequestFiles rejects shared data roots", () => {
+  assert.deepEqual(
+    sharedDataPullRequestFiles([
+      "data/kline/daily/000/000001.json",
+      "data/jobs/20260701/daily/job/progress.json",
+      "runs/20260701T000000Z_daily/run.json",
+      "data/universe/20260701/codes.json",
+      "data/pool/20260701/zt.json",
+    ]),
+    [
+      "data/universe/20260701/codes.json",
+      "data/pool/20260701/zt.json",
+    ]
+  );
 });

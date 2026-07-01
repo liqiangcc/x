@@ -1,0 +1,14 @@
+{
+  "run_id": "20260701T144007Z_yearly",
+  "failed": 1,
+  "items": [
+    {
+      "target": "0.000508",
+      "code": "000508",
+      "type": "kline",
+      "period": "yearly",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    }
+  ]
+}
