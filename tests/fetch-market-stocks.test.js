@@ -35,7 +35,7 @@ test("isHsAStock accepts only Shanghai and Shenzhen A-share code ranges", () => 
 
 test("normalizeMarketStock maps Eastmoney fields to stable stock records", () => {
   assert.deepEqual(
-    normalizeMarketStock({ f12: "600519", f13: 1, f14: "Kweichow Moutai" }),
+    normalizeMarketStock({ f12: "600519", f13: 1, f14: "Kweichow Moutai", f2: "1500.5", f3: "1.2", f124: 1782892800 }),
     {
       code: "600519",
       name: "Kweichow Moutai",
@@ -43,8 +43,13 @@ test("normalizeMarketStock maps Eastmoney fields to stable stock records", () =>
       market: "sh",
       secid: "1.600519",
       board: "main",
+      quote_available: true,
+      latest_price: 1500.5,
+      change_pct: 1.2,
+      quote_timestamp: 1782892800,
     }
   );
+  assert.equal(normalizeMarketStock({ f12: "600520", f13: 1, f14: "Unavailable", f2: "-" }).quote_available, false);
   assert.equal(normalizeMarketStock({ f12: "920001", f13: 0, f14: "BSE sample" }), null);
 });
 
@@ -57,13 +62,13 @@ test("buildStockUniverse filters, deduplicates, and sorts codes", () => {
       data: {
         total: 7,
         diff: [
-          { f12: "300750", f13: 0, f14: "CATL" },
-          { f12: "302132", f13: 0, f14: "AVIC Chengfei" },
-          { f12: "600519", f13: 1, f14: "Kweichow Moutai" },
+          { f12: "300750", f13: 0, f14: "CATL", f2: "300" },
+          { f12: "302132", f13: 0, f14: "AVIC Chengfei", f2: "-" },
+          { f12: "600519", f13: 1, f14: "Kweichow Moutai", f2: "1500" },
           { f12: "920001", f13: 0, f14: "BSE sample" },
           { f12: "510300", f13: 1, f14: "CSI 300 ETF" },
-          { f12: "000001", f13: 0, f14: "Ping An Bank" },
-          { f12: "600519", f13: 1, f14: "Kweichow Moutai" },
+          { f12: "000001", f13: 0, f14: "Ping An Bank", f2: "10" },
+          { f12: "600519", f13: 1, f14: "Kweichow Moutai", f2: "1500" },
         ],
       },
     },
@@ -72,6 +77,8 @@ test("buildStockUniverse filters, deduplicates, and sorts codes", () => {
   assert.deepEqual(universe.codesPayload.codes, ["000001", "300750", "302132", "600519"]);
   assert.equal(universe.stocksPayload.total_raw, 7);
   assert.equal(universe.stocksPayload.total_stocks, 4);
+  assert.equal(universe.stocksPayload.quote_available, 3);
+  assert.equal(universe.stocksPayload.quote_unavailable, 1);
   assert.equal(universe.summary.status, "completed");
 });
 
@@ -88,8 +95,8 @@ test("fetchMarketStocks writes stocks, codes, and summaries", async (t) => {
       data: {
         total: 2,
         diff: [
-          { f12: "600519", f13: 1, f14: "Kweichow Moutai" },
-          { f12: "000001", f13: 0, f14: "Ping An Bank" },
+          { f12: "600519", f13: 1, f14: "Kweichow Moutai", f2: "1500" },
+          { f12: "000001", f13: 0, f14: "Ping An Bank", f2: "10" },
         ],
       },
     })
@@ -101,6 +108,7 @@ test("fetchMarketStocks writes stocks, codes, and summaries", async (t) => {
   const rootSummary = JSON.parse(await fs.readFile(path.join(dir, "summary.json"), "utf8"));
   assert.deepEqual(codes.codes, ["000001", "600519"]);
   assert.equal(stocks.stocks.length, 2);
+  assert.equal(stocks.quote_available, 2);
   assert.equal(rootSummary.date, "20260630");
 });
 

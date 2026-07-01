@@ -4,7 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
-const { inspectKlinePayload } = require("./check_kline_empty");
+const { getKlines, inspectKlinePayload } = require("./check_kline_empty");
 
 const execFileAsync = promisify(execFile);
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
@@ -13,7 +13,7 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
   );
 }
 
@@ -39,6 +39,17 @@ function parseSuccessRate(value) {
   return rate;
 }
 
+function normalizeExpectedLatestDate(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const digits = String(value).replace(/-/g, "");
+  if (!/^\d{8}$/.test(digits)) {
+    throw new Error(`Invalid value for --expected-latest-date: ${value}`);
+  }
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
 function defaultConcurrency(engine) {
   return engine === "local" ? 4 : 1;
 }
@@ -54,6 +65,9 @@ function parseArguments(argv) {
     huaweiCloudRegionStartIndex: null,
     huaweiCloudRegions: null,
     huaweiCloudTargetsFile: null,
+    expectedLatestDate: null,
+    freshnessCodes: null,
+    freshnessCodesPath: null,
     inputPath: null,
     lambdaName: "kline",
     limit: null,
@@ -212,6 +226,23 @@ function parseArguments(argv) {
       continue;
     }
 
+    if (arg === "--expected-latest-date") {
+      const nextArg = argv[index + 1];
+      options.expectedLatestDate = normalizeExpectedLatestDate(nextArg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--freshness-codes") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --freshness-codes.");
+      }
+      options.freshnessCodesPath = path.resolve(nextArg);
+      index += 1;
+      continue;
+    }
+
     if (arg === "--force") {
       options.force = true;
       continue;
@@ -241,7 +272,7 @@ function parseArguments(argv) {
 }
 
 function uniqueCodes(codes) {
-  return [...new Set(codes.filter(Boolean))].sort();
+  return [...new Set((codes ?? []).map((code) => String(code).trim()).filter(Boolean))].sort();
 }
 
 async function extractCodesFromPoolDir(dirPath) {
@@ -301,6 +332,71 @@ async function loadCodes(inputPath) {
   );
 }
 
+async function loadFreshnessCodes(options) {
+  if (options.period !== "daily" || !options.expectedLatestDate) {
+    return null;
+  }
+
+  if (options.freshnessCodes instanceof Set) {
+    return new Set(uniqueCodes([...options.freshnessCodes]));
+  }
+
+  if (Array.isArray(options.freshnessCodes)) {
+    return new Set(uniqueCodes(options.freshnessCodes));
+  }
+
+  if (!options.freshnessCodesPath) {
+    return null;
+  }
+
+  return new Set(await loadCodes(options.freshnessCodesPath));
+}
+
+function latestKlineDate(payload) {
+  const klines = getKlines(payload);
+  if (!Array.isArray(klines.value) || klines.value.length === 0) {
+    return null;
+  }
+
+  for (let index = klines.value.length - 1; index >= 0; index -= 1) {
+    const row = klines.value[index];
+    if (typeof row !== "string") {
+      continue;
+    }
+    const date = row.split(",")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
+function freshnessRequired(options, code) {
+  return (
+    options.period === "daily" &&
+    Boolean(options.expectedLatestDate) &&
+    (options.freshnessCodes === null || options.freshnessCodes.has(code))
+  );
+}
+
+function inspectFreshness(payload, code, options) {
+  if (!freshnessRequired(options, code)) {
+    return null;
+  }
+
+  const latestDate = latestKlineDate(payload);
+  if (!latestDate || latestDate < options.expectedLatestDate) {
+    return {
+      issue: "stale_kline",
+      latestDate,
+      expectedLatestDate: options.expectedLatestDate,
+    };
+  }
+
+  return null;
+}
+
 function inferSecid(code) {
   if (/^\d+\.[A-Za-z0-9]+$/.test(code)) {
     return code;
@@ -340,9 +436,10 @@ function getLegacyOutputPath(outputDir, period, code) {
   return path.join(outputDir, period, `${code}.json`);
 }
 
-async function hasShardedOutput(outputDir, period, code) {
+async function hasShardedOutput(outputDir, period, code, options) {
   try {
-    return (await inspectExistingKline(getOutputPath(outputDir, period, code))).issue === null;
+    const inspected = await inspectExistingKline(getOutputPath(outputDir, period, code));
+    return inspected.issue === null && inspectFreshness(inspected.payload, code, options) === null;
   } catch {
     return false;
   }
@@ -355,7 +452,7 @@ async function codeNeedsProcessing(inputCode, options) {
 
   try {
     const code = extractStockCode(inputCode);
-    return !(await hasShardedOutput(options.outputDir, options.period, code));
+    return !(await hasShardedOutput(options.outputDir, options.period, code, options));
   } catch {
     return true;
   }
@@ -517,7 +614,10 @@ function createSummary(options, selection) {
     candidate_codes: selection.candidateCodes,
     concurrency: options.concurrency,
     engine: options.engine,
+    expected_latest_date: options.expectedLatestDate,
     force: options.force,
+    freshness_codes: options.freshnessCodes ? options.freshnessCodes.size : null,
+    freshness_codes_path: options.freshnessCodesPath,
     huaweicloud_regions: options.huaweiCloudRegions,
     huaweicloud_region_strategy: options.engine === "huaweicloud" || options.engine === "auto"
       ? "round_robin_start_index"
@@ -648,6 +748,12 @@ async function existingShardedResult(outputPath, code, secid, options) {
     return null;
   }
 
+  const freshness = inspectFreshness(inspected.payload, code, options);
+  if (freshness) {
+    await removeInvalidKlineFile(outputPath);
+    return null;
+  }
+
   return {
     code,
     countKey: "skipped_existing",
@@ -659,7 +765,7 @@ async function existingShardedResult(outputPath, code, secid, options) {
   };
 }
 
-async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, period) {
+async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, options) {
   let inspected;
   try {
     inspected = await inspectExistingKline(legacyOutputPath);
@@ -672,7 +778,13 @@ async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, p
     return null;
   }
 
-  const normalized = normalizeKlinePayload(inspected.payload, code, secid, period);
+  const normalized = normalizeKlinePayload(inspected.payload, code, secid, options.period);
+  const freshness = inspectFreshness(normalized, code, options);
+  if (freshness) {
+    await removeInvalidKlineFile(legacyOutputPath);
+    return null;
+  }
+
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
   return {
@@ -688,10 +800,25 @@ async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, p
   };
 }
 
-function validateNormalizedKline(normalized, code, secid) {
+function validateNormalizedKline(normalized, code, secid, options) {
   const issue = inspectKlinePayload(normalized);
   if (!issue) {
-    return null;
+    const freshness = inspectFreshness(normalized, code, options);
+    if (!freshness) {
+      return null;
+    }
+
+    return createFailureResult(
+      code,
+      secid,
+      `daily kline latest date ${freshness.latestDate ?? "none"} is before expected ${freshness.expectedLatestDate}`,
+      freshness.issue,
+      {
+        deferred: true,
+        expected_latest_date: freshness.expectedLatestDate,
+        latest_date: freshness.latestDate,
+      }
+    );
   }
 
   return createFailureResult(
@@ -728,7 +855,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
       outputPath,
       code,
       secid,
-      options.period
+      options
     );
     if (migratedResult) {
       return migratedResult;
@@ -738,7 +865,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
   try {
     const data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
     const normalized = normalizeKlinePayload(data, code, secid, options.period);
-    const validationFailure = validateNormalizedKline(normalized, code, secid);
+    const validationFailure = validateNormalizedKline(normalized, code, secid, options);
     if (validationFailure) {
       return validationFailure;
     }
@@ -852,7 +979,10 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     concurrency: options.concurrency ?? defaultConcurrency(options.engine ?? "auto"),
     configFile: options.configFile ?? null,
     engine: options.engine ?? "auto",
+    expectedLatestDate: normalizeExpectedLatestDate(options.expectedLatestDate ?? null),
     force: Boolean(options.force),
+    freshnessCodes: null,
+    freshnessCodesPath: options.freshnessCodesPath ?? null,
     huaweiCloudRegionStartIndex: options.huaweiCloudRegionStartIndex ?? null,
     huaweiCloudRegions: options.huaweiCloudRegions ?? null,
     huaweiCloudTargetsFile: options.huaweiCloudTargetsFile ?? null,
@@ -867,6 +997,12 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     retryConcurrency: options.retryConcurrency ?? 1,
     retryDelayMs: options.retryDelayMs ?? 1000,
   };
+  effectiveOptions.freshnessCodes = await loadFreshnessCodes({
+    ...options,
+    expectedLatestDate: effectiveOptions.expectedLatestDate,
+    freshnessCodesPath: effectiveOptions.freshnessCodesPath,
+    period: effectiveOptions.period,
+  });
   const codes = await loadCodes(effectiveOptions.inputPath);
   const selection = await selectCodes(codes, effectiveOptions);
   const selectedCodes = selection.selectedCodes;

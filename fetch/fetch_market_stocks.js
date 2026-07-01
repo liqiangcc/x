@@ -128,6 +128,21 @@ function boardName(code, marketId) {
   return "main";
 }
 
+function parseMaybeNumber(value) {
+  if (value === null || value === undefined || value === "" || value === "-") {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeQuoteAvailable(item) {
+  if (!Object.prototype.hasOwnProperty.call(item ?? {}, "f2")) {
+    return null;
+  }
+  return parseMaybeNumber(item.f2) !== null;
+}
+
 function normalizeMarketStock(item, market = "hs-a") {
   const code = String(item?.f12 ?? item?.code ?? "").trim();
   const marketId = Number(item?.f13 ?? item?.market_id);
@@ -141,7 +156,8 @@ function normalizeMarketStock(item, market = "hs-a") {
     return null;
   }
 
-  return {
+  const quoteAvailable = normalizeQuoteAvailable(item);
+  const stock = {
     code,
     name,
     market_id: marketId,
@@ -149,6 +165,15 @@ function normalizeMarketStock(item, market = "hs-a") {
     secid: `${marketId}.${code}`,
     board: boardName(code, marketId),
   };
+
+  if (quoteAvailable !== null) {
+    stock.quote_available = quoteAvailable;
+    stock.latest_price = parseMaybeNumber(item.f2);
+    stock.change_pct = parseMaybeNumber(item.f3);
+    stock.quote_timestamp = Number.isFinite(Number(item.f124)) ? Number(item.f124) : null;
+  }
+
+  return stock;
 }
 
 function extractRows(payload) {
@@ -176,6 +201,9 @@ function buildStockUniverse({ date, market, payload, generatedAt = new Date().to
 
   const stocks = [...stocksByCode.values()].sort((left, right) => left.code.localeCompare(right.code));
   const codes = stocks.map((stock) => stock.code);
+  const quoteKnown = stocks.filter((stock) => typeof stock.quote_available === "boolean").length;
+  const quoteAvailable = stocks.filter((stock) => stock.quote_available === true).length;
+  const quoteUnavailable = stocks.filter((stock) => stock.quote_available === false).length;
   const base = {
     date,
     market,
@@ -188,6 +216,9 @@ function buildStockUniverse({ date, market, payload, generatedAt = new Date().to
       ...base,
       total_raw: Number(payload?.data?.total ?? extractRows(payload).length),
       total_stocks: stocks.length,
+      quote_available: quoteAvailable,
+      quote_unavailable: quoteUnavailable,
+      quote_unknown: stocks.length - quoteKnown,
       stocks,
     },
     codesPayload: {
@@ -201,6 +232,9 @@ function buildStockUniverse({ date, market, payload, generatedAt = new Date().to
       total_raw: Number(payload?.data?.total ?? extractRows(payload).length),
       total_stocks: stocks.length,
       total_codes: codes.length,
+      quote_available: quoteAvailable,
+      quote_unavailable: quoteUnavailable,
+      quote_unknown: stocks.length - quoteKnown,
     },
   };
 }

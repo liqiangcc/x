@@ -28,11 +28,33 @@ test("hasCompleteMarketUniverse accepts matching stock and code payloads", async
   await writeJson(path.join(dateDir, "stocks.json"), {
     date: "20260701",
     market: "hs-a",
-    stocks: [{ code: "000001" }, { code: "600519" }],
+    stocks: [
+      { code: "000001", quote_available: true },
+      { code: "600519", quote_available: true },
+    ],
   });
 
   assert.equal(await hasCompleteMarketUniverse("20260701", tempDir, "hs-a"), true);
   assert.equal(await hasCompleteMarketUniverse("20260702", tempDir, "hs-a"), false);
+});
+
+test("hasCompleteMarketUniverse rejects legacy payloads without quote metadata", async (t) => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "x-universe-cache-"));
+  t.after(() => fs.rm(tempDir, { recursive: true, force: true }));
+  const dateDir = path.join(tempDir, "20260701");
+
+  await writeJson(path.join(dateDir, "codes.json"), {
+    date: "20260701",
+    market: "hs-a",
+    codes: ["000001"],
+  });
+  await writeJson(path.join(dateDir, "stocks.json"), {
+    date: "20260701",
+    market: "hs-a",
+    stocks: [{ code: "000001" }],
+  });
+
+  assert.equal(await hasCompleteMarketUniverse("20260701", tempDir, "hs-a"), false);
 });
 
 test("hasCompleteMarketUniverse rejects mismatched market or counts", async (t) => {

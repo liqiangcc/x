@@ -196,6 +196,135 @@ function shellQuote(value) {
   return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
+function sanitizeBranchSegment(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function isDataBranch(refName) {
+  return /^data\/(daily|yearly)\//.test(String(refName ?? ""));
+}
+
+function dataBranchNameForRun(run, env = process.env) {
+  const explicitBranch = String(env.DATA_BRANCH_NAME ?? "").trim();
+  if (explicitBranch) {
+    return explicitBranch;
+  }
+  const period = sanitizeBranchSegment(run?.period ?? "daily");
+  const currentRef = String(env.GITHUB_REF_NAME ?? "").trim();
+  if (isDataBranch(currentRef) && currentRef.startsWith(`data/${period}/`)) {
+    return currentRef;
+  }
+
+  const date = sanitizeBranchSegment(run?.date);
+  const universe = sanitizeBranchSegment(run?.universe ?? "market");
+  const jobId = sanitizeBranchSegment(run?.job_id ?? `${date}-${period}-${universe}`);
+  if (!period || !date || !jobId) {
+    return null;
+  }
+  return `data/${period}/${date}-${universe}-${jobId}`;
+}
+
+async function checkoutDataBranch(branchName) {
+  if (!branchName) {
+    return null;
+  }
+  await runChecked("git", ["checkout", "-B", branchName]);
+  return branchName;
+}
+
+async function pushDataBranch(branchName) {
+  if (!branchName) {
+    await runChecked("git", ["push"]);
+    return null;
+  }
+  await runChecked("git", ["push", "--set-upstream", "origin", `HEAD:${branchName}`]);
+  return branchName;
+}
+
+function dataPullRequestTitle(run) {
+  return `data(${run.period}): ${run.date} ${run.universe} kline sync`;
+}
+
+function dataPullRequestBody(run, branchName) {
+  return [
+    "## Data sync",
+    "",
+    `- branch: ${branchName}`,
+    `- date: ${run.date}`,
+    `- period: ${run.period}`,
+    `- universe: ${run.universe}`,
+    `- job_id: ${run.job_id ?? "n/a"}`,
+    `- status: ${run.job_status ?? run.status ?? "n/a"}`,
+    `- total: ${run.total}`,
+    `- success: ${run.success}`,
+    `- failed: ${run.failed}`,
+    `- skipped: ${run.skipped}`,
+    `- freshness_codes: ${run.freshness_codes ?? "n/a"}`,
+    `- stale_completed: ${run.stale_completed ?? 0}`,
+    "",
+    "## Validation",
+    "",
+    `- quality: ${run.artifacts?.quality ?? "n/a"}`,
+    `- kline_summary: ${run.artifacts?.kline_summary ?? "n/a"}`,
+    "",
+  ].join("\n");
+}
+
+function shouldOpenDataPullRequest(run, branchName, env = process.env) {
+  if (String(env.GITHUB_ACTIONS ?? "").toLowerCase() !== "true") {
+    return false;
+  }
+  if (isTruthy(env.DISABLE_DATA_PR)) {
+    return false;
+  }
+  return Boolean(
+    branchName &&
+      isDataBranch(branchName) &&
+      run?.job_status === "completed" &&
+      !run.should_dispatch_next
+  );
+}
+
+async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
+  if (!shouldOpenDataPullRequest(run, branchName, env)) {
+    return null;
+  }
+
+  const existing = await runCaptureChecked("gh", [
+    "pr",
+    "list",
+    "--head",
+    branchName,
+    "--base",
+    "master",
+    "--state",
+    "open",
+    "--json",
+    "number,url",
+  ]);
+  const parsed = JSON.parse(existing);
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    return parsed[0];
+  }
+
+  const stdout = await runCaptureChecked("gh", [
+    "pr",
+    "create",
+    "--base",
+    "master",
+    "--head",
+    branchName,
+    "--title",
+    dataPullRequestTitle(run),
+    "--body",
+    dataPullRequestBody(run, branchName),
+  ]);
+  return { url: stdout.trim() };
+}
+
 async function writeGithubStepSummary(args, run = null) {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryFile) {
@@ -211,7 +340,7 @@ async function writeGithubStepSummary(args, run = null) {
     await fs.appendFile(
       summaryFile,
       [
-        "## Daily data summary",
+        "## Kline data summary",
         "",
         `Kline summary was not available: ${error.message}`,
         "",
@@ -226,7 +355,7 @@ async function writeGithubStepSummary(args, run = null) {
   const huaweiCloudSuccesses = Number(summary.engine_counts?.huaweicloud ?? 0);
   const universe = argValue(args, "--universe", "market");
   const lines = [
-    "## Daily data summary",
+    "## Kline data summary",
     "",
     `- universe: ${universe}`,
     `- input_path: ${summary.input_path}`,
@@ -349,7 +478,7 @@ function addDispatchInput(args, name, value) {
 
 function buildDispatchArgs(run, env = process.env) {
   const workflowName = env.GITHUB_WORKFLOW || "Daily Data Commit";
-  const ref = env.GITHUB_REF_NAME || "master";
+  const ref = dataBranchNameForRun(run, env) || env.GITHUB_REF_NAME || "master";
   const nextChainDepth = Number(run.chain_depth ?? 0) + 1;
   const args = ["workflow", "run", workflowName, "--ref", ref];
 
@@ -399,7 +528,7 @@ function issueStatusForRun(run, { dailyCode = 0, dispatchError = null } = {}) {
 }
 
 function buildIssueTitle(run) {
-  return `Daily kline sync ${run.date} ${run.period} ${run.universe} ${run.job_id}`;
+  return `Kline sync ${run.date} ${run.period} ${run.universe} ${run.job_id}`;
 }
 
 function progressCompletionRate(run) {
@@ -417,7 +546,7 @@ function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext
     ? "n/a"
     : `gh ${buildDispatchArgs(run, env).map(shellQuote).join(" ")}`;
   return [
-    "## Daily kline sync",
+    "## Kline sync",
     "",
     `- status: ${status}`,
     `- job_id: ${run.job_id}`,
@@ -440,7 +569,7 @@ function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext
     `- progress_file: ${run.progress_file ?? "n/a"}`,
     `- kline_summary: ${run.artifacts?.kline_summary ?? "n/a"}`,
     `- dispatch_next: ${dispatchNext}`,
-    `- daily_exit_code: ${dailyCode}`,
+    `- workflow_exit_code: ${dailyCode}`,
     `- dispatch_error: ${dispatchError?.message ?? "n/a"}`,
     "",
     "## Failure context",
@@ -460,16 +589,16 @@ function buildIssueBody(run, { dailyCode = 0, dispatchError = null, dispatchNext
 
 function buildIssueComment(run, status, { issueCreated = false, dispatchError = null } = {}) {
   if (status === "blocked") {
-    return `Daily kline sync job \`${run.job_id}\` is blocked. Check the issue body for failed codes and the resume command.`;
+    return `Kline sync job \`${run.job_id}\` is blocked. Check the issue body for failed codes and the resume command.`;
   }
   if (status === "failed") {
-    return `Daily kline sync job \`${run.job_id}\` failed${dispatchError ? `: ${dispatchError.message}` : "."}`;
+    return `Kline sync job \`${run.job_id}\` failed${dispatchError ? `: ${dispatchError.message}` : "."}`;
   }
   if (status === "completed") {
-    return `Daily kline sync job \`${run.job_id}\` completed.`;
+    return `Kline sync job \`${run.job_id}\` completed.`;
   }
   if (issueCreated) {
-    return `Started daily kline sync job \`${run.job_id}\`.`;
+    return `Started kline sync job \`${run.job_id}\`.`;
   }
   return null;
 }
@@ -594,8 +723,12 @@ async function main() {
   const startedAtMs = Date.now();
   const dailyCode = await run(process.execPath, [path.join(ROOT, "bin/x"), ...dailyArgs]);
   const latestRun = await findLatestRun({ sinceMs: startedAtMs - 1000 });
+  const dataBranch = dataBranchNameForRun(latestRun);
+  if (dataBranch) {
+    await checkoutDataBranch(dataBranch);
+  }
   await writeGithubStepSummary(dailyArgs, latestRun);
-  await runChecked("git", ["push"]);
+  await pushDataBranch(dataBranch);
 
   const dispatchNext = shouldDispatchNextRun(latestRun);
   let dispatchError = null;
@@ -615,6 +748,15 @@ async function main() {
     });
   } catch (error) {
     console.error(`Issue sync failed: ${error.message}`);
+  }
+
+  try {
+    const pr = await maybeOpenDataPullRequest(latestRun, dataBranch);
+    if (pr?.url) {
+      console.log(`Data pull request: ${pr.url}`);
+    }
+  } catch (error) {
+    console.error(`Data PR sync failed: ${error.message}`);
   }
 
   if (dispatchError) {
@@ -640,7 +782,12 @@ module.exports = {
   buildIssueTitle,
   buildDailyArgs,
   buildDispatchArgs,
+  dataBranchNameForRun,
+  dataPullRequestBody,
+  dataPullRequestTitle,
+  isDataBranch,
   issueStatusForRun,
+  shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,
 };

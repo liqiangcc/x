@@ -111,9 +111,10 @@ permissions:
   actions: write
   contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
-  group: daily-data-commit
+  group: data-kline-${{ github.event.inputs.period || 'daily' }}-${{ github.event.inputs.job_id || github.event.inputs.date || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -149,17 +150,20 @@ jobs:
 
       - name: AWS kline preflight
         if: ${{ github.event.inputs.engine == 'aws' }}
-        run: node bin/x kline fetch 600519 --period daily --engine aws > /tmp/kline-aws-preflight.json
+        env:
+          PERIOD_INPUT: ${{ github.event.inputs.period }}
+        run: node bin/x kline fetch 600519 --period "${PERIOD_INPUT:-daily}" --engine aws > /tmp/kline-aws-preflight.json
 
       - name: Huawei Cloud kline preflight
         if: ${{ github.event.inputs.engine == 'huaweicloud' }}
         env:
+          PERIOD_INPUT: ${{ github.event.inputs.period }}
           HUAWEICLOUD_ACCESS_KEY: ${{ secrets.HUAWEICLOUD_ACCESS_KEY }}
           HUAWEICLOUD_SECRET_KEY: ${{ secrets.HUAWEICLOUD_SECRET_KEY }}
           HUAWEICLOUD_TARGETS_JSON: ${{ secrets.HUAWEICLOUD_TARGETS_JSON || vars.HUAWEICLOUD_TARGETS_JSON }}
           HUAWEICLOUD_REGION_INPUT: ${{ github.event.inputs.huaweicloud_region }}
         run: |
-          args=(kline fetch 600519 --period daily --engine huaweicloud)
+          args=(kline fetch 600519 --period "${PERIOD_INPUT:-daily}" --engine huaweicloud)
           if [ -n "${HUAWEICLOUD_REGION_INPUT}" ]; then
             args+=(--huaweicloud-region "${HUAWEICLOUD_REGION_INPUT}")
           fi

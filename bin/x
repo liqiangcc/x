@@ -25,6 +25,7 @@ const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
 } = require("../src/aws/latency");
+const { dataCommitMessage } = require("../src/core/data_commit");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
 const {
   applyProgressResults,
@@ -41,7 +42,7 @@ const {
   shouldReuseMarketUniverse,
 } = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
-const { validateKlinePath } = require("../fetch/check_kline_empty");
+const { getKlines, validateKlinePath } = require("../fetch/check_kline_empty");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -66,7 +67,7 @@ function printUsage() {
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
   x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
@@ -630,6 +631,12 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.minSuccessRate) {
     args.push("--min-success-rate", String(options.minSuccessRate));
   }
+  if (options.expectedLatestDate) {
+    args.push("--expected-latest-date", String(options.expectedLatestDate));
+  }
+  if (options.freshnessCodes) {
+    args.push("--freshness-codes", String(options.freshnessCodes));
+  }
 }
 
 async function commandPoolPull(argv) {
@@ -899,6 +906,125 @@ async function cleanupInvalidKlineFiles(period) {
   };
 }
 
+function formatExpectedLatestDate(date) {
+  const normalized = normalizeDate(date);
+  return `${normalized.slice(0, 4)}-${normalized.slice(4, 6)}-${normalized.slice(6, 8)}`;
+}
+
+function latestKlineDate(payload) {
+  const klines = getKlines(payload);
+  if (!Array.isArray(klines.value) || klines.value.length === 0) {
+    return null;
+  }
+
+  for (let index = klines.value.length - 1; index >= 0; index -= 1) {
+    const row = klines.value[index];
+    if (typeof row !== "string") {
+      continue;
+    }
+    const date = row.split(",")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
+function shardedKlinePath(period, code) {
+  return path.join(DEFAULT_KLINE_DIR, period, code.slice(0, 3), `${code}.json`);
+}
+
+function legacyKlinePath(period, code) {
+  return path.join(DEFAULT_KLINE_DIR, period, `${code}.json`);
+}
+
+async function readFreshnessCodesFromMarketUniverse(inputDir) {
+  try {
+    const payload = await readJson(path.join(inputDir, "stocks.json"));
+    const stocks = Array.isArray(payload?.stocks) ? payload.stocks : [];
+    const hasQuoteMetadata = stocks.some((stock) => typeof stock?.quote_available === "boolean");
+    if (!hasQuoteMetadata) {
+      return null;
+    }
+    return uniqueCodes(
+      stocks
+        .filter((stock) => stock?.quote_available === true)
+        .map((stock) => stock.code)
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function buildDailyFreshnessContext({ date, inputDir, options, runDir }) {
+  if (options.period !== "daily") {
+    return null;
+  }
+
+  const expectedLatestDate = formatExpectedLatestDate(date);
+  const source = options.universe === "market" ? "market_quote_available" : "pool_codes";
+  const codes = options.universe === "market"
+    ? await readFreshnessCodesFromMarketUniverse(inputDir)
+    : await loadCodesJson(inputDir);
+
+  if (!codes || codes.length === 0) {
+    return {
+      codes: new Set(),
+      codesPath: null,
+      expectedLatestDate,
+      source,
+    };
+  }
+
+  const codesPath = path.join(runDir, "freshness.codes.json");
+  await writeJson(codesPath, {
+    date,
+    expected_latest_date: expectedLatestDate,
+    period: options.period,
+    source,
+    total_codes: codes.length,
+    codes,
+  });
+
+  return {
+    codes: new Set(codes),
+    codesPath,
+    expectedLatestDate,
+    source,
+  };
+}
+
+async function findStaleKlineCodes({ expectedLatestDate, freshnessCodes, period }) {
+  if (period !== "daily" || !expectedLatestDate || !freshnessCodes || freshnessCodes.size === 0) {
+    return [];
+  }
+
+  const staleCodes = [];
+  for (const code of freshnessCodes) {
+    let filePath = shardedKlinePath(period, code);
+    try {
+      await fs.access(filePath);
+    } catch {
+      filePath = legacyKlinePath(period, code);
+    }
+
+    let payload;
+    try {
+      payload = await readJson(filePath);
+    } catch {
+      continue;
+    }
+
+    const latestDate = latestKlineDate(payload);
+    if (!latestDate || latestDate < expectedLatestDate) {
+      staleCodes.push(code);
+    }
+  }
+
+  return uniqueCodes(staleCodes);
+}
+
 function parsePositiveIntegerOption(value, fallback) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : fallback;
@@ -944,7 +1070,7 @@ function parseKlineSummaryPath(stdout, period) {
   return line ? rootPath(line) : null;
 }
 
-async function prepareDailyJobProgress(options, { date, inputDir }) {
+async function prepareDailyJobProgress(options, { date, inputDir, preselectFailedCodes = [] }) {
   if ((options.jobMode ?? "single") !== "batch") {
     return null;
   }
@@ -973,6 +1099,9 @@ async function prepareDailyJobProgress(options, { date, inputDir }) {
     progress.chain_depth = chainDepth;
     if (options.maxChainDepth) {
       progress.max_chain_depth = parsePositiveIntegerOption(options.maxChainDepth, progress.max_chain_depth);
+    }
+    if (preselectFailedCodes.length > 0) {
+      progress = markProgressCodesFailed(progress, preselectFailedCodes);
     }
   } else {
     let codes = await loadCodesJson(inputDir);
@@ -1114,7 +1243,26 @@ async function commandDaily(argv) {
   process.stdout.write(codesResult.stdout);
   process.stderr.write(codesResult.stderr);
 
-  const jobContext = await prepareDailyJobProgress(options, { date, inputDir });
+  const freshnessContext = await buildDailyFreshnessContext({
+    date,
+    inputDir,
+    options,
+    runDir,
+  });
+  if (freshnessContext?.expectedLatestDate && freshnessContext.codesPath) {
+    options.expectedLatestDate = freshnessContext.expectedLatestDate;
+    options.freshnessCodes = rel(freshnessContext.codesPath);
+  }
+  const staleCodes = await findStaleKlineCodes({
+    expectedLatestDate: freshnessContext?.expectedLatestDate ?? null,
+    freshnessCodes: freshnessContext?.codes ?? null,
+    period: options.period,
+  });
+  const jobContext = await prepareDailyJobProgress(options, {
+    date,
+    inputDir,
+    preselectFailedCodes: staleCodes,
+  });
   let progress = jobContext?.progress ?? null;
   const cleanupSummary = await cleanupInvalidKlineFiles(options.period);
   if (cleanupSummary.removed_codes.length > 0) {
@@ -1253,6 +1401,10 @@ async function commandDaily(argv) {
     kline_failure_reason_counts: klineSummary.failure_reason_counts ?? {},
     kline_region_counts: klineSummary.region_counts ?? {},
     kline_failure_reasons: klineFailureReasons,
+    expected_latest_date: freshnessContext?.expectedLatestDate ?? null,
+    freshness_codes: freshnessContext?.codes.size ?? null,
+    freshness_source: freshnessContext?.source ?? null,
+    stale_completed: staleCodes.length,
     started_at: startedAt,
     finished_at: isoNow(),
     artifacts: {
@@ -1262,6 +1414,7 @@ async function commandDaily(argv) {
       job_batch_codes: jobContext ? rel(jobContext.batchCodesPath) : null,
       kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),
       kline_summary: rel(summaryPath),
+      freshness_codes: freshnessContext?.codesPath ? rel(freshnessContext.codesPath) : null,
       run: rel(path.join(runDir, "run.json")),
       failures: rel(path.join(runDir, "failures.json")),
       quality: rel(path.join(runDir, "quality.json")),
@@ -1598,43 +1751,6 @@ async function existingDataPathspecs() {
   return existingPathspecs(ROOT);
 }
 
-function commitMessage(run, quality) {
-  const qualityStatus = quality?.status ?? "recorded";
-  const universe = run.universe ?? "pool";
-  const title = `data(daily): ${run.date} update ${universe} universe and ${run.period} kline`;
-  const body = [
-    `run_id: ${run.run_id}`,
-    `pool_date: ${run.date}`,
-    `universe: ${universe}`,
-    `market: ${run.market ?? "n/a"}`,
-    `universe_total_codes: ${run.universe_total_codes ?? "n/a"}`,
-    `period: ${run.period}`,
-    `engine: ${run.engine}`,
-    `total: ${run.total}`,
-    `success: ${run.success}`,
-    `failed: ${run.failed}`,
-    `skipped: ${run.skipped}`,
-    `batch_size: ${run.batch_size ?? "n/a"}`,
-    `selection_mode: ${run.selection_mode ?? "n/a"}`,
-    `job_mode: ${run.job_mode ?? "single"}`,
-    `job_id: ${run.job_id ?? "n/a"}`,
-    `job_status: ${run.job_status ?? "n/a"}`,
-    `chain_depth: ${run.chain_depth ?? "n/a"}`,
-    `max_chain_depth: ${run.max_chain_depth ?? "n/a"}`,
-    `progress_counts: ${JSON.stringify(run.progress_counts ?? {})}`,
-    `should_dispatch_next: ${run.should_dispatch_next ?? false}`,
-    `initial_failed: ${run.initial_failed ?? 0}`,
-    `retried: ${run.retried ?? 0}`,
-    `retry_success: ${run.retry_success ?? 0}`,
-    `retry_failed: ${run.retry_failed ?? 0}`,
-    `success_rate: ${run.kline_success_rate ?? "n/a"}`,
-    `engine_counts: ${JSON.stringify(run.kline_engine_counts ?? {})}`,
-    `failure_reason_counts: ${JSON.stringify(run.kline_failure_reason_counts ?? {})}`,
-    `quality: ${qualityStatus}`,
-  ].join("\n");
-  return { title, body };
-}
-
 function printDailyRunSummary(run, quality, failures) {
   const qualityStatus = quality?.status ?? "recorded";
   console.log(
@@ -1696,7 +1812,7 @@ async function commitData(runId) {
     return;
   }
 
-  const message = commitMessage(run, quality);
+  const message = dataCommitMessage(run, quality);
   await execFileAsync(
     "git",
     ["commit", "-m", message.title, "-m", message.body, "--", ...files],

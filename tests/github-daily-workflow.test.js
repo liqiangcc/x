@@ -9,7 +9,12 @@ const {
   buildIssueComment,
   buildIssueSearchArgs,
   buildIssueTitle,
+  dataBranchNameForRun,
+  dataPullRequestBody,
+  dataPullRequestTitle,
+  isDataBranch,
   issueStatusForRun,
+  shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,
 } = require("../scripts/github-daily-workflow");
@@ -192,12 +197,47 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
     }
   );
 
-  assert.deepEqual(args.slice(0, 5), ["workflow", "run", "Daily Data Commit", "--ref", "master"]);
+  assert.deepEqual(args.slice(0, 5), [
+    "workflow",
+    "run",
+    "Daily Data Commit",
+    "--ref",
+    "data/daily/20260630-market-20260630-daily-market-hs-a",
+  ]);
   assert.equal(args[args.indexOf("-f") + 1], "date=20260630");
   assert.equal(args.includes("chain_depth=3"), true);
   assert.equal(args.includes("job_id=20260630-daily-market-hs-a"), true);
   assert.equal(args.includes("aws_region=ap-northeast-1,ap-southeast-1"), true);
   assert.equal(args.includes("huaweicloud_region=cn-east-3"), true);
+});
+
+test("dataBranchNameForRun separates daily and yearly data branches", () => {
+  assert.equal(isDataBranch("data/daily/20260701-market-job"), true);
+  assert.equal(isDataBranch("master"), false);
+  assert.equal(
+    dataBranchNameForRun({
+      date: "20260701",
+      job_id: "20260701-daily-market-hs-a",
+      period: "daily",
+      universe: "market",
+    }, { GITHUB_REF_NAME: "master" }),
+    "data/daily/20260701-market-20260701-daily-market-hs-a"
+  );
+  assert.equal(
+    dataBranchNameForRun({
+      date: "20260701",
+      job_id: "20260701-yearly-market-hs-a",
+      period: "yearly",
+      universe: "market",
+    }, { GITHUB_REF_NAME: "master" }),
+    "data/yearly/20260701-market-20260701-yearly-market-hs-a"
+  );
+  assert.equal(
+    dataBranchNameForRun({ date: "20260701", period: "daily", universe: "market" }, {
+      GITHUB_REF_NAME: "data/daily/custom",
+    }),
+    "data/daily/custom"
+  );
 });
 
 function sampleRun(overrides = {}) {
@@ -236,7 +276,7 @@ function sampleRun(overrides = {}) {
 test("buildIssueTitle is unique per daily job id", () => {
   assert.equal(
     buildIssueTitle(sampleRun()),
-    "Daily kline sync 20260630 daily market 20260630-daily-market-hs-a"
+    "Kline sync 20260630 daily market 20260630-daily-market-hs-a"
   );
 });
 
@@ -275,13 +315,14 @@ test("buildIssueBody includes progress, run link, and resume command", () => {
   assert.match(body, /https:\/\/github\.com\/liqiangcc\/x\/actions\/runs\/123/);
   assert.match(body, /gh workflow run 'Daily Data Commit'/);
   assert.match(body, /chain_depth=3/);
+  assert.match(body, /--ref data\/daily\/20260630-market-20260630-daily-market-hs-a/);
 });
 
 test("buildIssueComment only comments on important states", () => {
   const run = sampleRun();
 
   assert.equal(buildIssueComment(run, "running"), null);
-  assert.equal(buildIssueComment(run, "running", { issueCreated: true }), "Started daily kline sync job `20260630-daily-market-hs-a`.");
+  assert.equal(buildIssueComment(run, "running", { issueCreated: true }), "Started kline sync job `20260630-daily-market-hs-a`.");
   assert.match(buildIssueComment(run, "blocked"), /is blocked/);
   assert.match(buildIssueComment(run, "completed"), /completed/);
   assert.match(buildIssueComment(run, "completed", { issueCreated: true }), /completed/);
@@ -292,7 +333,7 @@ test("buildIssueComment only comments on important states", () => {
 });
 
 test("buildIssueSearchArgs searches all issues by exact title candidate", () => {
-  assert.deepEqual(buildIssueSearchArgs("Daily kline sync 20260630 daily market job"), [
+  assert.deepEqual(buildIssueSearchArgs("Kline sync 20260630 daily market job"), [
     "issue",
     "list",
     "--state",
@@ -300,8 +341,19 @@ test("buildIssueSearchArgs searches all issues by exact title candidate", () => 
     "--limit",
     "20",
     "--search",
-    "in:title \"Daily kline sync 20260630 daily market job\"",
+    "in:title \"Kline sync 20260630 daily market job\"",
     "--json",
     "number,title,state,url",
   ]);
+});
+
+test("data pull request helpers only open completed data branch jobs", () => {
+  const run = sampleRun({ job_status: "completed", should_dispatch_next: false });
+  const branch = "data/daily/20260630-market-20260630-daily-market-hs-a";
+
+  assert.equal(shouldOpenDataPullRequest(run, branch, { GITHUB_ACTIONS: "true" }), true);
+  assert.equal(shouldOpenDataPullRequest(sampleRun(), branch, { GITHUB_ACTIONS: "true" }), false);
+  assert.equal(shouldOpenDataPullRequest(run, "master", { GITHUB_ACTIONS: "true" }), false);
+  assert.equal(dataPullRequestTitle(run), "data(daily): 20260630 market kline sync");
+  assert.match(dataPullRequestBody(run, branch), /- branch: data\/daily/);
 });

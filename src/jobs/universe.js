@@ -16,7 +16,8 @@ async function hasCompleteMarketUniverse(date, outputDir, market = "hs-a") {
       Array.isArray(codesPayload.codes) &&
       Array.isArray(stocksPayload.stocks) &&
       codesPayload.codes.length > 0 &&
-      codesPayload.codes.length === stocksPayload.stocks.length
+      codesPayload.codes.length === stocksPayload.stocks.length &&
+      stocksPayload.stocks.every((stock) => typeof stock?.quote_available === "boolean")
     );
   } catch {
     return false;
