@@ -150,6 +150,10 @@ test("daily workflow uses maintained AWS access key secrets", () => {
     path.join(__dirname, "..", ".github", "workflows", "daily-data-commit.yml"),
     "utf8"
   );
+  const latencyWorkflow = fs.readFileSync(
+    path.join(__dirname, "..", ".github", "workflows", "latency-benchmark.yml"),
+    "utf8"
+  );
 
   assert.equal(workflow.includes("id-token: write"), false);
   assert.equal(workflow.includes("AWS_ROLE_ARN"), false);
@@ -159,4 +163,10 @@ test("daily workflow uses maintained AWS access key secrets", () => {
   assert.equal(workflow.includes("- aws-router"), true);
   assert.equal(workflow.includes("secrets.AWS_ROUTER_URL"), true);
   assert.equal(workflow.includes("secrets.AWS_ROUTER_TOKEN"), true);
+  assert.equal(workflow.includes("force_universe"), true);
+  assert.equal(latencyWorkflow.includes("name: Latency Benchmark"), true);
+  assert.equal(latencyWorkflow.includes("bin/x \"${args[@]}\""), true);
+  assert.equal(latencyWorkflow.includes("latency-results.json"), true);
+  assert.equal(latencyWorkflow.includes("secrets.AWS_ROUTER_URL"), true);
+  assert.equal(latencyWorkflow.includes("secrets.AWS_ACCESS_KEY_ID"), true);
 });

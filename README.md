@@ -123,9 +123,15 @@ AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
 
 AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
   bin/x kline fetch 000001 --period daily --engine aws-router
+
+AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
+  bin/x aws latency --engine both --region ap-northeast-1 --attempts 3
+
+AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
+  bin/x aws latency --engine aws-router --region all --attempts 1 --json
 ```
 
-`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。部署脚本会输出 GitHub secret 设置命令；只写入 `AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`，不要提交真实 URL、token 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为。
+`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 同时作用于 `aws` 和 `aws-router`，也可分别用 `--aws-region`、`--target-region` 覆盖。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。部署脚本会输出 GitHub secret 设置命令；只写入 `AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`，不要提交真实 URL、token 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为。
 
 API：
 
@@ -187,8 +193,8 @@ bin/x kline validate data/kline --period daily --json
 
 Daily Action 使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
 
-默认配置不传 `limit`，会先生成 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单，再通过 AWS 同步全部 kline。手动触发时可用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
-Action job 显式设置 `timeout-minutes: 360`，这是 GitHub-hosted runner 单 job 的 6 小时上限。默认不强制刷新已有 kline，而是按下一批缺失代码续跑。
+默认配置不传 `limit`，会先确保 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单存在，再通过 AWS 同步全部 kline。同一交易日已有完整 market universe 时会复用；手动触发时可用 `force_universe=true` 强制刷新，用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
+Action job 显式设置 `timeout-minutes: 360`，这是 GitHub-hosted runner 单 job 的 6 小时上限。默认不强制刷新已有 kline，而是按下一批缺失代码续跑。Latency Benchmark Action 不写数据、不提交，只上传 `latency-results.json` artifact。
 
 - 默认 `aws` engine 必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
 - 手动选择 `aws-router` 时必需 secrets：`AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`

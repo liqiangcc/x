@@ -44,6 +44,11 @@ on:
         required: false
         default: false
         type: boolean
+      force_universe:
+        description: "是否强制刷新 market universe；默认否，同日完整清单会复用。"
+        required: false
+        default: false
+        type: boolean
       universe:
         description: "股票范围：market=全市场，pool=当日池。"
         required: false
@@ -152,6 +157,7 @@ jobs:
           RETRY_CONCURRENCY_INPUT: ${{ github.event.inputs.retry_concurrency }}
           MIN_SUCCESS_RATE_INPUT: ${{ github.event.inputs.min_success_rate }}
           FORCE_INPUT: ${{ github.event.inputs.force }}
+          FORCE_UNIVERSE_INPUT: ${{ github.event.inputs.force_universe }}
           UNIVERSE_INPUT: ${{ github.event.inputs.universe }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
           AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}

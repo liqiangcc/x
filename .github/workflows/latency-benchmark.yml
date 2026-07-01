@@ -1,0 +1,146 @@
+name: Latency Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine:
+        description: "Benchmark engine."
+        required: false
+        default: "both"
+        type: choice
+        options:
+          - aws
+          - aws-router
+          - both
+      region:
+        description: "Region list or all. Applies to both engines unless overridden."
+        required: false
+        default: "all"
+      aws_region:
+        description: "AWS Lambda regions for engine=aws. Overrides region."
+        required: false
+        default: ""
+      target_region:
+        description: "Router target regions for engine=aws-router. Overrides region."
+        required: false
+        default: ""
+      secid:
+        description: "Stock code or secid."
+        required: false
+        default: "1.600519"
+      period:
+        description: "Kline period."
+        required: false
+        default: "daily"
+        type: choice
+        options:
+          - daily
+          - yearly
+      lmt:
+        description: "Kline row limit."
+        required: false
+        default: "1"
+      attempts:
+        description: "Attempts per engine/region."
+        required: false
+        default: "3"
+      router_mode:
+        description: "Router benchmark mode."
+        required: false
+        default: "probe"
+        type: choice
+        options:
+          - probe
+          - kline
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        if: ${{ github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'both' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+
+      - name: Run latency benchmark
+        env:
+          AWS_ROUTER_URL: ${{ secrets.AWS_ROUTER_URL }}
+          AWS_ROUTER_TOKEN: ${{ secrets.AWS_ROUTER_TOKEN }}
+          ENGINE_INPUT: ${{ github.event.inputs.engine }}
+          REGION_INPUT: ${{ github.event.inputs.region }}
+          AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}
+          TARGET_REGION_INPUT: ${{ github.event.inputs.target_region }}
+          SECID_INPUT: ${{ github.event.inputs.secid }}
+          PERIOD_INPUT: ${{ github.event.inputs.period }}
+          LMT_INPUT: ${{ github.event.inputs.lmt }}
+          ATTEMPTS_INPUT: ${{ github.event.inputs.attempts }}
+          ROUTER_MODE_INPUT: ${{ github.event.inputs.router_mode }}
+        run: |
+          args=(
+            aws latency
+            --engine "${ENGINE_INPUT:-both}"
+            --region "${REGION_INPUT:-all}"
+            --secid "${SECID_INPUT:-1.600519}"
+            --period "${PERIOD_INPUT:-daily}"
+            --lmt "${LMT_INPUT:-1}"
+            --attempts "${ATTEMPTS_INPUT:-3}"
+            --router-mode "${ROUTER_MODE_INPUT:-probe}"
+            --json
+            --output latency-results.json
+          )
+          if [ -n "${AWS_REGION_INPUT}" ]; then
+            args+=(--aws-region "${AWS_REGION_INPUT}")
+          fi
+          if [ -n "${TARGET_REGION_INPUT}" ]; then
+            args+=(--target-region "${TARGET_REGION_INPUT}")
+          fi
+          bin/x "${args[@]}"
+
+      - name: Write benchmark summary
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync("latency-results.json", "utf8"));
+          const lines = [
+            "## Latency benchmark",
+            "",
+            `- secid: ${report.secid}`,
+            `- period: ${report.period}`,
+            `- lmt: ${report.lmt}`,
+            `- attempts: ${report.attempts}`,
+            `- engine: ${report.engine}`,
+            "",
+            "| engine | region | success | avg ms | p50 ms | p95 ms | min ms | max ms |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+          ];
+          for (const [engine, engineSummary] of Object.entries(report.summary ?? {})) {
+            for (const [region, item] of Object.entries(engineSummary.regions ?? {})) {
+              const format = (value) => Number.isFinite(value) ? value.toFixed(1).replace(/\\.0$/, "") : "n/a";
+              lines.push(`| ${engine} | ${region} | ${item.successes}/${item.attempts} | ${format(item.avg_ms)} | ${format(item.p50_ms)} | ${format(item.p95_ms)} | ${format(item.min_ms)} | ${format(item.max_ms)} |`);
+            }
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+          NODE
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latency-results
+          path: latency-results.json

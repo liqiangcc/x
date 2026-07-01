@@ -20,6 +20,11 @@ const {
   sanitizeError,
   summarizeCredentials,
 } = require("../src/aws/maintenance");
+const {
+  formatLatencyReport,
+  normalizeLatencyOptions,
+  runLatencyBenchmark,
+} = require("../src/aws/latency");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
 const {
   applyProgressResults,
@@ -30,6 +35,10 @@ const {
   selectProgressBatch,
   uniqueCodes,
 } = require("../src/jobs/progress");
+const {
+  hasCompleteMarketUniverse,
+  shouldReuseMarketUniverse,
+} = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
 
 const execFileAsync = promisify(execFile);
@@ -58,7 +67,7 @@ function printUsage() {
   x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router] [--concurrency N] [--retry-attempts N] [--retry-concurrency N]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router] [--force] [--force-pool] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -66,6 +75,7 @@ function printUsage() {
   x aws status [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--lambda-name kline]
   x aws sync-github-secrets [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--repo owner/name] [--lambda-name kline]
   x aws probe-router --secid 1.600519 [--period daily|yearly] [--target-region all|region]
+  x aws latency [--engine aws|aws-router|both] [--region all|r1,r2] [--aws-region r1,r2] [--target-region all|r1,r2] [--secid 1.600519] [--period daily|yearly] [--lmt N] [--attempts N] [--router-mode probe|kline] [--json] [--output file]
   x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy check
@@ -95,7 +105,7 @@ function parseOptions(argv, defaults = {}) {
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (["latest", "commit", "force", "forcePool", "json", "allowPartial"].includes(key)) {
+    if (["latest", "commit", "force", "forcePool", "forceUniverse", "json", "allowPartial"].includes(key)) {
       options[key] = true;
       continue;
     }
@@ -486,6 +496,27 @@ async function commandAwsProbeRouter(rawOptions) {
   printJson(payload);
 }
 
+async function commandAwsLatency(rawOptions) {
+  const configFile = rawOptions.config ? rootPath(rawOptions.config) : path.join(ROOT, "config", "kline.json");
+  const config = await readJson(configFile, {});
+  const options = normalizeLatencyOptions(rawOptions, config);
+  const report = await runLatencyBenchmark(options);
+  const output = `${JSON.stringify(report, null, 2)}\n`;
+
+  if (rawOptions.output) {
+    const outputPath = rootPath(rawOptions.output);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, output, "utf8");
+  }
+
+  if (rawOptions.json) {
+    process.stdout.write(output);
+    return;
+  }
+
+  process.stdout.write(formatLatencyReport(report));
+}
+
 async function commandAws(argv) {
   const subcommand = argv[0];
   const options = parseOptions(argv.slice(1));
@@ -502,6 +533,11 @@ async function commandAws(argv) {
 
   if (subcommand === "probe-router") {
     await commandAwsProbeRouter(options);
+    return;
+  }
+
+  if (subcommand === "latency") {
+    await commandAwsLatency(options);
     return;
   }
 
@@ -804,26 +840,6 @@ async function buildQuality(runId, validateResult, period) {
   };
 }
 
-async function hasCompleteMarketUniverse(date, outputDir, market = "hs-a") {
-  const universeDir = path.join(rootPath(outputDir), date);
-  try {
-    const codesPayload = JSON.parse(await fs.readFile(path.join(universeDir, "codes.json"), "utf8"));
-    const stocksPayload = JSON.parse(await fs.readFile(path.join(universeDir, "stocks.json"), "utf8"));
-    return (
-      codesPayload.date === date &&
-      stocksPayload.date === date &&
-      codesPayload.market === market &&
-      stocksPayload.market === market &&
-      Array.isArray(codesPayload.codes) &&
-      Array.isArray(stocksPayload.stocks) &&
-      codesPayload.codes.length > 0 &&
-      codesPayload.codes.length === stocksPayload.stocks.length
-    );
-  } catch {
-    return false;
-  }
-}
-
 function parsePositiveIntegerOption(value, fallback) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : fallback;
@@ -960,7 +976,6 @@ async function commandDaily(argv) {
     universeDir: rel(DEFAULT_UNIVERSE_DIR),
   });
   const startedAt = isoNow();
-  const explicitDate = Boolean(options.date);
 
   if (!options.date && !options.latest) {
     options.latest = true;
@@ -1016,8 +1031,10 @@ async function commandDaily(argv) {
   if (options.universe === "pool") {
     codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
   } else {
-    inputDir = path.join(rootPath(options.universeDir), date);
-    if (explicitDate && (await hasCompleteMarketUniverse(date, options.universeDir, options.market))) {
+    const universeDir = rootPath(options.universeDir);
+    inputDir = path.join(universeDir, date);
+    const completeUniverse = await hasCompleteMarketUniverse(date, universeDir, options.market);
+    if (shouldReuseMarketUniverse({ complete: completeUniverse, forceUniverse: options.forceUniverse })) {
       codesResult = {
         stdout: `Using existing market universe: ${rel(inputDir)}\n`,
         stderr: "",

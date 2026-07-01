@@ -103,6 +103,10 @@ function buildDailyArgs(env = process.env) {
     args.push("--force");
   }
 
+  if (isTruthy(env.FORCE_UNIVERSE_INPUT)) {
+    args.push("--force-universe");
+  }
+
   if (limit) {
     args.push("--limit", limit);
   }
