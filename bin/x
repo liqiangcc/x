@@ -30,6 +30,7 @@ const {
   applyProgressResults,
   calculateMaxChainDepth,
   initializeProgress,
+  markProgressCodesFailed,
   normalizeJobId,
   normalizeProgress,
   selectProgressBatch,
@@ -40,6 +41,7 @@ const {
   shouldReuseMarketUniverse,
 } = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
+const { validateKlinePath } = require("../fetch/check_kline_empty");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -858,6 +860,45 @@ async function buildQuality(runId, validateResult, period) {
   };
 }
 
+async function cleanupInvalidKlineFiles(period) {
+  let summary;
+  try {
+    summary = await validateKlinePath({
+      targetPath: DEFAULT_KLINE_DIR,
+      period,
+    });
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+    return {
+      target_path: path.join(DEFAULT_KLINE_DIR, period),
+      total_files: 0,
+      issue_count: 0,
+      status: "ok",
+      issues: [],
+      removed_codes: [],
+    };
+  }
+  const issues = Array.isArray(summary.issues) ? summary.issues : [];
+  const removedCodes = [];
+
+  for (const issue of issues) {
+    if (!issue?.file) {
+      continue;
+    }
+    await fs.rm(issue.file, { force: true });
+    if (issue.code) {
+      removedCodes.push(String(issue.code));
+    }
+  }
+
+  return {
+    ...summary,
+    removed_codes: uniqueCodes(removedCodes),
+  };
+}
+
 function parsePositiveIntegerOption(value, fallback) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : fallback;
@@ -1074,6 +1115,17 @@ async function commandDaily(argv) {
   process.stderr.write(codesResult.stderr);
 
   const jobContext = await prepareDailyJobProgress(options, { date, inputDir });
+  let progress = jobContext?.progress ?? null;
+  const cleanupSummary = await cleanupInvalidKlineFiles(options.period);
+  if (cleanupSummary.removed_codes.length > 0) {
+    console.error(
+      `Removed ${cleanupSummary.removed_codes.length} invalid ${options.period} kline file(s) before sync.`
+    );
+    if (jobContext) {
+      progress = markProgressCodesFailed(progress, cleanupSummary.removed_codes);
+      await writeJson(jobContext.progressPath, progress);
+    }
+  }
   const klineInputPath = jobContext ? jobContext.batchCodesPath : inputDir;
   const klineOptions = jobContext
     ? { ...options, batchSize: null, limit: null, offset: null }
@@ -1100,7 +1152,6 @@ async function commandDaily(argv) {
     ? await readJson(summaryPath, emptyKlineSummary)
     : emptyKlineSummary;
 
-  let progress = jobContext?.progress ?? null;
   if (jobContext) {
     progress = applyProgressResults(progress, klineSummary, {
       chainDepth: jobContext.chainDepth,

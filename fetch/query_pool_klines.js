@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
+const { inspectKlinePayload } = require("./check_kline_empty");
 
 const execFileAsync = promisify(execFile);
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
@@ -341,8 +342,7 @@ function getLegacyOutputPath(outputDir, period, code) {
 
 async function hasShardedOutput(outputDir, period, code) {
   try {
-    await fs.access(getOutputPath(outputDir, period, code));
-    return true;
+    return (await inspectExistingKline(getOutputPath(outputDir, period, code))).issue === null;
   } catch {
     return false;
   }
@@ -498,8 +498,28 @@ function classifyFailure(error) {
   return "unknown";
 }
 
+const RETRIABLE_VALIDATION_FAILURES = new Set([
+  "blank_klines",
+  "date_not_ascending",
+  "duplicate_date",
+  "empty_file",
+  "empty_klines",
+  "invalid_date",
+  "invalid_field_count",
+  "invalid_json",
+  "invalid_kline_row",
+  "invalid_klines",
+  "invalid_numeric_field",
+  "invalid_ohlc",
+  "invalid_payload",
+  "missing_klines",
+  "negative_volume_or_turnover",
+  "read_error",
+]);
+
 function isRetriableFailure(errorClass) {
-  return ["rate_limited", "transient_network"].includes(errorClass);
+  return ["rate_limited", "transient_network"].includes(errorClass) ||
+    RETRIABLE_VALIDATION_FAILURES.has(errorClass);
 }
 
 function createSummary(options, selection) {
@@ -570,6 +590,137 @@ function fetchOptionsForIndex(options, itemIndex) {
   };
 }
 
+async function inspectExistingKline(filePath) {
+  let raw;
+  try {
+    raw = await fs.readFile(filePath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw error;
+    }
+    return {
+      issue: "read_error",
+      error: error.message,
+      payload: null,
+    };
+  }
+
+  if (raw.trim() === "") {
+    return {
+      issue: "empty_file",
+      error: "kline file is empty",
+      payload: null,
+    };
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (error) {
+    return {
+      issue: "invalid_json",
+      error: error.message,
+      payload: null,
+    };
+  }
+
+  const issue = inspectKlinePayload(payload);
+  return {
+    issue,
+    error: issue ? `existing kline payload is invalid: ${issue}` : null,
+    payload,
+  };
+}
+
+function createFailureResult(code, secid, error, errorClass) {
+  return {
+    code,
+    countKey: "failed",
+    file: {
+      status: "failed",
+      secid,
+      error,
+      error_class: errorClass,
+      retriable: isRetriableFailure(errorClass),
+    },
+  };
+}
+
+async function removeInvalidKlineFile(filePath) {
+  await fs.rm(filePath, { force: true });
+}
+
+async function existingShardedResult(outputPath, code, secid, options) {
+  let inspected;
+  try {
+    inspected = await inspectExistingKline(outputPath);
+  } catch {
+    return null;
+  }
+
+  if (inspected.issue) {
+    await removeInvalidKlineFile(outputPath);
+    return null;
+  }
+
+  if (options.force) {
+    return null;
+  }
+
+  return {
+    code,
+    countKey: "skipped_existing",
+    file: {
+      status: "skipped_existing",
+      file: outputPath,
+      secid,
+    },
+  };
+}
+
+async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, period) {
+  let inspected;
+  try {
+    inspected = await inspectExistingKline(legacyOutputPath);
+  } catch {
+    return null;
+  }
+
+  if (inspected.issue) {
+    await removeInvalidKlineFile(legacyOutputPath);
+    return null;
+  }
+
+  const normalized = normalizeKlinePayload(inspected.payload, code, secid, period);
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  return {
+    code,
+    countKey: "migrated_existing",
+    file: {
+      status: "migrated_existing",
+      file: outputPath,
+      legacy_file: legacyOutputPath,
+      secid,
+      points: normalized.klines.length,
+    },
+  };
+}
+
+function validateNormalizedKline(normalized, code, secid) {
+  const issue = inspectKlinePayload(normalized);
+  if (!issue) {
+    return null;
+  }
+
+  return createFailureResult(
+    code,
+    secid,
+    `kline payload is invalid: ${issue}`,
+    issue
+  );
+}
+
 async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
   let secid;
   let code;
@@ -578,59 +729,37 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
     code = extractStockCode(inputCode);
   } catch (error) {
     const errorClass = classifyFailure(error);
-    return {
-      code: inputCode,
-      countKey: "failed",
-      file: {
-        status: "failed",
-        secid: null,
-        error: error.message,
-        error_class: errorClass,
-        retriable: isRetriableFailure(errorClass),
-      },
-    };
+    return createFailureResult(inputCode, null, error.message, errorClass);
   }
 
   const outputPath = getOutputPath(options.outputDir, options.period, code);
   const legacyOutputPath = getLegacyOutputPath(options.outputDir, options.period, code);
 
-  if (!options.force) {
-    try {
-      await fs.access(outputPath);
-      return {
-        code,
-        countKey: "skipped_existing",
-        file: {
-          status: "skipped_existing",
-          file: outputPath,
-          secid,
-        },
-      };
-    } catch {}
+  const existingResult = await existingShardedResult(outputPath, code, secid, options);
+  if (existingResult) {
+    return existingResult;
+  }
 
-    try {
-      const rawLegacy = await fs.readFile(legacyOutputPath, "utf8");
-      const legacyPayload = JSON.parse(rawLegacy);
-      const normalized = normalizeKlinePayload(legacyPayload, code, secid, options.period);
-      await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
-      return {
-        code,
-        countKey: "migrated_existing",
-        file: {
-          status: "migrated_existing",
-          file: outputPath,
-          legacy_file: legacyOutputPath,
-          secid,
-          points: normalized.klines.length,
-        },
-      };
-    } catch {}
+  if (!options.force) {
+    const migratedResult = await migratedLegacyResult(
+      legacyOutputPath,
+      outputPath,
+      code,
+      secid,
+      options.period
+    );
+    if (migratedResult) {
+      return migratedResult;
+    }
   }
 
   try {
     const data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
     const normalized = normalizeKlinePayload(data, code, secid, options.period);
+    const validationFailure = validateNormalizedKline(normalized, code, secid);
+    if (validationFailure) {
+      return validationFailure;
+    }
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
     return {
@@ -653,17 +782,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
     };
   } catch (error) {
     const errorClass = classifyFailure(error);
-    return {
-      code,
-      countKey: "failed",
-      file: {
-        status: "failed",
-        secid,
-        error: error.message,
-        error_class: errorClass,
-        retriable: isRetriableFailure(errorClass),
-      },
-    };
+    return createFailureResult(code, secid, error.message, errorClass);
   }
 }
 

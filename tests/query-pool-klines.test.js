@@ -36,6 +36,15 @@ function klinePayload(code, engine = "aws", region = "ap-northeast-1", metrics =
   };
 }
 
+function normalizedKlinePayload(code) {
+  return {
+    code,
+    market: code.startsWith("6") ? 1 : 0,
+    period: "daily",
+    klines: ["2026-06-30,1,2,3,1,100,200,0,0,0,0"],
+  };
+}
+
 test("queryPoolKlines parses Huawei Cloud engine options", () => {
   const options = parseArguments([
     "codes.json",
@@ -65,7 +74,7 @@ test("queryPoolKlines handles concurrent success, failure, and skipped files", a
   await fs.mkdir(path.dirname(existingPath), { recursive: true });
   await fs.writeFile(
     existingPath,
-    `${JSON.stringify({ code: "600004", market: 1, period: "daily", klines: [] }, null, 2)}\n`,
+    `${JSON.stringify(normalizedKlinePayload("600004"), null, 2)}\n`,
     "utf8"
   );
 
@@ -158,6 +167,79 @@ test("queryPoolKlines force refreshes existing output files", async (t) => {
   assert.equal(summary.files["600004"].status, "success");
 });
 
+test("queryPoolKlines treats empty fetched klines as retryable failures without writing files", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+  ]);
+  const { exitCode, summary } = await queryPoolKlines(options, async () => ({
+    source_engine: "aws",
+    source_region: "ap-northeast-1",
+    data: {
+      code: "600001",
+      market: 1,
+      klines: [],
+    },
+  }));
+
+  const outputPath = path.join(outputDir, "daily", "600", "600001.json");
+  await assert.rejects(fs.access(outputPath));
+  assert.equal(exitCode, 1);
+  assert.equal(summary.success, 0);
+  assert.equal(summary.failed, 1);
+  assert.equal(summary.files["600001"].status, "failed");
+  assert.equal(summary.files["600001"].error_class, "empty_klines");
+  assert.equal(summary.files["600001"].retriable, true);
+});
+
+test("queryPoolKlines refetches existing empty output instead of skipping it", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const outputPath = path.join(outputDir, "daily", "600", "600001.json");
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(
+    outputPath,
+    `${JSON.stringify({ code: "600001", market: 1, period: "daily", klines: [] }, null, 2)}\n`,
+    "utf8"
+  );
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+  ]);
+  let calls = 0;
+  const { exitCode, summary } = await queryPoolKlines(options, async () => {
+    calls += 1;
+    return klinePayload("600001", "aws", "ap-northeast-1");
+  });
+
+  const rewritten = JSON.parse(await fs.readFile(outputPath, "utf8"));
+  assert.equal(exitCode, 0);
+  assert.equal(calls, 1);
+  assert.equal(summary.success, 1);
+  assert.equal(summary.skipped_existing, 0);
+  assert.equal(summary.files["600001"].status, "success");
+  assert.equal(rewritten.klines.length, 1);
+});
+
 test("queryPoolKlines retries transient failures serially", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -216,7 +298,7 @@ test("queryPoolKlines batch-size selects the next missing codes", async (t) => {
   await fs.mkdir(path.dirname(existingPath), { recursive: true });
   await fs.writeFile(
     existingPath,
-    `${JSON.stringify({ code: "600001", market: 1, period: "daily", klines: [] }, null, 2)}\n`,
+    `${JSON.stringify(normalizedKlinePayload("600001"), null, 2)}\n`,
     "utf8"
   );
 

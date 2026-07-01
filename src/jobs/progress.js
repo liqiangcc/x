@@ -244,10 +244,43 @@ function applyProgressResults(progress, summary, { chainDepth = null } = {}) {
   return updated;
 }
 
+function markProgressCodesFailed(progress, codes) {
+  const updated = normalizeProgress(progress);
+  const invalidCodes = new Set(uniqueCodes(codes));
+  if (invalidCodes.size === 0) {
+    return updated;
+  }
+
+  const completed = new Set(updated.completed_codes);
+  const failed = new Set(updated.failed_codes);
+  const blocked = new Set(updated.blocked_codes);
+  const all = new Set(updated.all_codes);
+
+  for (const code of invalidCodes) {
+    if (!all.has(code)) {
+      continue;
+    }
+    if (completed.delete(code) || blocked.delete(code) || failed.has(code)) {
+      failed.add(code);
+      blocked.delete(code);
+    }
+  }
+
+  updated.completed_codes = [...completed].sort();
+  updated.failed_codes = [...failed].sort();
+  updated.blocked_codes = [...blocked].sort();
+  updated.counts = countCodes(updated);
+  updated.updated_at = isoNow();
+  finalizeStatus(updated);
+  validateProgress(updated);
+  return updated;
+}
+
 module.exports = {
   applyProgressResults,
   calculateMaxChainDepth,
   initializeProgress,
+  markProgressCodesFailed,
   normalizeJobId,
   normalizeProgress,
   selectProgressBatch,
