@@ -39,6 +39,33 @@ function routerProbeFetch(regions) {
   });
 }
 
+const HUAWEICLOUD_TARGETS = {
+  "cn-east-3": {
+    project_id: "project",
+    function_urn: "urn:fss:cn-east-3:project:function:default:x-kline-target",
+  },
+};
+
+function huaweiCloudFetch(assertUrl) {
+  return async (url, request) => {
+    assertUrl?.(url, request);
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        request_id: "hwc-request-1",
+        result: JSON.stringify({
+          ok: true,
+          target_duration_ms: 13,
+          eastmoney_duration_ms: 9,
+          data: { klines: ["row"] },
+        }),
+        status: 200,
+      }),
+    };
+  };
+}
+
 test("normalizeLatencyOptions applies region alias to both engines", () => {
   const options = normalizeLatencyOptions(
     {
@@ -58,6 +85,40 @@ test("normalizeLatencyOptions applies region alias to both engines", () => {
   assert.deepEqual(options.awsRegions, ["ap-northeast-1", "us-east-1"]);
   assert.deepEqual(options.routerRegions, ["ap-northeast-1", "us-east-1"]);
   assert.equal(options.attempts, 2);
+});
+
+test("normalizeLatencyOptions keeps both as AWS only and expands all to Huawei Cloud", () => {
+  const bothOptions = normalizeLatencyOptions(
+    {
+      engine: "both",
+      region: "ap-northeast-1",
+    },
+    { aws_regions: ["ap-northeast-1"] }
+  );
+  assert.deepEqual(bothOptions.awsRegions, ["ap-northeast-1"]);
+  assert.deepEqual(bothOptions.routerRegions, ["ap-northeast-1"]);
+  assert.deepEqual(bothOptions.huaweiCloudRegions, []);
+
+  const huaweiCloudOptions = normalizeLatencyOptions({
+    engine: "huaweicloud",
+    huaweicloudRegion: "cn-east-3",
+    huaweicloudTargetsData: HUAWEICLOUD_TARGETS,
+  });
+  assert.deepEqual(huaweiCloudOptions.awsRegions, []);
+  assert.deepEqual(huaweiCloudOptions.routerRegions, []);
+  assert.deepEqual(huaweiCloudOptions.huaweiCloudRegions, ["cn-east-3"]);
+
+  const allOptions = normalizeLatencyOptions(
+    {
+      engine: "all",
+      region: "all",
+      huaweicloudTargetsData: HUAWEICLOUD_TARGETS,
+    },
+    { aws_regions: ["ap-northeast-1"] }
+  );
+  assert.deepEqual(allOptions.awsRegions, ["ap-northeast-1"]);
+  assert.equal(allOptions.routerRegions, "all");
+  assert.deepEqual(allOptions.huaweiCloudRegions, ["cn-east-3"]);
 });
 
 test("normalizeLatencyOptions expands aws all from config and keeps router all", () => {
@@ -100,6 +161,56 @@ test("runLatencyBenchmark records aws and aws-router region summaries", async ()
   assert.equal(report.summary["aws-router"].regions["ap-northeast-1"].successes, 2);
   assert.equal(report.results.find((item) => item.engine === "aws").points, 2);
   assert.equal(report.results.find((item) => item.engine === "aws-router").target_duration_ms, 8);
+});
+
+test("runLatencyBenchmark records Huawei Cloud FunctionGraph region summaries", async () => {
+  const options = normalizeLatencyOptions({
+    attempts: "2",
+    engine: "huaweicloud",
+    huaweicloudRegion: "cn-east-3",
+    huaweicloudTargetsData: HUAWEICLOUD_TARGETS,
+    secid: "1.600519",
+  });
+  const report = await runLatencyBenchmark(options, {
+    env: {
+      HUAWEICLOUD_ACCESS_KEY: "ak",
+      HUAWEICLOUD_SECRET_KEY: "sk",
+    },
+    fetchImpl: huaweiCloudFetch((url, request) => {
+      assert.match(url, /^https:\/\/functiongraph\.cn-east-3\.myhuaweicloud\.com\/v2\/project\/fgs\/functions\/urn%3Afss%3A/);
+      assert.equal(request.method, "POST");
+      assert.match(request.headers.Authorization, /^SDK-HMAC-SHA256 Access=ak/);
+    }),
+  });
+
+  assert.equal(report.results.length, 2);
+  assert.equal(report.summary.huaweicloud.regions["cn-east-3"].successes, 2);
+  assert.equal(report.results[0].points, 1);
+  assert.equal(report.results[0].target_duration_ms, 13);
+  assert.equal(report.results[0].eastmoney_duration_ms, 9);
+  assert.equal(report.results[0].request_id, "hwc-request-1");
+});
+
+test("runLatencyBenchmark reports missing Huawei Cloud target regions", async () => {
+  const options = normalizeLatencyOptions({
+    attempts: "1",
+    engine: "huaweicloud",
+    huaweicloudRegion: "cn-north-4",
+    huaweicloudTargetsData: HUAWEICLOUD_TARGETS,
+    secid: "1.600519",
+  });
+  const report = await runLatencyBenchmark(options, {
+    env: {
+      HUAWEICLOUD_ACCESS_KEY: "ak",
+      HUAWEICLOUD_SECRET_KEY: "sk",
+    },
+    fetchImpl: huaweiCloudFetch(),
+  });
+
+  assert.equal(report.results.length, 1);
+  assert.equal(report.results[0].ok, false);
+  assert.equal(report.results[0].error_class, "missing_huaweicloud_target");
+  assert.equal(report.summary.huaweicloud.regions["cn-north-4"].failures, 1);
 });
 
 test("runLatencyBenchmark expands router probe all into per-region rows", async () => {

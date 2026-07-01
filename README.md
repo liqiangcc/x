@@ -129,9 +129,20 @@ AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
 
 AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
   bin/x aws latency --engine aws-router --region all --attempts 1 --json
+
+scripts/deploy-huaweicloud-functiongraph.sh \
+  --all-regions \
+  --output /tmp/huaweicloud-deploy.tsv \
+  --targets-output /tmp/huaweicloud-targets.json
+
+HUAWEICLOUD_ACCESS_KEY='...' HUAWEICLOUD_SECRET_KEY='...' \
+  bin/x aws latency --engine huaweicloud \
+  --huaweicloud-targets /tmp/huaweicloud-targets.json \
+  --huaweicloud-region all \
+  --attempts 1 --json
 ```
 
-`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 同时作用于 `aws` 和 `aws-router`，也可分别用 `--aws-region`、`--target-region` 覆盖。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。部署脚本会输出 GitHub secret 设置命令；只写入 `AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`，不要提交真实 URL、token 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为；旧 `aws` engine 仍可手动选择作为直连 Lambda 回退。
+`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 作用于当前 engine 选中的云函数入口，也可分别用 `--aws-region`、`--target-region`、`--huaweicloud-region` 覆盖。`both` 仍只跑 AWS Lambda 直连和 AWS Router；`all` 才会额外跑 Huawei Cloud FunctionGraph。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。Huawei Cloud latency 需要 `HUAWEICLOUD_ACCESS_KEY`、`HUAWEICLOUD_SECRET_KEY` 和 `HUAWEICLOUD_TARGETS_JSON`；targets JSON 由 `scripts/deploy-huaweicloud-functiongraph.sh --targets-output` 生成，格式是按 region 映射 `project_id` 和 `function_urn`。AWS Router 部署脚本会输出 GitHub secret 设置命令；Huawei Cloud secrets/targets 统一手动写入 GitHub Secrets 或 Variables。不要提交真实 URL、token、密钥、targets JSON 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为；旧 `aws` engine 仍可手动选择作为直连 Lambda 回退。
 
 Eastmoney 超时调大只作为实验配置执行，不作为默认部署值。验证命令：
 

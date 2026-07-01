@@ -176,6 +176,12 @@ test("daily workflow uses maintained AWS access key secrets", () => {
   assert.equal(latencyWorkflow.includes("latency-results.json"), true);
   assert.equal(latencyWorkflow.includes("secrets.AWS_ROUTER_URL"), true);
   assert.equal(latencyWorkflow.includes("secrets.AWS_ACCESS_KEY_ID"), true);
+  assert.equal(latencyWorkflow.includes("- huaweicloud"), true);
+  assert.equal(latencyWorkflow.includes("- all"), true);
+  assert.equal(latencyWorkflow.includes("huaweicloud_region"), true);
+  assert.equal(latencyWorkflow.includes("secrets.HUAWEICLOUD_ACCESS_KEY"), true);
+  assert.equal(latencyWorkflow.includes("secrets.HUAWEICLOUD_SECRET_KEY"), true);
+  assert.equal(latencyWorkflow.includes("HUAWEICLOUD_TARGETS_JSON"), true);
   assert.equal(deployScript.includes('TARGET_REGIONS="ap-northeast-1,ap-northeast-2,ap-southeast-1,us-west-2"'), true);
   assert.equal(deployScript.includes('ROUTER_MAX_FALLBACKS="4"'), true);
   assert.equal(deployScript.includes("ap-northeast-1,us-east-1,ap-northeast-2"), false);

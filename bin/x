@@ -75,7 +75,7 @@ function printUsage() {
   x aws status [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--lambda-name kline]
   x aws sync-github-secrets [--profile default] [--region ap-northeast-1] [--preflight-region r1,r2] [--repo owner/name] [--lambda-name kline]
   x aws probe-router --secid 1.600519 [--period daily|yearly] [--target-region all|region]
-  x aws latency [--engine aws|aws-router|both] [--region all|r1,r2] [--aws-region r1,r2] [--target-region all|r1,r2] [--secid 1.600519] [--period daily|yearly] [--lmt N] [--attempts N] [--router-mode probe|kline] [--json] [--output file]
+  x aws latency [--engine aws|aws-router|huaweicloud|both|all] [--region all|r1,r2] [--aws-region r1,r2] [--target-region all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json] [--secid 1.600519] [--period daily|yearly] [--lmt N] [--attempts N] [--router-mode probe|kline] [--json] [--output file]
   x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy check

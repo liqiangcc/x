@@ -2,6 +2,13 @@
 
 const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
 const { inferSecid } = require("../core/secid");
+const {
+  ACCESS_KEY_ENV: HUAWEICLOUD_ACCESS_KEY_ENV,
+  SECRET_KEY_ENV: HUAWEICLOUD_SECRET_KEY_ENV,
+  invokeFunctionGraph,
+  loadHuaweiCloudTargets,
+  normalizeHuaweiCloudTarget,
+} = require("../huaweicloud/functiongraph");
 
 const DEFAULT_AWS_REGIONS = [
   "ap-northeast-1",
@@ -26,7 +33,7 @@ const PERIOD_MAP = {
   daily: 101,
   yearly: 106,
 };
-const VALID_ENGINES = new Set(["aws", "aws-router", "both"]);
+const VALID_ENGINES = new Set(["aws", "aws-router", "huaweicloud", "both", "all"]);
 const VALID_ROUTER_MODES = new Set(["probe", "kline"]);
 
 function nowMs() {
@@ -80,6 +87,30 @@ function resolveRouterRegions(value) {
   return uniqueRegions(regions);
 }
 
+function resolveHuaweiCloudRegions(value, targets) {
+  const targetRegions = Object.keys(targets ?? {}).sort();
+  if (!value || value === "all") {
+    return targetRegions;
+  }
+  const regions = parseRegionList(value);
+  if (regions.length === 0) {
+    throw new Error("No Huawei Cloud regions were provided.");
+  }
+  return uniqueRegions(regions);
+}
+
+function shouldRunAws(engine) {
+  return engine === "aws" || engine === "both" || engine === "all";
+}
+
+function shouldRunAwsRouter(engine) {
+  return engine === "aws-router" || engine === "both" || engine === "all";
+}
+
+function shouldRunHuaweiCloud(engine) {
+  return engine === "huaweicloud" || engine === "all";
+}
+
 function normalizeLatencyOptions(rawOptions = {}, config = {}) {
   const engine = rawOptions.engine ?? "both";
   if (!VALID_ENGINES.has(engine)) {
@@ -100,12 +131,22 @@ function normalizeLatencyOptions(rawOptions = {}, config = {}) {
   const regionAlias = rawOptions.region ?? null;
   const awsRegionValue = rawOptions.awsRegion ?? regionAlias ?? null;
   const targetRegionValue = rawOptions.targetRegion ?? regionAlias ?? "all";
-  const awsRegions = engine === "aws-router"
-    ? []
-    : resolveAwsRegions(awsRegionValue, config.aws_regions);
-  const routerRegions = engine === "aws"
-    ? []
-    : resolveRouterRegions(targetRegionValue);
+  const huaweiCloudTargets = shouldRunHuaweiCloud(engine)
+    ? (rawOptions.huaweicloudTargetsData ?? config.huaweicloud_targets ?? loadHuaweiCloudTargets({
+      env: rawOptions.env ?? process.env,
+      targetsFile: rawOptions.huaweicloudTargets ?? null,
+    }))
+    : {};
+  const huaweiCloudRegionValue = rawOptions.huaweicloudRegion ?? regionAlias ?? "all";
+  const awsRegions = shouldRunAws(engine)
+    ? resolveAwsRegions(awsRegionValue, config.aws_regions)
+    : [];
+  const routerRegions = shouldRunAwsRouter(engine)
+    ? resolveRouterRegions(targetRegionValue)
+    : [];
+  const huaweiCloudRegions = shouldRunHuaweiCloud(engine)
+    ? resolveHuaweiCloudRegions(huaweiCloudRegionValue, huaweiCloudTargets)
+    : [];
 
   if (routerMode === "kline" && routerRegions === "all") {
     throw new Error("aws-router kline latency requires explicit --target-region/--region values; use --router-mode probe for all.");
@@ -122,6 +163,7 @@ function normalizeLatencyOptions(rawOptions = {}, config = {}) {
     period,
     requestedRegions: {
       aws_region: rawOptions.awsRegion ?? null,
+      huaweicloud_region: rawOptions.huaweicloudRegion ?? null,
       region: regionAlias,
       target_region: rawOptions.targetRegion ?? null,
     },
@@ -130,6 +172,10 @@ function normalizeLatencyOptions(rawOptions = {}, config = {}) {
     routerTokenEnv: config.aws_router_token_env ?? "AWS_ROUTER_TOKEN",
     routerUrlEnv: config.aws_router_url_env ?? "AWS_ROUTER_URL",
     secid: inferSecid(rawOptions.secid ?? "1.600519"),
+    huaweiCloudAccessKeyEnv: config.huaweicloud_access_key_env ?? HUAWEICLOUD_ACCESS_KEY_ENV,
+    huaweiCloudRegions,
+    huaweiCloudSecretKeyEnv: config.huaweicloud_secret_key_env ?? HUAWEICLOUD_SECRET_KEY_ENV,
+    huaweiCloudTargets,
   };
 }
 
@@ -389,11 +435,75 @@ async function measureRouterKline(options, region, attempt, deps = {}) {
   }
 }
 
+async function measureHuaweiCloudRegion(options, region, attempt, deps = {}) {
+  const startedAt = nowMs();
+  const target = normalizeHuaweiCloudTarget(region, options.huaweiCloudTargets[region]);
+  if (!target.ok) {
+    return {
+      attempt,
+      client_duration_ms: nowMs() - startedAt,
+      engine: "huaweicloud",
+      error: target.error,
+      error_class: "missing_huaweicloud_target",
+      ok: false,
+      region,
+    };
+  }
+
+  try {
+    const env = deps.env ?? process.env;
+    const accessKey = String(env[options.huaweiCloudAccessKeyEnv] ?? "").trim();
+    const secretKey = String(env[options.huaweiCloudSecretKeyEnv] ?? "").trim();
+    const { requestId, resultPayload } = await invokeFunctionGraph({
+      accessKey,
+      date: deps.date,
+      fetchImpl: deps.fetchImpl ?? fetch,
+      payload: {
+        end: options.end,
+        klt: options.klt,
+        lmt: options.lmt,
+        secid: options.secid,
+      },
+      secretKey,
+      target,
+    });
+    if (resultPayload?.ok === false) {
+      throw Object.assign(new Error(resultPayload.error ?? "Huawei Cloud target returned ok=false."), {
+        errorClass: resultPayload.error_class ?? "target_failed",
+        requestId,
+        resultPayload,
+      });
+    }
+    return {
+      attempt,
+      client_duration_ms: nowMs() - startedAt,
+      eastmoney_duration_ms: resultPayload?.eastmoney_duration_ms ?? null,
+      engine: "huaweicloud",
+      ok: true,
+      points: Array.isArray(resultPayload?.data?.klines) ? resultPayload.data.klines.length : null,
+      region,
+      request_id: requestId,
+      target_duration_ms: resultPayload?.target_duration_ms ?? null,
+    };
+  } catch (error) {
+    return {
+      attempt,
+      client_duration_ms: nowMs() - startedAt,
+      engine: "huaweicloud",
+      error: error?.message ?? String(error),
+      error_class: error?.errorClass ?? null,
+      ok: false,
+      region,
+      request_id: error?.requestId ?? null,
+    };
+  }
+}
+
 async function runLatencyBenchmark(options, deps = {}) {
   const results = [];
   const startedAt = new Date().toISOString();
 
-  if (options.engine === "aws" || options.engine === "both") {
+  if (shouldRunAws(options.engine)) {
     for (const region of options.awsRegions) {
       for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
         results.push(await measureAwsRegion(options, region, attempt, deps));
@@ -401,7 +511,7 @@ async function runLatencyBenchmark(options, deps = {}) {
     }
   }
 
-  if (options.engine === "aws-router" || options.engine === "both") {
+  if (shouldRunAwsRouter(options.engine)) {
     if (options.routerMode === "probe") {
       const probeRegions = options.routerRegions === "all" ? ["all"] : options.routerRegions;
       for (const region of probeRegions) {
@@ -414,6 +524,14 @@ async function runLatencyBenchmark(options, deps = {}) {
         for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
           results.push(...await measureRouterKline(options, region, attempt, deps));
         }
+      }
+    }
+  }
+
+  if (shouldRunHuaweiCloud(options.engine)) {
+    for (const region of options.huaweiCloudRegions) {
+      for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
+        results.push(await measureHuaweiCloudRegion(options, region, attempt, deps));
       }
     }
   }
@@ -436,6 +554,7 @@ async function runLatencyBenchmark(options, deps = {}) {
     resolved_regions: {
       aws: options.awsRegions,
       "aws-router": options.routerRegions,
+      huaweicloud: options.huaweiCloudRegions,
     },
     results,
     router_mode: options.routerMode,

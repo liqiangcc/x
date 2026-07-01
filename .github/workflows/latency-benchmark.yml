@@ -11,9 +11,11 @@ on:
         options:
           - aws
           - aws-router
+          - huaweicloud
           - both
+          - all
       region:
-        description: "Region list or all. Applies to both engines unless overridden."
+        description: "Region list or all. Applies to selected engines unless overridden."
         required: false
         default: "all"
       aws_region:
@@ -22,6 +24,10 @@ on:
         default: ""
       target_region:
         description: "Router target regions for engine=aws-router. Overrides region."
+        required: false
+        default: ""
+      huaweicloud_region:
+        description: "Huawei Cloud FunctionGraph regions for engine=huaweicloud/all. Overrides region."
         required: false
         default: ""
       secid:
@@ -72,7 +78,7 @@ jobs:
         run: npm ci
 
       - name: Configure AWS credentials
-        if: ${{ github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'both' }}
+        if: ${{ github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'both' || github.event.inputs.engine == 'all' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -83,10 +89,14 @@ jobs:
         env:
           AWS_ROUTER_URL: ${{ secrets.AWS_ROUTER_URL }}
           AWS_ROUTER_TOKEN: ${{ secrets.AWS_ROUTER_TOKEN }}
+          HUAWEICLOUD_ACCESS_KEY: ${{ secrets.HUAWEICLOUD_ACCESS_KEY }}
+          HUAWEICLOUD_SECRET_KEY: ${{ secrets.HUAWEICLOUD_SECRET_KEY }}
+          HUAWEICLOUD_TARGETS_JSON: ${{ secrets.HUAWEICLOUD_TARGETS_JSON || vars.HUAWEICLOUD_TARGETS_JSON }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
           REGION_INPUT: ${{ github.event.inputs.region }}
           AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}
           TARGET_REGION_INPUT: ${{ github.event.inputs.target_region }}
+          HUAWEICLOUD_REGION_INPUT: ${{ github.event.inputs.huaweicloud_region }}
           SECID_INPUT: ${{ github.event.inputs.secid }}
           PERIOD_INPUT: ${{ github.event.inputs.period }}
           LMT_INPUT: ${{ github.event.inputs.lmt }}
@@ -110,6 +120,9 @@ jobs:
           fi
           if [ -n "${TARGET_REGION_INPUT}" ]; then
             args+=(--target-region "${TARGET_REGION_INPUT}")
+          fi
+          if [ -n "${HUAWEICLOUD_REGION_INPUT}" ]; then
+            args+=(--huaweicloud-region "${HUAWEICLOUD_REGION_INPUT}")
           fi
           bin/x "${args[@]}"
 
