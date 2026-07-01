@@ -1,0 +1,510 @@
+{
+  "run_id": "20260701T131249Z_daily",
+  "failed": 63,
+  "items": [
+    {
+      "target": "0.002481",
+      "code": "002481",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002482",
+      "code": "002482",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002484",
+      "code": "002484",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002485",
+      "code": "002485",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002486",
+      "code": "002486",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002488",
+      "code": "002488",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002489",
+      "code": "002489",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002492",
+      "code": "002492",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002493",
+      "code": "002493",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002494",
+      "code": "002494",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002495",
+      "code": "002495",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002496",
+      "code": "002496",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002497",
+      "code": "002497",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002499",
+      "code": "002499",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002500",
+      "code": "002500",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002502",
+      "code": "002502",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002503",
+      "code": "002503",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002504",
+      "code": "002504",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002505",
+      "code": "002505",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002508",
+      "code": "002508",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002509",
+      "code": "002509",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002510",
+      "code": "002510",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002511",
+      "code": "002511",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002512",
+      "code": "002512",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002514",
+      "code": "002514",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002515",
+      "code": "002515",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002516",
+      "code": "002516",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002517",
+      "code": "002517",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002518",
+      "code": "002518",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002521",
+      "code": "002521",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002523",
+      "code": "002523",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002524",
+      "code": "002524",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002527",
+      "code": "002527",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002528",
+      "code": "002528",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002529",
+      "code": "002529",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002530",
+      "code": "002530",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002534",
+      "code": "002534",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002535",
+      "code": "002535",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002539",
+      "code": "002539",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002540",
+      "code": "002540",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002541",
+      "code": "002541",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002542",
+      "code": "002542",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002544",
+      "code": "002544",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002548",
+      "code": "002548",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002550",
+      "code": "002550",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002551",
+      "code": "002551",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002553",
+      "code": "002553",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002555",
+      "code": "002555",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002557",
+      "code": "002557",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002561",
+      "code": "002561",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002562",
+      "code": "002562",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002563",
+      "code": "002563",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002564",
+      "code": "002564",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002566",
+      "code": "002566",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002567",
+      "code": "002567",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002568",
+      "code": "002568",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002569",
+      "code": "002569",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002570",
+      "code": "002570",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002572",
+      "code": "002572",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002573",
+      "code": "002573",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002574",
+      "code": "002574",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002576",
+      "code": "002576",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.002577",
+      "code": "002577",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    }
+  ]
+}
