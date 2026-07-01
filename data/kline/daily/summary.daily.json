@@ -20,115 +20,115 @@
   "selection_mode": "all",
   "total_codes": 100,
   "success": 0,
-  "migrated_existing": 35,
+  "migrated_existing": 39,
   "skipped_existing": 0,
-  "failed": 65,
-  "initial_failed": 65,
+  "failed": 61,
+  "initial_failed": 61,
   "retried": 0,
   "retry_success": 0,
   "retry_failed": 0,
-  "success_rate": 0.35,
+  "success_rate": 0.39,
   "attempts_by_code": {
-    "002278": 1,
-    "002279": 1,
-    "002280": 1,
-    "002281": 1,
-    "002282": 1,
-    "002283": 1,
-    "002284": 1,
-    "002285": 1,
-    "002286": 1,
-    "002287": 1,
-    "002288": 1,
-    "002289": 1,
-    "002290": 1,
-    "002291": 1,
-    "002292": 1,
-    "002293": 1,
-    "002294": 1,
-    "002295": 1,
-    "002296": 1,
-    "002297": 1,
-    "002298": 1,
-    "002299": 1,
-    "002300": 1,
-    "002301": 1,
-    "002302": 1,
-    "002303": 1,
-    "002304": 1,
-    "002305": 1,
-    "002306": 1,
-    "002307": 1,
-    "002308": 1,
-    "002309": 1,
-    "002310": 1,
-    "002311": 1,
-    "002312": 1,
-    "002313": 1,
-    "002314": 1,
-    "002315": 1,
-    "002316": 1,
-    "002317": 1,
-    "002318": 1,
-    "002319": 1,
-    "002320": 1,
-    "002321": 1,
-    "002322": 1,
-    "002323": 1,
-    "002324": 1,
-    "002325": 1,
-    "002326": 1,
-    "002327": 1,
-    "002328": 1,
-    "002329": 1,
-    "002330": 1,
-    "002331": 1,
-    "002332": 1,
-    "002333": 1,
-    "002334": 1,
-    "002335": 1,
-    "002336": 1,
-    "002337": 1,
-    "002338": 1,
-    "002339": 1,
-    "002340": 1,
-    "002341": 1,
-    "002342": 1,
-    "002343": 1,
-    "002344": 1,
-    "002345": 1,
-    "002346": 1,
-    "002347": 1,
-    "002348": 1,
-    "002349": 1,
-    "002350": 1,
-    "002351": 1,
-    "002352": 1,
-    "002353": 1,
-    "002354": 1,
-    "002355": 1,
-    "002356": 1,
-    "002357": 1,
-    "002358": 1,
-    "002359": 1,
-    "002360": 1,
-    "002361": 1,
-    "002362": 1,
-    "002363": 1,
-    "002364": 1,
-    "002365": 1,
-    "002366": 1,
-    "002367": 1,
-    "002368": 1,
-    "002369": 1,
-    "002370": 1,
-    "002371": 1,
-    "002372": 1,
-    "002373": 1,
-    "002374": 1,
-    "002375": 1,
-    "002376": 1,
-    "002377": 1
+    "002378": 1,
+    "002379": 1,
+    "002380": 1,
+    "002381": 1,
+    "002382": 1,
+    "002383": 1,
+    "002384": 1,
+    "002385": 1,
+    "002386": 1,
+    "002387": 1,
+    "002388": 1,
+    "002389": 1,
+    "002390": 1,
+    "002391": 1,
+    "002392": 1,
+    "002393": 1,
+    "002394": 1,
+    "002395": 1,
+    "002396": 1,
+    "002397": 1,
+    "002398": 1,
+    "002399": 1,
+    "002400": 1,
+    "002401": 1,
+    "002402": 1,
+    "002403": 1,
+    "002404": 1,
+    "002405": 1,
+    "002406": 1,
+    "002407": 1,
+    "002408": 1,
+    "002409": 1,
+    "002410": 1,
+    "002411": 1,
+    "002412": 1,
+    "002413": 1,
+    "002414": 1,
+    "002415": 1,
+    "002416": 1,
+    "002417": 1,
+    "002418": 1,
+    "002419": 1,
+    "002420": 1,
+    "002421": 1,
+    "002422": 1,
+    "002423": 1,
+    "002424": 1,
+    "002425": 1,
+    "002426": 1,
+    "002427": 1,
+    "002428": 1,
+    "002429": 1,
+    "002430": 1,
+    "002431": 1,
+    "002432": 1,
+    "002433": 1,
+    "002434": 1,
+    "002435": 1,
+    "002436": 1,
+    "002437": 1,
+    "002438": 1,
+    "002439": 1,
+    "002440": 1,
+    "002441": 1,
+    "002442": 1,
+    "002443": 1,
+    "002444": 1,
+    "002445": 1,
+    "002446": 1,
+    "002447": 1,
+    "002448": 1,
+    "002449": 1,
+    "002450": 1,
+    "002451": 1,
+    "002452": 1,
+    "002453": 1,
+    "002454": 1,
+    "002455": 1,
+    "002456": 1,
+    "002457": 1,
+    "002458": 1,
+    "002459": 1,
+    "002460": 1,
+    "002461": 1,
+    "002462": 1,
+    "002463": 1,
+    "002464": 1,
+    "002465": 1,
+    "002466": 1,
+    "002467": 1,
+    "002468": 1,
+    "002469": 1,
+    "002470": 1,
+    "002471": 1,
+    "002472": 1,
+    "002473": 1,
+    "002474": 1,
+    "002475": 1,
+    "002476": 1,
+    "002477": 1
   },
   "engine_counts": {},
   "duration_ms_by_code": {},
@@ -136,7 +136,7 @@
   "p50_duration_ms": null,
   "p95_duration_ms": null,
   "failure_reason_counts": {
-    "empty_klines": 65
+    "empty_klines": 61
   },
   "region_counts": {},
   "retriable_failure_counts": {},
@@ -146,229 +146,55 @@
   ],
   "status": "failed_success_rate",
   "files": {
-    "002278": {
+    "002378": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002278.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002278.json",
-      "secid": "0.002278",
-      "points": 3815,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002378.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002378.json",
+      "secid": "0.002378",
+      "points": 3846,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002279": {
-      "status": "failed",
-      "secid": "0.002279",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002280": {
-      "status": "failed",
-      "secid": "0.002280",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002281": {
+    "002379": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002281.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002281.json",
-      "secid": "0.002281",
-      "points": 3961,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002379.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002379.json",
+      "secid": "0.002379",
+      "points": 3519,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002282": {
+    "002380": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002282.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002282.json",
-      "secid": "0.002282",
-      "points": 3849,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002283": {
-      "status": "failed",
-      "secid": "0.002283",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002284": {
-      "status": "failed",
-      "secid": "0.002284",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002285": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002285.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002285.json",
-      "secid": "0.002285",
-      "points": 3982,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002286": {
-      "status": "failed",
-      "secid": "0.002286",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002287": {
-      "status": "failed",
-      "secid": "0.002287",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002288": {
-      "status": "failed",
-      "secid": "0.002288",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002289": {
-      "status": "failed",
-      "secid": "0.002289",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002290": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002290.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002290.json",
-      "secid": "0.002290",
-      "points": 3870,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002291": {
-      "status": "failed",
-      "secid": "0.002291",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002292": {
-      "status": "failed",
-      "secid": "0.002292",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002293": {
-      "status": "failed",
-      "secid": "0.002293",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002294": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002294.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002294.json",
-      "secid": "0.002294",
-      "points": 4015,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002295": {
-      "status": "failed",
-      "secid": "0.002295",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002296": {
-      "status": "failed",
-      "secid": "0.002296",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002297": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002297.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002297.json",
-      "secid": "0.002297",
-      "points": 3753,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002298": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002298.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002298.json",
-      "secid": "0.002298",
-      "points": 3844,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002299": {
-      "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002299.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002299.json",
-      "secid": "0.002299",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002380.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002380.json",
+      "secid": "0.002380",
       "points": 3863,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002300": {
+    "002381": {
+      "status": "failed",
+      "secid": "0.002381",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002382": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002300.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002300.json",
-      "secid": "0.002300",
-      "points": 3980,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002382.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002382.json",
+      "secid": "0.002382",
+      "points": 3682,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002301": {
+    "002383": {
       "status": "failed",
-      "secid": "0.002301",
+      "secid": "0.002383",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -376,68 +202,18 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002302": {
-      "status": "failed",
-      "secid": "0.002302",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002303": {
-      "status": "failed",
-      "secid": "0.002303",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002304": {
-      "status": "failed",
-      "secid": "0.002304",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002305": {
-      "status": "failed",
-      "secid": "0.002305",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002306": {
-      "status": "failed",
-      "secid": "0.002306",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002307": {
+    "002384": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002307.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002307.json",
-      "secid": "0.002307",
-      "points": 3948,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002384.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002384.json",
+      "secid": "0.002384",
+      "points": 3663,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002308": {
+    "002385": {
       "status": "failed",
-      "secid": "0.002308",
+      "secid": "0.002385",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -445,36 +221,66 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002309": {
+    "002386": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002309.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002309.json",
-      "secid": "0.002309",
-      "points": 3722,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002386.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002386.json",
+      "secid": "0.002386",
+      "points": 3832,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002310": {
+    "002387": {
+      "status": "failed",
+      "secid": "0.002387",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002388": {
+      "status": "failed",
+      "secid": "0.002388",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002389": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002310.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002310.json",
-      "secid": "0.002310",
-      "points": 3730,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002389.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002389.json",
+      "secid": "0.002389",
+      "points": 3591,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002311": {
+    "002390": {
+      "status": "failed",
+      "secid": "0.002390",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002391": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002311.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002311.json",
-      "secid": "0.002311",
-      "points": 3938,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002391.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002391.json",
+      "secid": "0.002391",
+      "points": 3861,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002312": {
+    "002392": {
       "status": "failed",
-      "secid": "0.002312",
+      "secid": "0.002392",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -482,48 +288,18 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002313": {
-      "status": "failed",
-      "secid": "0.002313",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002314": {
-      "status": "failed",
-      "secid": "0.002314",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002315": {
-      "status": "failed",
-      "secid": "0.002315",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002316": {
+    "002393": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002316.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002316.json",
-      "secid": "0.002316",
-      "points": 3502,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002393.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002393.json",
+      "secid": "0.002393",
+      "points": 3861,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002317": {
+    "002394": {
       "status": "failed",
-      "secid": "0.002317",
+      "secid": "0.002394",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -531,9 +307,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002318": {
+    "002395": {
       "status": "failed",
-      "secid": "0.002318",
+      "secid": "0.002395",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -541,57 +317,107 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002319": {
-      "status": "failed",
-      "secid": "0.002319",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002320": {
-      "status": "failed",
-      "secid": "0.002320",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002321": {
-      "status": "failed",
-      "secid": "0.002321",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002322": {
+    "002396": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002322.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002322.json",
-      "secid": "0.002322",
-      "points": 3812,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002396.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002396.json",
+      "secid": "0.002396",
+      "points": 3618,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002323": {
+    "002397": {
+      "status": "failed",
+      "secid": "0.002397",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002398": {
+      "status": "failed",
+      "secid": "0.002398",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002399": {
+      "status": "failed",
+      "secid": "0.002399",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002400": {
+      "status": "failed",
+      "secid": "0.002400",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002401": {
+      "status": "failed",
+      "secid": "0.002401",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002402": {
+      "status": "failed",
+      "secid": "0.002402",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002403": {
+      "status": "failed",
+      "secid": "0.002403",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002404": {
+      "status": "failed",
+      "secid": "0.002404",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002405": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002323.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002323.json",
-      "secid": "0.002323",
-      "points": 3490,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002405.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002405.json",
+      "secid": "0.002405",
+      "points": 3707,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002324": {
+    "002406": {
       "status": "failed",
-      "secid": "0.002324",
+      "secid": "0.002406",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -599,9 +425,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002325": {
+    "002407": {
       "status": "failed",
-      "secid": "0.002325",
+      "secid": "0.002407",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -609,38 +435,18 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002326": {
-      "status": "failed",
-      "secid": "0.002326",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002327": {
-      "status": "failed",
-      "secid": "0.002327",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002328": {
+    "002408": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002328.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002328.json",
-      "secid": "0.002328",
-      "points": 3871,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002408.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002408.json",
+      "secid": "0.002408",
+      "points": 3672,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002329": {
+    "002409": {
       "status": "failed",
-      "secid": "0.002329",
+      "secid": "0.002409",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -648,9 +454,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002330": {
+    "002410": {
       "status": "failed",
-      "secid": "0.002330",
+      "secid": "0.002410",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -658,9 +464,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002331": {
+    "002411": {
       "status": "failed",
-      "secid": "0.002331",
+      "secid": "0.002411",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -668,9 +474,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002332": {
+    "002412": {
       "status": "failed",
-      "secid": "0.002332",
+      "secid": "0.002412",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -678,163 +484,173 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002333": {
+    "002413": {
+      "status": "failed",
+      "secid": "0.002413",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002414": {
+      "status": "failed",
+      "secid": "0.002414",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002415": {
+      "status": "failed",
+      "secid": "0.002415",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002416": {
+      "status": "failed",
+      "secid": "0.002416",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002417": {
+      "status": "failed",
+      "secid": "0.002417",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002418": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002333.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002333.json",
-      "secid": "0.002333",
-      "points": 3897,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002418.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002418.json",
+      "secid": "0.002418",
+      "points": 3620,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002334": {
+    "002419": {
+      "status": "failed",
+      "secid": "0.002419",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002420": {
+      "status": "failed",
+      "secid": "0.002420",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002421": {
+      "status": "failed",
+      "secid": "0.002421",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002422": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002334.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002334.json",
-      "secid": "0.002334",
-      "points": 3899,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002422.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002422.json",
+      "secid": "0.002422",
+      "points": 3816,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002335": {
+    "002423": {
+      "status": "failed",
+      "secid": "0.002423",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002424": {
+      "status": "failed",
+      "secid": "0.002424",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002425": {
+      "status": "failed",
+      "secid": "0.002425",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002426": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002335.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002335.json",
-      "secid": "0.002335",
-      "points": 3808,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002426.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002426.json",
+      "secid": "0.002426",
+      "points": 3503,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002336": {
-      "status": "failed",
-      "secid": "0.002336",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002337": {
-      "status": "failed",
-      "secid": "0.002337",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002338": {
-      "status": "failed",
-      "secid": "0.002338",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002339": {
+    "002427": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002339.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002339.json",
-      "secid": "0.002339",
-      "points": 3864,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002427.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002427.json",
+      "secid": "0.002427",
+      "points": 3627,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002340": {
-      "status": "failed",
-      "secid": "0.002340",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002341": {
-      "status": "failed",
-      "secid": "0.002341",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002342": {
+    "002428": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002342.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002342.json",
-      "secid": "0.002342",
-      "points": 3890,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002428.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002428.json",
+      "secid": "0.002428",
+      "points": 3821,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002343": {
-      "status": "failed",
-      "secid": "0.002343",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002344": {
-      "status": "failed",
-      "secid": "0.002344",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002345": {
-      "status": "failed",
-      "secid": "0.002345",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002346": {
-      "status": "failed",
-      "secid": "0.002346",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002347": {
-      "status": "failed",
-      "secid": "0.002347",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002348": {
+    "002429": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002348.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002348.json",
-      "secid": "0.002348",
-      "points": 3767,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002429.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002429.json",
+      "secid": "0.002429",
+      "points": 3733,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002349": {
+    "002430": {
       "status": "failed",
-      "secid": "0.002349",
+      "secid": "0.002430",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -842,18 +658,28 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002350": {
+    "002431": {
+      "status": "failed",
+      "secid": "0.002431",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002432": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002350.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002350.json",
-      "secid": "0.002350",
-      "points": 3868,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002432.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002432.json",
+      "secid": "0.002432",
+      "points": 3793,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002351": {
+    "002433": {
       "status": "failed",
-      "secid": "0.002351",
+      "secid": "0.002433",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -861,9 +687,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002352": {
+    "002434": {
       "status": "failed",
-      "secid": "0.002352",
+      "secid": "0.002434",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -871,92 +697,182 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002353": {
+    "002435": {
+      "status": "failed",
+      "secid": "0.002435",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002436": {
+      "status": "failed",
+      "secid": "0.002436",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002437": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002353.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002353.json",
-      "secid": "0.002353",
-      "points": 3801,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002437.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002437.json",
+      "secid": "0.002437",
+      "points": 3561,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002354": {
-      "status": "failed",
-      "secid": "0.002354",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002355": {
+    "002438": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002355.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002355.json",
-      "secid": "0.002355",
-      "points": 3783,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002438.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002438.json",
+      "secid": "0.002438",
+      "points": 3698,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002356": {
+    "002439": {
+      "status": "failed",
+      "secid": "0.002439",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002440": {
+      "status": "failed",
+      "secid": "0.002440",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002441": {
+      "status": "failed",
+      "secid": "0.002441",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002442": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002356.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002356.json",
-      "secid": "0.002356",
-      "points": 3603,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002442.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002442.json",
+      "secid": "0.002442",
+      "points": 3514,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002357": {
+    "002443": {
+      "status": "failed",
+      "secid": "0.002443",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002444": {
+      "status": "failed",
+      "secid": "0.002444",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002445": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002357.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002357.json",
-      "secid": "0.002357",
-      "points": 3705,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002445.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002445.json",
+      "secid": "0.002445",
+      "points": 3474,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002358": {
+    "002446": {
+      "status": "failed",
+      "secid": "0.002446",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002447": {
+      "status": "failed",
+      "secid": "0.002447",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002448": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002358.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002358.json",
-      "secid": "0.002358",
-      "points": 3691,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002448.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002448.json",
+      "secid": "0.002448",
+      "points": 3797,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002359": {
-      "status": "failed",
-      "secid": "0.002359",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002360": {
+    "002449": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002360.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002360.json",
-      "secid": "0.002360",
-      "points": 3798,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002449.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002449.json",
+      "secid": "0.002449",
+      "points": 3754,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002361": {
+    "002450": {
+      "status": "failed",
+      "secid": "0.002450",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002451": {
+      "status": "failed",
+      "secid": "0.002451",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002452": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002361.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002361.json",
-      "secid": "0.002361",
-      "points": 3803,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002452.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002452.json",
+      "secid": "0.002452",
+      "points": 3652,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002362": {
+    "002453": {
       "status": "failed",
-      "secid": "0.002362",
+      "secid": "0.002453",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -964,9 +880,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002363": {
+    "002454": {
       "status": "failed",
-      "secid": "0.002363",
+      "secid": "0.002454",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -974,37 +890,27 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002364": {
+    "002455": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002364.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002364.json",
-      "secid": "0.002364",
-      "points": 3836,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002455.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002455.json",
+      "secid": "0.002455",
+      "points": 3750,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002365": {
-      "status": "failed",
-      "secid": "0.002365",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002366": {
+    "002456": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002366.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002366.json",
-      "secid": "0.002366",
-      "points": 3685,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002456.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002456.json",
+      "secid": "0.002456",
+      "points": 3715,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002367": {
+    "002457": {
       "status": "failed",
-      "secid": "0.002367",
+      "secid": "0.002457",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1012,38 +918,45 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002368": {
-      "status": "failed",
-      "secid": "0.002368",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002369": {
-      "status": "failed",
-      "secid": "0.002369",
-      "error": "kline payload is invalid: empty_klines",
-      "error_class": "empty_klines",
-      "retriable": false,
-      "deferred": true,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "002370": {
+    "002458": {
       "status": "migrated_existing",
-      "file": "/home/runner/work/x/x/data/kline/daily/002/002370.json",
-      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002370.json",
-      "secid": "0.002370",
-      "points": 3758,
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002458.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002458.json",
+      "secid": "0.002458",
+      "points": 3678,
       "attempts": 1,
       "last_attempt": 0
     },
-    "002371": {
+    "002459": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002459.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002459.json",
+      "secid": "0.002459",
+      "points": 3701,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002460": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002460.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002460.json",
+      "secid": "0.002460",
+      "points": 3709,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002461": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002461.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002461.json",
+      "secid": "0.002461",
+      "points": 3734,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002462": {
       "status": "failed",
-      "secid": "0.002371",
+      "secid": "0.002462",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1051,9 +964,18 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002372": {
+    "002463": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002463.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002463.json",
+      "secid": "0.002463",
+      "points": 3777,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002464": {
       "status": "failed",
-      "secid": "0.002372",
+      "secid": "0.002464",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1061,9 +983,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002373": {
+    "002465": {
       "status": "failed",
-      "secid": "0.002373",
+      "secid": "0.002465",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1071,9 +993,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002374": {
+    "002466": {
       "status": "failed",
-      "secid": "0.002374",
+      "secid": "0.002466",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1081,9 +1003,54 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002375": {
+    "002467": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002467.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002467.json",
+      "secid": "0.002467",
+      "points": 3703,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002468": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002468.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002468.json",
+      "secid": "0.002468",
+      "points": 3638,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002469": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002469.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002469.json",
+      "secid": "0.002469",
+      "points": 3675,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002470": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002470.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002470.json",
+      "secid": "0.002470",
+      "points": 3658,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002471": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002471.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002471.json",
+      "secid": "0.002471",
+      "points": 3657,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002472": {
       "status": "failed",
-      "secid": "0.002375",
+      "secid": "0.002472",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1091,9 +1058,9 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002376": {
+    "002473": {
       "status": "failed",
-      "secid": "0.002376",
+      "secid": "0.002473",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
@@ -1101,9 +1068,38 @@
       "attempts": 1,
       "last_attempt": 0
     },
-    "002377": {
+    "002474": {
       "status": "failed",
-      "secid": "0.002377",
+      "secid": "0.002474",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002475": {
+      "status": "migrated_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/002/002475.json",
+      "legacy_file": "/home/runner/work/x/x/data/kline/daily/002475.json",
+      "secid": "0.002475",
+      "points": 3738,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002476": {
+      "status": "failed",
+      "secid": "0.002476",
+      "error": "kline payload is invalid: empty_klines",
+      "error_class": "empty_klines",
+      "retriable": false,
+      "deferred": true,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "002477": {
+      "status": "failed",
+      "secid": "0.002477",
       "error": "kline payload is invalid: empty_klines",
       "error_class": "empty_klines",
       "retriable": false,
