@@ -1,0 +1,16 @@
+{
+  "run_id": "20260701T100144Z_daily",
+  "target": "/home/runner/work/x/x/data/kline/daily",
+  "period": "daily",
+  "total_files": 1424,
+  "issue_count": 1,
+  "status": "failed",
+  "issues": [
+    {
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000508.json",
+      "issue": "empty_klines",
+      "code": "000508",
+      "period": "daily"
+    }
+  ]
+}
