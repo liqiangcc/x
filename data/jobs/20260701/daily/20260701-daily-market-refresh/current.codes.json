@@ -2,7 +2,7 @@
   "job_id": "20260701-daily-market-refresh",
   "date": "20260701",
   "period": "daily",
-  "chain_depth": 25,
+  "chain_depth": 26,
   "batch_size": 300,
   "selection_source": "failed",
   "codes": [
