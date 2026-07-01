@@ -45,6 +45,16 @@ const HUAWEICLOUD_TARGETS = {
     function_urn: "urn:fss:cn-east-3:project:function:default:x-kline-target",
   },
 };
+const HUAWEICLOUD_MULTI_REGION_TARGETS = {
+  "cn-east-3": {
+    project_id: "project-east",
+    function_urn: "urn:fss:cn-east-3:project-east:function:default:x-kline-target",
+  },
+  "cn-north-4": {
+    project_id: "project-north",
+    function_urn: "urn:fss:cn-north-4:project-north:function:default:x-kline-target",
+  },
+};
 
 function huaweiCloudFetch(assertUrl) {
   return async (url, request) => {
@@ -121,6 +131,25 @@ test("normalizeLatencyOptions keeps both as AWS only and expands all to Huawei C
   assert.deepEqual(allOptions.huaweiCloudRegions, ["cn-east-3"]);
 });
 
+test("normalizeLatencyOptions reports missing Huawei Cloud targets without throwing", () => {
+  const options = normalizeLatencyOptions({
+    engine: "huaweicloud",
+    env: {},
+  });
+
+  assert.deepEqual(options.huaweiCloudRegions, ["unconfigured"]);
+  assert.match(options.huaweiCloudTargetLoadError, /Huawei Cloud targets are required/);
+});
+
+test("normalizeLatencyOptions defaults Huawei Cloud regions to all deployed targets", () => {
+  const options = normalizeLatencyOptions({
+    engine: "huaweicloud",
+    huaweicloudTargetsData: HUAWEICLOUD_MULTI_REGION_TARGETS,
+  });
+
+  assert.deepEqual(options.huaweiCloudRegions, ["cn-east-3", "cn-north-4"]);
+});
+
 test("normalizeLatencyOptions expands aws all from config and keeps router all", () => {
   const awsOptions = normalizeLatencyOptions(
     { engine: "aws", region: "all" },
@@ -191,6 +220,47 @@ test("runLatencyBenchmark records Huawei Cloud FunctionGraph region summaries", 
   assert.equal(report.results[0].request_id, "hwc-request-1");
 });
 
+test("runLatencyBenchmark reports missing Huawei Cloud targets as a result row", async () => {
+  const options = normalizeLatencyOptions({
+    attempts: "1",
+    engine: "huaweicloud",
+    env: {},
+    secid: "1.600519",
+  });
+  const report = await runLatencyBenchmark(options, {
+    env: {},
+  });
+
+  assert.equal(report.results.length, 1);
+  assert.equal(report.results[0].region, "unconfigured");
+  assert.equal(report.results[0].ok, false);
+  assert.equal(report.results[0].error_class, "missing_huaweicloud_targets");
+  assert.equal(report.summary.huaweicloud.regions.unconfigured.failures, 1);
+});
+
+test("runLatencyBenchmark reports empty Huawei Cloud targets as a result row", async () => {
+  const options = normalizeLatencyOptions({
+    attempts: "1",
+    engine: "huaweicloud",
+    env: {
+      HUAWEICLOUD_TARGETS_JSON: "{}",
+    },
+    secid: "1.600519",
+  });
+  const report = await runLatencyBenchmark(options, {
+    env: {
+      HUAWEICLOUD_ACCESS_KEY: "ak",
+      HUAWEICLOUD_SECRET_KEY: "sk",
+    },
+  });
+
+  assert.equal(report.results.length, 1);
+  assert.equal(report.results[0].region, "unconfigured");
+  assert.equal(report.results[0].ok, false);
+  assert.equal(report.results[0].error_class, "empty_huaweicloud_targets");
+  assert.equal(report.summary.huaweicloud.regions.unconfigured.failures, 1);
+});
+
 test("runLatencyBenchmark reports missing Huawei Cloud target regions", async () => {
   const options = normalizeLatencyOptions({
     attempts: "1",
@@ -211,6 +281,32 @@ test("runLatencyBenchmark reports missing Huawei Cloud target regions", async ()
   assert.equal(report.results[0].ok, false);
   assert.equal(report.results[0].error_class, "missing_huaweicloud_target");
   assert.equal(report.summary.huaweicloud.regions["cn-north-4"].failures, 1);
+});
+
+test("runLatencyBenchmark all keeps AWS and router results when Huawei Cloud targets are missing", async () => {
+  const options = normalizeLatencyOptions(
+    {
+      attempts: "1",
+      engine: "all",
+      env: {},
+      region: "ap-northeast-1",
+      secid: "1.600519",
+    },
+    { aws_regions: ["ap-northeast-1"] }
+  );
+  const report = await runLatencyBenchmark(options, {
+    env: {
+      AWS_ROUTER_URL: "https://router.example",
+      AWS_ROUTER_TOKEN: "secret",
+    },
+    fetchImpl: routerProbeFetch(["ap-northeast-1"]),
+    lambdaClientFactory,
+  });
+
+  assert.equal(report.summary.aws.regions["ap-northeast-1"].successes, 1);
+  assert.equal(report.summary["aws-router"].regions["ap-northeast-1"].successes, 1);
+  assert.equal(report.summary.huaweicloud.regions["ap-northeast-1"].failures, 1);
+  assert.equal(report.results.find((item) => item.engine === "huaweicloud").error_class, "missing_huaweicloud_targets");
 });
 
 test("runLatencyBenchmark expands router probe all into per-region rows", async () => {

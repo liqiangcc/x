@@ -90,7 +90,7 @@ function resolveRouterRegions(value) {
 function resolveHuaweiCloudRegions(value, targets) {
   const targetRegions = Object.keys(targets ?? {}).sort();
   if (!value || value === "all") {
-    return targetRegions;
+    return targetRegions.length > 0 ? targetRegions : ["unconfigured"];
   }
   const regions = parseRegionList(value);
   if (regions.length === 0) {
@@ -109,6 +109,23 @@ function shouldRunAwsRouter(engine) {
 
 function shouldRunHuaweiCloud(engine) {
   return engine === "huaweicloud" || engine === "all";
+}
+
+function resolveHuaweiCloudTargets(rawOptions, config) {
+  try {
+    return {
+      error: null,
+      targets: rawOptions.huaweicloudTargetsData ?? config.huaweicloud_targets ?? loadHuaweiCloudTargets({
+        env: rawOptions.env ?? process.env,
+        targetsFile: rawOptions.huaweicloudTargets ?? null,
+      }),
+    };
+  } catch (error) {
+    return {
+      error: error?.message ?? String(error),
+      targets: {},
+    };
+  }
 }
 
 function normalizeLatencyOptions(rawOptions = {}, config = {}) {
@@ -131,12 +148,10 @@ function normalizeLatencyOptions(rawOptions = {}, config = {}) {
   const regionAlias = rawOptions.region ?? null;
   const awsRegionValue = rawOptions.awsRegion ?? regionAlias ?? null;
   const targetRegionValue = rawOptions.targetRegion ?? regionAlias ?? "all";
-  const huaweiCloudTargets = shouldRunHuaweiCloud(engine)
-    ? (rawOptions.huaweicloudTargetsData ?? config.huaweicloud_targets ?? loadHuaweiCloudTargets({
-      env: rawOptions.env ?? process.env,
-      targetsFile: rawOptions.huaweicloudTargets ?? null,
-    }))
-    : {};
+  const huaweiCloudTargetsResult = shouldRunHuaweiCloud(engine)
+    ? resolveHuaweiCloudTargets(rawOptions, config)
+    : { error: null, targets: {} };
+  const huaweiCloudTargets = huaweiCloudTargetsResult.targets;
   const huaweiCloudRegionValue = rawOptions.huaweicloudRegion ?? regionAlias ?? "all";
   const awsRegions = shouldRunAws(engine)
     ? resolveAwsRegions(awsRegionValue, config.aws_regions)
@@ -175,6 +190,7 @@ function normalizeLatencyOptions(rawOptions = {}, config = {}) {
     huaweiCloudAccessKeyEnv: config.huaweicloud_access_key_env ?? HUAWEICLOUD_ACCESS_KEY_ENV,
     huaweiCloudRegions,
     huaweiCloudSecretKeyEnv: config.huaweicloud_secret_key_env ?? HUAWEICLOUD_SECRET_KEY_ENV,
+    huaweiCloudTargetLoadError: huaweiCloudTargetsResult.error,
     huaweiCloudTargets,
   };
 }
@@ -437,6 +453,30 @@ async function measureRouterKline(options, region, attempt, deps = {}) {
 
 async function measureHuaweiCloudRegion(options, region, attempt, deps = {}) {
   const startedAt = nowMs();
+  if (options.huaweiCloudTargetLoadError) {
+    return {
+      attempt,
+      client_duration_ms: nowMs() - startedAt,
+      engine: "huaweicloud",
+      error: options.huaweiCloudTargetLoadError,
+      error_class: "missing_huaweicloud_targets",
+      ok: false,
+      region,
+    };
+  }
+
+  if (Object.keys(options.huaweiCloudTargets ?? {}).length === 0) {
+    return {
+      attempt,
+      client_duration_ms: nowMs() - startedAt,
+      engine: "huaweicloud",
+      error: "Huawei Cloud targets JSON did not contain any deployed regions.",
+      error_class: "empty_huaweicloud_targets",
+      ok: false,
+      region,
+    };
+  }
+
   const target = normalizeHuaweiCloudTarget(region, options.huaweiCloudTargets[region]);
   if (!target.ok) {
     return {
