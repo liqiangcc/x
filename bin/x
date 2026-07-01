@@ -1036,7 +1036,7 @@ function parseNonNegativeIntegerOption(value, fallback) {
 }
 
 function defaultDailyBatchSize(period) {
-  return 100;
+  return 300;
 }
 
 async function loadCodesJson(inputDir) {
@@ -1096,6 +1096,7 @@ async function prepareDailyJobProgress(options, { date, inputDir, preselectFaile
 
   if (existingProgress) {
     progress = normalizeProgress(existingProgress);
+    progress.batch_size = batchSize;
     progress.chain_depth = chainDepth;
     if (options.maxChainDepth) {
       progress.max_chain_depth = parsePositiveIntegerOption(options.maxChainDepth, progress.max_chain_depth);

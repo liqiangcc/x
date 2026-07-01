@@ -39,7 +39,7 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "--retry-concurrency",
     "1",
     "--batch-size",
-    "100",
+    "300",
     "--min-success-rate",
     "0.95",
     "--latest",
@@ -76,7 +76,7 @@ test("buildDailyArgs forwards explicit workflow inputs", () => {
       "--retry-concurrency",
       "1",
       "--batch-size",
-      "100",
+      "300",
       "--min-success-rate",
       "0.95",
       "--force",
@@ -118,7 +118,7 @@ test("buildDailyArgs uses the same stable daily and yearly AWS defaults", () => 
   assert.equal(args[args.indexOf("--concurrency") + 1], "4");
   assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");
   assert.equal(args[args.indexOf("--retry-concurrency") + 1], "1");
-  assert.equal(args[args.indexOf("--batch-size") + 1], "100");
+  assert.equal(args[args.indexOf("--batch-size") + 1], "300");
 });
 
 test("buildDailyArgs gives aws-router the same remote retry defaults", () => {

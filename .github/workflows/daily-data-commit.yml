@@ -20,7 +20,7 @@ on:
         required: false
         default: ""
       batch_size:
-        description: "每轮处理股票数；留空默认 100。"
+        description: "每轮处理股票数；留空默认 300。"
         required: false
         default: ""
       concurrency:

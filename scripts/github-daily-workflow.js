@@ -42,7 +42,7 @@ function buildDailyArgs(env = process.env) {
     isRemoteKlineEngine(engine) ? (period === "yearly" ? "5" : "3") : "0"
   );
   const retryConcurrency = valueOrDefault(env.RETRY_CONCURRENCY_INPUT, "1");
-  const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, "100");
+  const batchSize = valueOrDefault(env.BATCH_SIZE_INPUT, "300");
   const minSuccessRate = valueOrDefault(env.MIN_SUCCESS_RATE_INPUT, "0.95");
   const date = String(env.DATE_INPUT ?? "").trim();
   const jobId = String(env.JOB_ID_INPUT ?? "").trim();
