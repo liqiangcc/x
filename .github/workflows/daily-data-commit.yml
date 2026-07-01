@@ -58,9 +58,9 @@ on:
           - market
           - pool
       engine:
-        description: "抓取引擎：默认 aws。"
+        description: "抓取引擎：默认 aws-router；aws/auto 为旧 Lambda 直连回退。"
         required: false
-        default: "aws"
+        default: "aws-router"
         type: choice
         options:
           - auto
@@ -135,7 +135,7 @@ jobs:
         run: npm ci
 
       - name: Configure AWS credentials
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.engine == '' || github.event.inputs.engine == 'aws' }}
+        if: ${{ github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'auto' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -143,7 +143,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
 
       - name: AWS kline preflight
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.engine == '' || github.event.inputs.engine == 'aws' }}
+        if: ${{ github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'auto' }}
         run: node bin/x kline fetch 600519 --period daily --engine aws > /tmp/kline-aws-preflight.json
 
       - name: Run daily data workflow

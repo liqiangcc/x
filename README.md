@@ -50,7 +50,7 @@ bin/x daily --latest --limit 10 --period daily
 
 `daily` 默认使用沪深 A 股全市场 universe；不传 `--limit` 时会同步全市场股票 kline。需要回到旧的热点 pool 输入时，显式加 `--universe pool`。
 
-GitHub Action 以稳定优先：默认 kline 并发为 1，按缺失文件分批处理；已有 kline 文件会跳过，手动传 `force=true` 才会覆盖刷新。
+GitHub Action 以稳定优先：默认使用 `aws-router`、kline 并发为 4，按缺失文件分批处理；已有 kline 文件会跳过，手动传 `force=true` 才会覆盖刷新。
 
 指定日期：
 
@@ -114,7 +114,7 @@ AWS Router 部署和测试：
 ```bash
 scripts/deploy-aws-router.sh \
   --router-region ap-northeast-1 \
-  --target-regions ap-northeast-1,us-east-1,ap-northeast-2,ap-southeast-1,ap-southeast-2,us-west-2 \
+  --target-regions ap-northeast-1,ap-northeast-2,ap-southeast-1,us-west-2 \
   --target-name kline-target \
   --router-name kline-router
 
@@ -131,7 +131,19 @@ AWS_ROUTER_URL='...' AWS_ROUTER_TOKEN='...' \
   bin/x aws latency --engine aws-router --region all --attempts 1 --json
 ```
 
-`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 同时作用于 `aws` 和 `aws-router`，也可分别用 `--aws-region`、`--target-region` 覆盖。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。部署脚本会输出 GitHub secret 设置命令；只写入 `AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`，不要提交真实 URL、token 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为。
+`aws latency` 用于本地和 GitHub Action 对比 region 延迟；`--region r1,r2` 同时作用于 `aws` 和 `aws-router`，也可分别用 `--aws-region`、`--target-region` 覆盖。`aws-router` 只需要 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN`，不需要在 GitHub Actions 运行时配置 AWS access key。部署脚本会输出 GitHub secret 设置命令；只写入 `AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`，不要提交真实 URL、token 或 zip 包。`auto` engine 仍保持原有 `aws -> local` 行为；旧 `aws` engine 仍可手动选择作为直连 Lambda 回退。
+
+Eastmoney 超时调大只作为实验配置执行，不作为默认部署值。验证命令：
+
+```bash
+scripts/deploy-aws-router.sh \
+  --target-regions ap-northeast-1,ap-northeast-2,ap-southeast-1,us-west-2 \
+  --target-timeout 30 \
+  --eastmoney-timeout-ms 8000 \
+  --eastmoney-retries 3 \
+  --router-target-timeout-ms 27000 \
+  --router-max-fallbacks 4
+```
 
 API：
 
@@ -191,19 +203,20 @@ bin/x kline validate data/kline --period daily --json
 
 ## GitHub Actions AWS 配置
 
-Daily Action 使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
+Daily Action 默认使用 `aws-router`，只依赖 `AWS_ROUTER_URL` 和 `AWS_ROUTER_TOKEN` secrets；手动选择 `aws` 或 `auto` 时才使用 GitHub Secrets 中维护的 AWS 长期访问密钥，不再依赖 OIDC role。
 
-默认配置不传 `limit`，会先确保 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单存在，再通过 AWS 同步全部 kline。同一交易日已有完整 market universe 时会复用；手动触发时可用 `force_universe=true` 强制刷新，用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
+默认配置不传 `limit`，会先确保 `data/universe/<YYYYMMDD>/codes.json` 的沪深 A 股全市场股票清单存在，再通过 `aws-router` 同步全部 kline。同一交易日已有完整 market universe 时会复用；手动触发时可用 `force_universe=true` 强制刷新，用 `limit=10` 做小范围验证，或选择 `universe=pool` 回到旧的 pool 输入。
 Action job 显式设置 `timeout-minutes: 360`，这是 GitHub-hosted runner 单 job 的 6 小时上限。默认不强制刷新已有 kline，而是按下一批缺失代码续跑。Latency Benchmark Action 不写数据、不提交，只上传 `latency-results.json` artifact。
 
-- 默认 `aws` engine 必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
-- 手动选择 `aws-router` 时必需 secrets：`AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`
+- 默认 `aws-router` engine 必需 secrets：`AWS_ROUTER_URL`、`AWS_ROUTER_TOKEN`
+- 手动选择 `aws` 或 `auto` 时必需 secrets：`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`
 - 可选 variable：`AWS_REGION`，默认 `ap-northeast-1`
 - IAM 最小权限：允许调用 `config/kline.json` 中配置的 Lambda，默认函数名 `kline`
 - 批量 AWS kline 会按代码索引轮询起始 region，并在失败时继续 fallback 到其余 region。
 - 批量 `aws-router` kline 会通过 Router Function URL 访问白名单 Target Lambda，并记录 `region_counts`、`fallback_count` 和 duration 指标。
 - 批量失败后会对 transient 网络错误串行重试；仍失败时可用 `bin/x kline retry <summary.json|failures.json>` 只重跑失败项。
-- 默认 Action 参数：daily `batch_size=500`、yearly `batch_size=200`、`concurrency=1`、`retry_concurrency=1`；yearly 建议手动分批运行。
+- 默认 Action 参数：`batch_size=100`、`concurrency=4`、daily `retry_attempts=3`、yearly `retry_attempts=5`、`retry_concurrency=1`；yearly 建议手动分批运行。
+- 默认 Router target region：`ap-northeast-1`, `ap-northeast-2`, `ap-southeast-1`, `us-west-2`。
 - 当前可轮询 region：`ap-northeast-1`, `ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-southeast-1`, `ap-southeast-2`, `ca-central-1`, `eu-central-1`, `eu-north-1`, `eu-west-1`, `eu-west-2`, `eu-west-3`, `sa-east-1`, `us-east-1`, `us-east-2`, `us-west-1`, `us-west-2`。
 
 不要把验证生成的数据、报告或运行记录混入代码提交，除非本次提交目标就是数据刷新。

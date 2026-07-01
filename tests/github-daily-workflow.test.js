@@ -20,7 +20,7 @@ test("buildDailyArgs uses safe workflow defaults", () => {
     "--period",
     "daily",
     "--engine",
-    "aws",
+    "aws-router",
     "--universe",
     "market",
     "--job-mode",
@@ -117,7 +117,7 @@ test("buildDailyArgs uses the same stable daily and yearly AWS defaults", () => 
 });
 
 test("buildDailyArgs gives aws-router the same remote retry defaults", () => {
-  const args = buildDailyArgs({ PERIOD_INPUT: "yearly", ENGINE_INPUT: "aws-router" });
+  const args = buildDailyArgs({ PERIOD_INPUT: "yearly" });
 
   assert.equal(args[args.indexOf("--engine") + 1], "aws-router");
   assert.equal(args[args.indexOf("--retry-attempts") + 1], "5");

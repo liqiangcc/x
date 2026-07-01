@@ -4,14 +4,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE="default"
 ROUTER_REGION="ap-northeast-1"
-TARGET_REGIONS="ap-northeast-1,us-east-1,ap-northeast-2,ap-southeast-1,ap-southeast-2,us-west-2"
+TARGET_REGIONS="ap-northeast-1,ap-northeast-2,ap-southeast-1,us-west-2"
 TARGET_NAME="kline-target"
 ROUTER_NAME="kline-router"
 MEMORY="128"
 ROUTER_TIMEOUT="120"
 TARGET_TIMEOUT="20"
 ROUTER_TARGET_TIMEOUT_MS="18000"
-ROUTER_MAX_FALLBACKS="6"
+ROUTER_MAX_FALLBACKS="4"
 EASTMONEY_BASE_URL="http://push2his.eastmoney.com/api/qt/stock/kline/get"
 EASTMONEY_TIMEOUT_MS="5000"
 EASTMONEY_RETRIES="3"
@@ -31,7 +31,7 @@ Options:
   --router-timeout SECONDS       Router Lambda timeout. Default: 120
   --target-timeout SECONDS       Target Lambda timeout. Default: 20
   --router-target-timeout-ms MS  Router per-target invoke timeout. Default: 18000
-  --router-max-fallbacks N       Max auto fallback attempts. Default: 6
+  --router-max-fallbacks N       Max auto fallback attempts. Default: 4
   --eastmoney-base-url URL       Eastmoney kline endpoint. Default: http://push2his.eastmoney.com/api/qt/stock/kline/get
   --eastmoney-timeout-ms MS      Target Eastmoney request timeout. Default: 5000
   --eastmoney-retries N          Target Eastmoney retry attempts. Default: 3

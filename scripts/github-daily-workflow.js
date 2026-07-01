@@ -33,7 +33,7 @@ function isRemoteKlineEngine(engine) {
 function buildDailyArgs(env = process.env) {
   const period = valueOrDefault(env.PERIOD_INPUT, "daily");
   const limit = String(env.LIMIT_INPUT ?? "").trim();
-  const engine = valueOrDefault(env.ENGINE_INPUT, "aws");
+  const engine = valueOrDefault(env.ENGINE_INPUT, "aws-router");
   const universe = valueOrDefault(env.UNIVERSE_INPUT, "market");
   const jobMode = valueOrDefault(env.JOB_MODE_INPUT, "batch");
   const concurrency = valueOrDefault(env.CONCURRENCY_INPUT, "4");

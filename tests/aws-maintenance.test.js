@@ -154,9 +154,16 @@ test("daily workflow uses maintained AWS access key secrets", () => {
     path.join(__dirname, "..", ".github", "workflows", "latency-benchmark.yml"),
     "utf8"
   );
+  const deployScript = fs.readFileSync(
+    path.join(__dirname, "..", "scripts", "deploy-aws-router.sh"),
+    "utf8"
+  );
 
   assert.equal(workflow.includes("id-token: write"), false);
   assert.equal(workflow.includes("AWS_ROLE_ARN"), false);
+  assert.equal(workflow.includes('default: "aws-router"'), true);
+  assert.equal(workflow.includes("github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'auto'"), true);
+  assert.equal(workflow.includes("github.event_name == 'schedule' || github.event.inputs.engine == ''"), false);
   assert.equal(workflow.includes("secrets.AWS_ACCESS_KEY_ID"), true);
   assert.equal(workflow.includes("secrets.AWS_SECRET_ACCESS_KEY"), true);
   assert.equal(workflow.includes("vars.AWS_REGION || 'ap-northeast-1'"), true);
@@ -169,4 +176,7 @@ test("daily workflow uses maintained AWS access key secrets", () => {
   assert.equal(latencyWorkflow.includes("latency-results.json"), true);
   assert.equal(latencyWorkflow.includes("secrets.AWS_ROUTER_URL"), true);
   assert.equal(latencyWorkflow.includes("secrets.AWS_ACCESS_KEY_ID"), true);
+  assert.equal(deployScript.includes('TARGET_REGIONS="ap-northeast-1,ap-northeast-2,ap-southeast-1,us-west-2"'), true);
+  assert.equal(deployScript.includes('ROUTER_MAX_FALLBACKS="4"'), true);
+  assert.equal(deployScript.includes("ap-northeast-1,us-east-1,ap-northeast-2"), false);
 });
