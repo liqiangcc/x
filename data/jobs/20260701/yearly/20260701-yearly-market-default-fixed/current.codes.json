@@ -2,7 +2,7 @@
   "job_id": "20260701-yearly-market-default-fixed",
   "date": "20260701",
   "period": "yearly",
-  "chain_depth": 21,
+  "chain_depth": 22,
   "batch_size": 300,
   "selection_source": "failed",
   "codes": [
