@@ -2,24 +2,24 @@
   "aws_regions": null,
   "aws_region_strategy": "router_auto",
   "available_codes": 5534,
-  "batch_size": 2,
+  "batch_size": 20,
   "candidate_codes": 5534,
-  "concurrency": 1,
+  "concurrency": 4,
   "engine": "aws-router",
-  "force": true,
+  "force": false,
   "input_path": "/home/runner/work/x/x/data/universe/20260701",
   "lambda_name": "kline",
-  "min_success_rate": 0,
+  "min_success_rate": 0.95,
   "offset": 0,
   "period": "daily",
-  "retry_attempts": 1,
+  "retry_attempts": 3,
   "retry_concurrency": 1,
   "retry_delay_ms": 1000,
   "selection_mode": "all",
-  "total_codes": 2,
+  "total_codes": 20,
   "success": 2,
   "migrated_existing": 0,
-  "skipped_existing": 0,
+  "skipped_existing": 18,
   "failed": 0,
   "initial_failed": 0,
   "retried": 0,
@@ -28,59 +28,205 @@
   "success_rate": 1,
   "attempts_by_code": {
     "000001": 1,
-    "000002": 1
+    "000002": 1,
+    "000003": 1,
+    "000004": 1,
+    "000005": 1,
+    "000006": 1,
+    "000007": 1,
+    "000008": 1,
+    "000009": 1,
+    "000010": 1,
+    "000011": 1,
+    "000012": 1,
+    "000013": 1,
+    "000014": 1,
+    "000015": 1,
+    "000016": 1,
+    "000017": 1,
+    "000018": 1,
+    "000019": 1,
+    "000020": 1
   },
   "engine_counts": {
     "aws-router": 2
   },
   "duration_ms_by_code": {
-    "000001": 3806,
-    "000002": 1561
+    "000013": 4515,
+    "000018": 3805
   },
-  "avg_duration_ms": 2683.5,
-  "p50_duration_ms": 1561,
-  "p95_duration_ms": 3806,
+  "avg_duration_ms": 4160,
+  "p50_duration_ms": 3805,
+  "p95_duration_ms": 4515,
   "failure_reason_counts": {},
   "region_counts": {
-    "ap-northeast-1": 2
+    "ap-northeast-2": 1,
+    "ap-northeast-1": 1
   },
   "retriable_failure_counts": {},
   "failure_reasons": [],
   "status": "completed",
   "files": {
     "000001": {
-      "engine": "aws-router",
-      "region": "ap-northeast-1",
-      "router_duration_ms": 1592,
-      "target_duration_ms": 2214,
-      "eastmoney_duration_ms": 2154,
-      "total_duration_ms": 3806,
-      "fallback_count": 0,
-      "attempted_regions": [
-        "ap-northeast-1"
-      ],
-      "status": "success",
+      "status": "skipped_existing",
       "file": "/home/runner/work/x/x/data/kline/daily/000/000001.json",
       "secid": "0.000001",
-      "points": 8426,
       "attempts": 1,
       "last_attempt": 0
     },
     "000002": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000002.json",
+      "secid": "0.000002",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000003": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000003.json",
+      "secid": "0.000003",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000004": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000004.json",
+      "secid": "0.000004",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000005": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000005.json",
+      "secid": "0.000005",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000006": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000006.json",
+      "secid": "0.000006",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000007": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000007.json",
+      "secid": "0.000007",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000008": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000008.json",
+      "secid": "0.000008",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000009": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000009.json",
+      "secid": "0.000009",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000010": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000010.json",
+      "secid": "0.000010",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000011": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000011.json",
+      "secid": "0.000011",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000012": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000012.json",
+      "secid": "0.000012",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000013": {
+      "engine": "aws-router",
+      "region": "ap-northeast-2",
+      "router_duration_ms": 2913,
+      "target_duration_ms": 1602,
+      "eastmoney_duration_ms": 1601,
+      "total_duration_ms": 4515,
+      "fallback_count": 1,
+      "attempted_regions": [
+        "ap-northeast-1",
+        "ap-northeast-2"
+      ],
+      "status": "success",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000013.json",
+      "secid": "0.000013",
+      "points": 2914,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000014": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000014.json",
+      "secid": "0.000014",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000015": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000015.json",
+      "secid": "0.000015",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000016": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000016.json",
+      "secid": "0.000016",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000017": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000017.json",
+      "secid": "0.000017",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000018": {
       "engine": "aws-router",
       "region": "ap-northeast-1",
-      "router_duration_ms": 483,
-      "target_duration_ms": 1078,
-      "eastmoney_duration_ms": 1076,
-      "total_duration_ms": 1561,
+      "router_duration_ms": 1437,
+      "target_duration_ms": 2368,
+      "eastmoney_duration_ms": 2366,
+      "total_duration_ms": 3805,
       "fallback_count": 0,
       "attempted_regions": [
         "ap-northeast-1"
       ],
       "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/000/000002.json",
-      "secid": "0.000002",
-      "points": 8441,
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000018.json",
+      "secid": "0.000018",
+      "points": 6476,
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000019": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000019.json",
+      "secid": "0.000019",
+      "attempts": 1,
+      "last_attempt": 0
+    },
+    "000020": {
+      "status": "skipped_existing",
+      "file": "/home/runner/work/x/x/data/kline/daily/000/000020.json",
+      "secid": "0.000020",
       "attempts": 1,
       "last_attempt": 0
     }
