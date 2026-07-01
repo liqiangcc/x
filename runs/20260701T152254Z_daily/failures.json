@@ -1,0 +1,46 @@
+{
+  "run_id": "20260701T152254Z_daily",
+  "failed": 5,
+  "items": [
+    {
+      "target": "0.301583",
+      "code": "301583",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688072",
+      "code": "688072",
+      "type": "kline",
+      "period": "daily",
+      "reason": "daily kline latest date 2026-06-26 is before expected 2026-07-01",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688121",
+      "code": "688121",
+      "type": "kline",
+      "period": "daily",
+      "reason": "daily kline latest date 2026-04-30 is before expected 2026-07-01",
+      "retry_count": 0
+    },
+    {
+      "target": "0.000508",
+      "code": "000508",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    },
+    {
+      "target": "0.001248",
+      "code": "001248",
+      "type": "kline",
+      "period": "daily",
+      "reason": "kline payload is invalid: empty_klines",
+      "retry_count": 0
+    }
+  ]
+}
