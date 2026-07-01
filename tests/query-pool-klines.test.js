@@ -319,6 +319,48 @@ test("queryPoolKlines does not migrate stale legacy daily files", async (t) => {
   assert.equal(rewritten.klines.at(-1).startsWith("2026-07-01,"), true);
 });
 
+test("queryPoolKlines does not migrate stale legacy yearly files", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const legacyPath = path.join(outputDir, "yearly", "600001.json");
+  await fs.mkdir(path.dirname(legacyPath), { recursive: true });
+  await fs.writeFile(
+    legacyPath,
+    `${JSON.stringify(normalizedKlinePayload("600001", "yearly", "2026-03-25"), null, 2)}\n`,
+    "utf8"
+  );
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "yearly",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+    "--expected-latest-date",
+    "2026-07-01",
+  ]);
+  options.freshnessCodes = new Set(["600001"]);
+  let calls = 0;
+  const { exitCode, summary } = await queryPoolKlines(options, async () => {
+    calls += 1;
+    return klinePayload("600001", "aws", "ap-northeast-1", { latestDate: "2026-07-01" });
+  });
+
+  const outputPath = path.join(outputDir, "yearly", "600", "600001.json");
+  const rewritten = JSON.parse(await fs.readFile(outputPath, "utf8"));
+  await assert.rejects(fs.access(legacyPath));
+  assert.equal(exitCode, 0);
+  assert.equal(calls, 1);
+  assert.equal(summary.migrated_existing, 0);
+  assert.equal(summary.success, 1);
+  assert.equal(rewritten.klines.at(-1).startsWith("2026-07-01,"), true);
+});
+
 test("queryPoolKlines refetches stale sharded daily files in batch selection", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -360,7 +402,7 @@ test("queryPoolKlines refetches stale sharded daily files in batch selection", a
   assert.equal(summary.skipped_existing, 0);
 });
 
-test("queryPoolKlines does not apply daily freshness rules to yearly files", async (t) => {
+test("queryPoolKlines refetches stale yearly files when freshness is requested", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
   const outputDir = path.join(dir, "kline");
@@ -389,12 +431,15 @@ test("queryPoolKlines does not apply daily freshness rules to yearly files", asy
   let calls = 0;
   const { exitCode, summary } = await queryPoolKlines(options, async () => {
     calls += 1;
-    return klinePayload("600001", "aws", "ap-northeast-1");
+    return klinePayload("600001", "aws", "ap-northeast-1", { latestDate: "2026-07-01" });
   });
 
   assert.equal(exitCode, 0);
-  assert.equal(calls, 0);
-  assert.equal(summary.skipped_existing, 1);
+  assert.equal(calls, 1);
+  assert.equal(summary.skipped_existing, 0);
+  assert.equal(summary.success, 1);
+  const rewritten = JSON.parse(await fs.readFile(existingPath, "utf8"));
+  assert.equal(rewritten.klines.at(-1).startsWith("2026-07-01,"), true);
 });
 
 test("queryPoolKlines retries transient failures serially", async (t) => {

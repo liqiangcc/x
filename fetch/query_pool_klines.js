@@ -333,7 +333,7 @@ async function loadCodes(inputPath) {
 }
 
 async function loadFreshnessCodes(options) {
-  if (options.period !== "daily" || !options.expectedLatestDate) {
+  if (!options.expectedLatestDate) {
     return null;
   }
 
@@ -374,7 +374,6 @@ function latestKlineDate(payload) {
 
 function freshnessRequired(options, code) {
   return (
-    options.period === "daily" &&
     Boolean(options.expectedLatestDate) &&
     (options.freshnessCodes === null || options.freshnessCodes.has(code))
   );
@@ -811,7 +810,7 @@ function validateNormalizedKline(normalized, code, secid, options) {
     return createFailureResult(
       code,
       secid,
-      `daily kline latest date ${freshness.latestDate ?? "none"} is before expected ${freshness.expectedLatestDate}`,
+      `${options.period} kline latest date ${freshness.latestDate ?? "none"} is before expected ${freshness.expectedLatestDate}`,
       freshness.issue,
       {
         deferred: true,
