@@ -9,7 +9,7 @@
   "expected_latest_date": "2026-07-01",
   "force": false,
   "freshness_codes": 5191,
-  "freshness_codes_path": "/home/runner/work/x/x/runs/20260701T152331Z_yearly/freshness.codes.json",
+  "freshness_codes_path": "/home/runner/work/x/x/runs/20260701T152429Z_yearly/freshness.codes.json",
   "huaweicloud_regions": null,
   "huaweicloud_region_strategy": "none",
   "input_path": "/home/runner/work/x/x/data/jobs/20260701/yearly/20260701-yearly-market-default-fixed/current.codes.json",
@@ -62,8 +62,8 @@
       "error_class": "empty_klines",
       "retriable": false,
       "deferred": true,
-      "fallback_error": "kline payload is invalid: empty_klines",
-      "fallback_error_class": "empty_klines",
+      "fallback_error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.301583 --period yearly --engine local --lambda-name kline\nfetch failed\n",
+      "fallback_error_class": "transient_network",
       "attempts": 1,
       "last_attempt": 0
     },
@@ -76,8 +76,8 @@
       "deferred": true,
       "expected_latest_date": "2026-07-01",
       "latest_date": "2026-06-26",
-      "fallback_error": "yearly kline latest date 2026-06-26 is before expected 2026-07-01",
-      "fallback_error_class": "stale_kline",
+      "fallback_error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 1.688072 --period yearly --engine local --lambda-name kline\nfetch failed\n",
+      "fallback_error_class": "transient_network",
       "attempts": 1,
       "last_attempt": 0
     },
@@ -102,8 +102,8 @@
       "error_class": "empty_klines",
       "retriable": false,
       "deferred": true,
-      "fallback_error": "kline payload is invalid: empty_klines",
-      "fallback_error_class": "empty_klines",
+      "fallback_error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.000508 --period yearly --engine local --lambda-name kline\nfetch failed\n",
+      "fallback_error_class": "transient_network",
       "attempts": 1,
       "last_attempt": 0
     },
@@ -114,8 +114,8 @@
       "error_class": "empty_klines",
       "retriable": false,
       "deferred": true,
-      "fallback_error": "kline payload is invalid: empty_klines",
-      "fallback_error_class": "empty_klines",
+      "fallback_error": "Command failed: node /home/runner/work/x/x/fetch/fetch_kline.js 0.001248 --period yearly --engine local --lambda-name kline\nfetch failed\n",
+      "fallback_error_class": "transient_network",
       "attempts": 1,
       "last_attempt": 0
     }
