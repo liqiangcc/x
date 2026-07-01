@@ -199,6 +199,7 @@ function applyProgressResults(progress, summary, { chainDepth = null } = {}) {
   const all = new Set(updated.all_codes);
   const batchCodes = uniqueCodes(updated.last_batch_codes);
   const attemptedCodes = new Set([...batchCodes, ...Object.keys(files).map(String)]);
+  let completedInBatch = 0;
 
   for (const code of attemptedCodes) {
     if (!all.has(code)) {
@@ -211,6 +212,7 @@ function applyProgressResults(progress, summary, { chainDepth = null } = {}) {
     if (isCompletedKlineStatus(status)) {
       completed.add(code);
       failed.delete(code);
+      completedInBatch += 1;
     } else if (status === "failed") {
       completed.delete(code);
       failed.add(code);
@@ -240,6 +242,15 @@ function applyProgressResults(progress, summary, { chainDepth = null } = {}) {
   };
   updated.updated_at = isoNow();
   finalizeStatus(updated);
+  if (
+    updated.status === "running" &&
+    updated.pending_codes.length === 0 &&
+    updated.failed_codes.length > 0 &&
+    updated.last_batch_source === "failed" &&
+    completedInBatch === 0
+  ) {
+    updated.status = "completed";
+  }
   validateProgress(updated);
   return updated;
 }
