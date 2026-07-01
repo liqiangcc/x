@@ -1,11 +1,11 @@
 {
   "aws_regions": null,
-  "aws_region_strategy": "round_robin_start_index",
+  "aws_region_strategy": "router_auto",
   "available_codes": 5534,
   "batch_size": 2,
   "candidate_codes": 5534,
   "concurrency": 1,
-  "engine": "aws",
+  "engine": "aws-router",
   "force": true,
   "input_path": "/home/runner/work/x/x/data/universe/20260701",
   "lambda_name": "kline",
@@ -31,30 +31,34 @@
     "000002": 1
   },
   "engine_counts": {
-    "aws": 2
+    "aws-router": 2
   },
-  "duration_ms_by_code": {},
-  "avg_duration_ms": null,
-  "p50_duration_ms": null,
-  "p95_duration_ms": null,
+  "duration_ms_by_code": {
+    "000001": 3806,
+    "000002": 1561
+  },
+  "avg_duration_ms": 2683.5,
+  "p50_duration_ms": 1561,
+  "p95_duration_ms": 3806,
   "failure_reason_counts": {},
   "region_counts": {
-    "ap-northeast-2": 1,
-    "ap-northeast-3": 1
+    "ap-northeast-1": 2
   },
   "retriable_failure_counts": {},
   "failure_reasons": [],
   "status": "completed",
   "files": {
     "000001": {
-      "engine": "aws",
-      "region": "ap-northeast-2",
-      "router_duration_ms": null,
-      "target_duration_ms": null,
-      "eastmoney_duration_ms": null,
-      "total_duration_ms": null,
-      "fallback_count": null,
-      "attempted_regions": null,
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 1592,
+      "target_duration_ms": 2214,
+      "eastmoney_duration_ms": 2154,
+      "total_duration_ms": 3806,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
       "status": "success",
       "file": "/home/runner/work/x/x/data/kline/daily/000/000001.json",
       "secid": "0.000001",
@@ -63,14 +67,16 @@
       "last_attempt": 0
     },
     "000002": {
-      "engine": "aws",
-      "region": "ap-northeast-3",
-      "router_duration_ms": null,
-      "target_duration_ms": null,
-      "eastmoney_duration_ms": null,
-      "total_duration_ms": null,
-      "fallback_count": null,
-      "attempted_regions": null,
+      "engine": "aws-router",
+      "region": "ap-northeast-1",
+      "router_duration_ms": 483,
+      "target_duration_ms": 1078,
+      "eastmoney_duration_ms": 1076,
+      "total_duration_ms": 1561,
+      "fallback_count": 0,
+      "attempted_regions": [
+        "ap-northeast-1"
+      ],
       "status": "success",
       "file": "/home/runner/work/x/x/data/kline/daily/000/000002.json",
       "secid": "0.000002",
