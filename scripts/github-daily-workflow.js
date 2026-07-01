@@ -16,6 +16,7 @@ const ISSUE_LABELS = {
   running: { color: "fbca04", description: "Daily sync job is running." },
 };
 const STATUS_LABELS = ["running", "blocked", "completed", "failed"];
+const SHARED_DATA_PR_PREFIXES = ["data/pool/", "data/universe/"];
 
 function valueOrDefault(value, fallback) {
   const normalized = String(value ?? "").trim();
@@ -312,6 +313,27 @@ function shouldEnableDataPullRequestAutoMerge(pr, env = process.env) {
   return Boolean(pr?.url && (pr.state ?? "OPEN") === "OPEN");
 }
 
+function sharedDataPullRequestFiles(files) {
+  return (files ?? []).filter((file) =>
+    SHARED_DATA_PR_PREFIXES.some((prefix) => String(file).startsWith(prefix))
+  );
+}
+
+async function assertDataPullRequestScope() {
+  const stdout = await runCaptureChecked("git", ["diff", "--name-only", "origin/master...HEAD", "--"]);
+  const files = stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const sharedFiles = sharedDataPullRequestFiles(files);
+  if (sharedFiles.length > 0) {
+    const preview = sharedFiles.slice(0, 10).join(", ");
+    const suffix = sharedFiles.length > 10 ? `, ... (${sharedFiles.length} files)` : "";
+    throw new Error(`Data pull request contains shared data files: ${preview}${suffix}`);
+  }
+  return files;
+}
+
 async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
   if (!shouldOpenDataPullRequest(run, branchName, env)) {
     return null;
@@ -357,6 +379,14 @@ async function maybeOpenDataPullRequest(run, branchName, env = process.env) {
 }
 
 async function setupDataPullRequest(run, branchName, env = process.env) {
+  if (!shouldOpenDataPullRequest(run, branchName, env)) {
+    return {
+      autoMerge: null,
+      pr: null,
+    };
+  }
+
+  await assertDataPullRequestScope();
   const pr = await maybeOpenDataPullRequest(run, branchName, env);
   if (!pr) {
     return {
@@ -918,6 +948,7 @@ module.exports = {
   isDataBranch,
   issueStatusForRun,
   selectDataPullRequest,
+  sharedDataPullRequestFiles,
   shouldEnableDataPullRequestAutoMerge,
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,

@@ -16,6 +16,7 @@ const {
   isDataBranch,
   issueStatusForRun,
   selectDataPullRequest,
+  sharedDataPullRequestFiles,
   shouldEnableDataPullRequestAutoMerge,
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,
@@ -438,5 +439,21 @@ test("data pull request helpers select reusable prs and auto-merge open prs", ()
       {}
     ),
     false
+  );
+});
+
+test("sharedDataPullRequestFiles rejects shared data roots", () => {
+  assert.deepEqual(
+    sharedDataPullRequestFiles([
+      "data/kline/daily/000/000001.json",
+      "data/jobs/20260701/daily/job/progress.json",
+      "runs/20260701T000000Z_daily/run.json",
+      "data/universe/20260701/codes.json",
+      "data/pool/20260701/zt.json",
+    ]),
+    [
+      "data/universe/20260701/codes.json",
+      "data/pool/20260701/zt.json",
+    ]
   );
 });
