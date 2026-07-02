@@ -1,0 +1,16 @@
+{
+  "date": "20260701",
+  "issue_count": 113,
+  "issue_counts": {
+    "insufficient_history": 10,
+    "insufficient_yearly_history": 63,
+    "missing_current_year_open": 6,
+    "missing_daily_kline": 6,
+    "missing_previous_trading_day": 6,
+    "missing_previous_year_bar": 10,
+    "missing_report_date_row": 6,
+    "missing_yearly_kline": 6
+  },
+  "candidate_count": 542,
+  "status": "recorded"
+}
