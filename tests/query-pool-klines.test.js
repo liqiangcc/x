@@ -338,6 +338,42 @@ test("queryPoolKlines falls back to local when remote throws empty klines", asyn
   assert.equal(summary.files["600001"].fallback_from, "huaweicloud");
 });
 
+test("queryPoolKlines falls back to local when aws-router has transient network failure", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws-router",
+    "--output-dir",
+    outputDir,
+  ]);
+  const engines = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    engines.push(fetchOptions.engine);
+    if (fetchOptions.engine === "local") {
+      return klinePayload(secid.split(".")[1], "local", null);
+    }
+    throw new Error(
+      "aws-router returned statusCode 502: fetch failed (UND_ERR_SOCKET: other side closed)"
+    );
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(engines, ["aws-router", "local"]);
+  assert.equal(summary.success, 1);
+  assert.equal(summary.failed, 0);
+  assert.deepEqual(summary.engine_counts, { local: 1 });
+  assert.equal(summary.files["600001"].fallback_from, "aws-router");
+  assert.equal(summary.files["600001"].attempts, 1);
+  assert.equal(summary.retried, 0);
+});
+
 test("queryPoolKlines reports remote empty when local fallback also fails", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -621,7 +657,7 @@ test("queryPoolKlines retries transient failures serially", async (t) => {
     "--period",
     "daily",
     "--engine",
-    "aws",
+    "local",
     "--output-dir",
     outputDir,
     "--concurrency",
@@ -634,20 +670,17 @@ test("queryPoolKlines retries transient failures serially", async (t) => {
     "1",
   ]);
   const attempts = {};
-  const regionStartIndexes = [];
   const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
     attempts[secid] = (attempts[secid] ?? 0) + 1;
-    regionStartIndexes.push(fetchOptions.awsRegionStartIndex);
     if (secid === "1.600001" && attempts[secid] === 1) {
       throw new Error("UND_ERR_SOCKET fetch failed");
     }
-    return klinePayload(secid.split(".")[1], "aws", "ap-northeast-1");
+    return klinePayload(secid.split(".")[1], fetchOptions.engine, null);
   });
 
   assert.equal(exitCode, 0);
   assert.equal(attempts["1.600001"], 2);
   assert.equal(attempts["1.600002"], 1);
-  assert.deepEqual(regionStartIndexes.sort((left, right) => left - right), [0, 1, 2]);
   assert.equal(summary.initial_failed, 1);
   assert.equal(summary.retried, 1);
   assert.equal(summary.retry_success, 1);

@@ -875,15 +875,25 @@ function validateNormalizedKline(normalized, code, secid, options) {
   );
 }
 
-function isLocalFallbackFailureClass(errorClass) {
-  return ["empty_klines", "blank_klines", "stale_kline"].includes(errorClass);
+function isFallbackEligibleFailureClass(errorClass) {
+  return [
+    "empty_klines",
+    "blank_klines",
+    "stale_kline",
+    "rate_limited",
+    "transient_network",
+  ].includes(errorClass);
+}
+
+function canFallbackEngine(engine) {
+  return ["auto", "aws", "aws-router", "huaweicloud"].includes(engine);
 }
 
 function shouldFallbackToLocal(failure, options) {
-  if (!failure || options.engine === "local") {
+  if (!failure || !canFallbackEngine(options.engine)) {
     return false;
   }
-  return isLocalFallbackFailureClass(failure.file?.error_class);
+  return isFallbackEligibleFailureClass(failure.file?.error_class);
 }
 
 async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
@@ -934,7 +944,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
       secid,
       error.message,
       errorClass,
-      isLocalFallbackFailureClass(errorClass) ? { deferred: true } : {}
+      isFallbackEligibleFailureClass(errorClass) ? { deferred: true } : {}
     );
     if (!shouldFallbackToLocal(validationFailure, options)) {
       return validationFailure;
@@ -943,6 +953,13 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
 
   if (shouldFallbackToLocal(validationFailure, options)) {
     try {
+      stageLog("start", "kline_local_fallback", {
+        code,
+        secid,
+        period: options.period,
+        from_engine: options.engine,
+        error_class: validationFailure.file?.error_class,
+      });
       const localData = await fetchKline(secid, { ...options, engine: "local" });
       const localNormalized = normalizeKlinePayload(localData, code, secid, options.period);
       const localFailure = validateNormalizedKline(localNormalized, code, secid, options);
@@ -951,13 +968,36 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         data = localData;
         normalized = localNormalized;
         validationFailure = null;
+        stageLog("end", "kline_local_fallback", {
+          code,
+          secid,
+          period: options.period,
+          from_engine: options.engine,
+          status: "success",
+        });
       } else {
         validationFailure.file.fallback_error = localFailure.file.error;
         validationFailure.file.fallback_error_class = localFailure.file.error_class;
+        stageLog("error", "kline_local_fallback", {
+          code,
+          secid,
+          period: options.period,
+          from_engine: options.engine,
+          error_class: localFailure.file.error_class,
+          error: localFailure.file.error,
+        });
       }
     } catch (fallbackError) {
       validationFailure.file.fallback_error = fallbackError.message;
       validationFailure.file.fallback_error_class = classifyFailure(fallbackError);
+      stageLog("error", "kline_local_fallback", {
+        code,
+        secid,
+        period: options.period,
+        from_engine: options.engine,
+        error_class: validationFailure.file.fallback_error_class,
+        error: fallbackError.message,
+      });
     }
   }
 
