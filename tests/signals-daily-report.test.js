@@ -60,8 +60,30 @@ function dailyRows({ previousHigh = 11, todayAmount = 2000, todayHigh = 13 } = {
   });
 }
 
-function yearlyRows(date = "2025-12-30", high = 12) {
-  return [klineRow(date, { close: 10, high, low: 8, open: 9 })];
+function yearlyRows(date = "2025-12-30", high = 12, options = {}) {
+  const completedCloses = options.completedCloses ?? [14, 12, 10, 8, 6];
+  const startYear = 2026 - completedCloses.length;
+  const rows = completedCloses.map((close, index) => {
+    const year = startYear + index;
+    const rowDate = year === 2025 ? date : `${year}-12-31`;
+    return klineRow(rowDate, {
+      close,
+      high: year === 2025 ? high : close + 2,
+      low: close - 1,
+      open: close + 1,
+    });
+  });
+
+  if (options.includeCurrent !== false) {
+    rows.push(klineRow("2026-06-30", {
+      close: options.currentClose ?? 5,
+      high: options.currentHigh ?? 6,
+      low: options.currentLow ?? 1,
+      open: options.currentOpen ?? 1,
+    }));
+  }
+
+  return rows;
 }
 
 async function writeJson(filePath, payload) {
@@ -99,10 +121,26 @@ test("buildFeatures selects report day, previous trading day, previous yearly ba
     assert.equal(built.features.previousTradingDay.date, "2026-06-30");
     assert.equal(built.features.previousYear.date, yearlyDate);
     assert.equal(built.features.previousYear.high, 12);
+    assert.equal(built.features.completedYears.length, 5);
+    assert.equal(built.features.completedYears.at(-1).year, 2025);
+    assert.equal(built.features.currentYear.open, 1);
+    assert.equal(built.features.currentYear.open_source, "yearly");
     assert.equal(built.features.averageAmount20, 1000);
     assert.equal(Number.isFinite(built.features.ma20), true);
     assert.equal(Number.isFinite(built.features.ma60), true);
   }
+});
+
+test("buildFeatures falls back current year open to daily rows", () => {
+  const built = buildFeatures({
+    dailyRows: dailyRows(),
+    isoDate: "2026-07-01",
+    yearlyRows: yearlyRows("2025-12-30", 12, { includeCurrent: false }),
+  });
+
+  assert.equal(built.features.currentYear.open_source, "daily");
+  assert.equal(Number.isFinite(built.features.currentYear.open), true);
+  assert.equal(built.issues.includes("missing_current_year_open"), false);
 });
 
 test("FIRST_CROSS models today-only breakout semantics", () => {
@@ -143,6 +181,104 @@ test("FIRST_CROSS models today-only breakout semantics", () => {
   );
 });
 
+test("VALUE_COMPARE supports configurable operators", () => {
+  const context = {
+    features: {
+      left: 12,
+      right: 10,
+    },
+  };
+
+  assert.equal(evaluateCapability(CapabilityType.VALUE_COMPARE, context, {
+    left: "features.left",
+    operator: "gt",
+    right: "features.right",
+  }).ok, true);
+  assert.equal(evaluateCapability(CapabilityType.VALUE_COMPARE, context, {
+    left: "features.left",
+    operator: "lte",
+    right: "features.right",
+  }).ok, false);
+  assert.equal(evaluateCapability(CapabilityType.VALUE_COMPARE, context, {
+    left: "features.missing",
+    operator: "gt",
+    qualityIssue: "missing_value",
+    right: "features.right",
+  }).qualityIssues[0], "missing_value");
+});
+
+test("SEQUENCE_PATTERN is fully parameterized", () => {
+  const context = {
+    features: {
+      years: [
+        { close: 14, high: 20, year: 2021 },
+        { close: 12, high: 18, year: 2022 },
+        { close: 10, high: 16, year: 2023 },
+        { close: 8, high: 14, year: 2024 },
+        { close: 6, high: 12, year: 2025 },
+      ],
+    },
+  };
+
+  assert.equal(evaluateCapability(CapabilityType.SEQUENCE_PATTERN, context, {
+    comparator: "lt",
+    field: "close",
+    order: "latest",
+    source: "features.years",
+    transitions: 3,
+  }).ok, true);
+  assert.equal(evaluateCapability(CapabilityType.SEQUENCE_PATTERN, context, {
+    comparator: "lt",
+    field: "high",
+    order: "earliest",
+    source: "features.years",
+    transitions: 2,
+  }).ok, true);
+  assert.equal(evaluateCapability(CapabilityType.SEQUENCE_PATTERN, {
+    features: {
+      years: [
+        { close: 1, year: 2021 },
+        { close: 2, year: 2022 },
+        { close: 3, year: 2023 },
+      ],
+    },
+  }, {
+    comparator: "gt",
+    field: "close",
+    order: "latest",
+    source: "features.years",
+    transitions: 2,
+  }).ok, true);
+  assert.equal(evaluateCapability(CapabilityType.SEQUENCE_PATTERN, {
+    features: {
+      years: [
+        { close: 3, year: 2021 },
+        { close: 2, year: 2022 },
+        { close: 2, year: 2023 },
+        { close: 1, year: 2024 },
+      ],
+    },
+  }, {
+    comparator: "lt",
+    field: "close",
+    order: "latest",
+    source: "features.years",
+    transitions: 3,
+  }).ok, false);
+  assert.deepEqual(evaluateCapability(CapabilityType.SEQUENCE_PATTERN, {
+    features: {
+      years: [{ close: 3, year: 2023 }],
+    },
+  }, {
+    comparator: "lt",
+    field: "close",
+    order: "latest",
+    qualityIssue: "insufficient_yearly_history",
+    source: "features.years",
+    transitions: 3,
+  }).qualityIssues, ["insufficient_yearly_history"]);
+});
+
 test("runDailySignals scores candidates with evidence and stable sorting", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-signals-"));
   const poolDir = path.join(root, "pool");
@@ -165,14 +301,62 @@ test("runDailySignals scores candidates with evidence and stable sorting", async
     const report = await runDailySignals({ date, klineDir, poolDir });
     assert.equal(report.candidates.length, 2);
     assert.equal(report.candidates[0].code, "600001");
-    assert.equal(report.candidates[0].score, 140);
+    assert.equal(report.candidates[0].score, 160);
     assert.deepEqual(
       report.candidates[0].signals.map((signal) => signal.id),
-      ["limit_up_pool", "strong_pool", "year_breakout", "volume_expand", "trend_confirmed"]
+      ["limit_up_pool", "strong_pool", "year_breakout", "year_downtrend_reversal", "volume_expand", "trend_confirmed"]
     );
     assert.equal(report.candidates[0].signals.find((signal) => signal.id === "year_breakout").evidence.previous_year_high, 12);
+    assert.equal(
+      report.candidates[0].signals.find((signal) => signal.id === "year_downtrend_reversal").evidence.required_down_transitions,
+      3
+    );
     assert.equal(report.candidates[1].signals.some((signal) => signal.id === "year_breakout"), false);
     assert.equal(report.summary.status, "ok");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("year_downtrend_reversal requires configured down sequence and current-year gain", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-reversal-"));
+  const poolDir = path.join(root, "pool");
+  const klineDir = path.join(root, "kline");
+  const date = "20260701";
+
+  try {
+    await writePool(poolDir, date, "zt", [
+      { c: "600001", m: 1, n: "Alpha" },
+      { c: "600002", m: 1, n: "Beta" },
+      { c: "600003", m: 1, n: "Gamma" },
+      { c: "600004", m: 1, n: "Delta" },
+    ]);
+    await writePool(poolDir, date, "qs", []);
+    await writePool(poolDir, date, "zb", []);
+
+    for (const code of ["600001", "600002", "600003", "600004"]) {
+      await writeKline(klineDir, "daily", code, dailyRows());
+    }
+    await writeKline(klineDir, "yearly", "600001", yearlyRows("2025-12-30", 12));
+    await writeKline(klineDir, "yearly", "600002", yearlyRows("2025-12-30", 12, {
+      completedCloses: [14, 12, 13, 8, 6],
+    }));
+    await writeKline(klineDir, "yearly", "600003", yearlyRows("2025-12-30", 12, {
+      currentOpen: 100,
+    }));
+    await writeKline(klineDir, "yearly", "600004", yearlyRows("2025-12-30", 12, {
+      completedCloses: [6],
+    }));
+
+    const report = await runDailySignals({ date, klineDir, poolDir });
+    const byCode = new Map(report.candidates.map((candidate) => [candidate.code, candidate]));
+    const signalIds = (code) => new Set(byCode.get(code).signals.map((signal) => signal.id));
+
+    assert.equal(signalIds("600001").has("year_downtrend_reversal"), true);
+    assert.equal(signalIds("600002").has("year_downtrend_reversal"), false);
+    assert.equal(signalIds("600003").has("year_downtrend_reversal"), false);
+    assert.equal(signalIds("600004").has("year_downtrend_reversal"), false);
+    assert.equal(byCode.get("600004").quality.issues.includes("insufficient_yearly_history"), true);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

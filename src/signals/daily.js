@@ -123,7 +123,7 @@ function compareCandidates(left, right) {
 
   const leftSignals = hitSignalIds(left);
   const rightSignals = hitSignalIds(right);
-  for (const signalId of ["year_breakout", "volume_expand"]) {
+  for (const signalId of ["year_breakout", "year_downtrend_reversal", "volume_expand"]) {
     const diff = Number(rightSignals.has(signalId)) - Number(leftSignals.has(signalId));
     if (diff !== 0) {
       return diff;

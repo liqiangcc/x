@@ -154,17 +154,17 @@ const CapabilityType = Object.freeze({
 v0.2 必须实现：
 
 - `POOL_MEMBERSHIP`：判断股票是否属于指定 pool。
+- `VALUE_COMPARE`：参数化比较两个 feature 值。
 - `FIRST_CROSS`：判断当前值是否首次上穿基准值。
 - `RATIO_COMPARE`：判断当前值是否达到基准值的指定倍数。
 - `TREND_ALIGNMENT`：判断多个趋势值是否满足顺序关系。
+- `SEQUENCE_PATTERN`：参数化判断数组序列中的连续比较形态。
 - `QUALITY_GATE`：判断数据是否足够支持信号。
 
 v0.2 可预留但不必完整实现：
 
-- `VALUE_COMPARE`
 - `WINDOW_EXTREME`
 - `WINDOW_AVERAGE`
-- `SEQUENCE_PATTERN`
 
 ## 5. 能力接口
 
@@ -248,6 +248,26 @@ condition:
   today.close > ma20 > ma60
 ```
 
+`year_downtrend_reversal`
+
+```text
+capabilities:
+  SEQUENCE_PATTERN:
+    source: features.completedYears
+    field: close
+    order: latest
+    transitions: 3
+    comparator: lt
+  VALUE_COMPARE:
+    left: features.today.close
+    right: features.currentYear.open
+    operator: gt
+score: 20
+condition:
+  最近 4 个已完成年度 close 形成 3 次连续下降
+  报告日 close > 当前年度 open
+```
+
 ## 7. year_breakout 精确定义
 
 `year_breakout` 表示：今天最高价首次突破上一自然年的年线最高价。
@@ -315,6 +335,15 @@ v0.2 features：
     high,
     close
   },
+  completedYears: [
+    { year, date, open, close, high, low, amount }
+  ],
+  currentYear: {
+    year,
+    open,
+    close,
+    open_source
+  },
   ma20,
   ma60,
   averageAmount20
@@ -338,6 +367,8 @@ missing_previous_year_bar
 insufficient_history
 invalid_kline
 invalid_feature_value
+missing_current_year_open
+insufficient_yearly_history
 ```
 
 candidate 质量状态：
@@ -380,6 +411,7 @@ candidate 汇总字段：
 ```text
 score desc
 year_breakout ok desc
+year_downtrend_reversal ok desc
 volume_expand ok desc
 data_quality ok desc
 code asc

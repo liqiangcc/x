@@ -4,7 +4,9 @@ const { evaluateFirstCross } = require("./first_cross");
 const { evaluatePoolMembership } = require("./pool_membership");
 const { evaluateQualityGate } = require("./quality_gate");
 const { evaluateRatioCompare } = require("./ratio_compare");
+const { evaluateSequencePattern } = require("./sequence_pattern");
 const { evaluateTrendAlignment } = require("./trend_alignment");
+const { evaluateValueCompare } = require("./value_compare");
 const { getPathValue, numberAtPath } = require("./utils");
 
 const CapabilityType = Object.freeze({
@@ -24,7 +26,9 @@ const EVALUATORS = {
   [CapabilityType.POOL_MEMBERSHIP]: evaluatePoolMembership,
   [CapabilityType.QUALITY_GATE]: evaluateQualityGate,
   [CapabilityType.RATIO_COMPARE]: evaluateRatioCompare,
+  [CapabilityType.SEQUENCE_PATTERN]: evaluateSequencePattern,
   [CapabilityType.TREND_ALIGNMENT]: evaluateTrendAlignment,
+  [CapabilityType.VALUE_COMPARE]: evaluateValueCompare,
 };
 
 function evaluateCapability(type, context, params = {}) {
