@@ -7,7 +7,9 @@ const {
   buildReportIssueBody,
   buildReportIssueTitle,
   normalizeOptions,
+  parseRemoteHeadSha,
   renderCandidateTable,
+  reportBranchPushArgs,
   reportBranchName,
   reportPullRequestBody,
   reportPullRequestTitle,
@@ -94,6 +96,25 @@ test("report workflow helper names are stable", () => {
     "--json",
     "number,title,state,url",
   ]);
+});
+
+test("report branch push args use force-with-lease only for existing remote branches", () => {
+  const sha = "4c786d95be00ec9d48f88ccdd68e39b1fa41126f";
+  assert.deepEqual(reportBranchPushArgs("report/daily/20260701", null), [
+    "push",
+    "--set-upstream",
+    "origin",
+    "HEAD:report/daily/20260701",
+  ]);
+  assert.deepEqual(reportBranchPushArgs("report/daily/20260701", sha), [
+    "push",
+    "--set-upstream",
+    `--force-with-lease=refs/heads/report/daily/20260701:${sha}`,
+    "origin",
+    "HEAD:report/daily/20260701",
+  ]);
+  assert.equal(parseRemoteHeadSha(`${sha}\trefs/heads/report/daily/20260701\n`), sha);
+  assert.equal(parseRemoteHeadSha(""), null);
 });
 
 test("report issue and PR selectors prefer active records", () => {

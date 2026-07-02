@@ -274,6 +274,29 @@ async function hasStagedChanges() {
   throw new Error(result.stderr || "git diff --cached --quiet failed");
 }
 
+function parseRemoteHeadSha(stdout) {
+  const line = String(stdout ?? "").trim().split(/\r?\n/).find(Boolean);
+  if (!line) {
+    return null;
+  }
+  const [sha] = line.split(/\s+/);
+  return /^[0-9a-f]{40}$/i.test(sha) ? sha : null;
+}
+
+async function remoteBranchSha(branchName) {
+  const stdout = await runCaptureChecked("git", ["ls-remote", "--heads", "origin", branchName]);
+  return parseRemoteHeadSha(stdout);
+}
+
+function reportBranchPushArgs(branchName, remoteSha = null) {
+  const args = ["push", "--set-upstream"];
+  if (remoteSha) {
+    args.push(`--force-with-lease=refs/heads/${branchName}:${remoteSha}`);
+  }
+  args.push("origin", `HEAD:${branchName}`);
+  return args;
+}
+
 async function createOrUpdateReportPullRequest({ baseRef, dataRef, report }) {
   const branchName = reportBranchName(report.date);
   const sourceDir = report.reportDir;
@@ -296,7 +319,7 @@ async function createOrUpdateReportPullRequest({ baseRef, dataRef, report }) {
       await runChecked("git", ["commit", "-m", reportPullRequestTitle(report.date)]);
       committed = true;
       commit = (await runCaptureChecked("git", ["rev-parse", "--short", "HEAD"])).trim();
-      await runChecked("git", ["push", "--set-upstream", "origin", `HEAD:${branchName}`]);
+      await runChecked("git", reportBranchPushArgs(branchName, await remoteBranchSha(branchName)));
     }
 
     const existing = await runCaptureChecked("gh", [
@@ -480,7 +503,9 @@ module.exports = {
   buildReportIssueBody,
   buildReportIssueTitle,
   normalizeOptions,
+  parseRemoteHeadSha,
   renderCandidateTable,
+  reportBranchPushArgs,
   reportBranchName,
   reportPullRequestBody,
   reportPullRequestTitle,
