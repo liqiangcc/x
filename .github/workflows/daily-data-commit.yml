@@ -119,7 +119,7 @@ concurrency:
 
 jobs:
   daily:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 360
     steps:
       - name: Checkout
