@@ -824,23 +824,30 @@ test("queryPoolKlines records aws-router regions and duration metrics", async (t
     "daily",
     "--engine",
     "aws-router",
+    "--router-region",
+    "us-west-1,us-west-2",
     "--output-dir",
     outputDir,
     "--force",
   ]);
-  const { exitCode, summary } = await queryPoolKlines(options, async (secid) =>
-    klinePayload(secid.split(".")[1], "aws-router", "us-east-1", {
+  const routerRegions = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    routerRegions.push(fetchOptions.routerRegion);
+    return klinePayload(secid.split(".")[1], "aws-router", "us-east-1", {
       router_duration_ms: 5,
       target_duration_ms: 20,
       eastmoney_duration_ms: 15,
       total_duration_ms: secid === "1.600001" ? 40 : 60,
       fallback_count: 1,
       attempted_regions: ["ap-northeast-2", "us-east-1"],
-    })
-  );
+    });
+  });
 
   assert.equal(exitCode, 0);
   assert.equal(summary.aws_region_strategy, "router_auto");
+  assert.deepEqual(routerRegions, ["us-west-1,us-west-2", "us-west-1,us-west-2"]);
+  assert.equal(summary.router_region, "us-west-1,us-west-2");
+  assert.equal(summary.router_region_strategy, "ordered_fallback");
   assert.deepEqual(summary.engine_counts, { "aws-router": 2 });
   assert.deepEqual(summary.region_counts, { "us-east-1": 2 });
   assert.deepEqual(summary.duration_ms_by_code, {

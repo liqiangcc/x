@@ -102,19 +102,29 @@ test("buildDailyArgs omits empty workflow limit", () => {
 test("buildDailyArgs forwards chained job inputs", () => {
   const args = buildDailyArgs({
     JOB_MODE_INPUT: "batch",
-    JOB_ID_INPUT: "20260630-daily-market-hs-a",
-    CHAIN_DEPTH_INPUT: "2",
-    MAX_CHAIN_DEPTH_INPUT: "20",
-    AWS_REGION_INPUT: "ap-northeast-1,ap-southeast-1",
-    LAMBDA_NAME_INPUT: "kline-prod",
-    CONFIG_INPUT: "config/kline.json",
-  });
+      JOB_ID_INPUT: "20260630-daily-market-hs-a",
+      CHAIN_DEPTH_INPUT: "2",
+      MAX_CHAIN_DEPTH_INPUT: "20",
+      AWS_REGION_INPUT: "ap-northeast-1,ap-southeast-1",
+      ROUTER_REGION_INPUT: "us-west-1,us-west-2",
+      ROUTER_PROBE_INPUT: "false",
+      ROUTER_PROBE_ATTEMPTS_INPUT: "2",
+      ROUTER_PROBE_LMT_INPUT: "1",
+      ROUTER_PROBE_SECID_INPUT: "1.600519",
+      LAMBDA_NAME_INPUT: "kline-prod",
+      CONFIG_INPUT: "config/kline.json",
+    });
 
   assert.equal(args[args.indexOf("--job-id") + 1], "20260630-daily-market-hs-a");
   assert.equal(args[args.indexOf("--chain-depth") + 1], "2");
-  assert.equal(args[args.indexOf("--max-chain-depth") + 1], "20");
-  assert.equal(args[args.indexOf("--aws-region") + 1], "ap-northeast-1,ap-southeast-1");
-  assert.equal(args[args.indexOf("--lambda-name") + 1], "kline-prod");
+    assert.equal(args[args.indexOf("--max-chain-depth") + 1], "20");
+    assert.equal(args[args.indexOf("--aws-region") + 1], "ap-northeast-1,ap-southeast-1");
+    assert.equal(args[args.indexOf("--router-region") + 1], "us-west-1,us-west-2");
+    assert.equal(args[args.indexOf("--router-probe") + 1], "false");
+    assert.equal(args[args.indexOf("--router-probe-attempts") + 1], "2");
+    assert.equal(args[args.indexOf("--router-probe-lmt") + 1], "1");
+    assert.equal(args[args.indexOf("--router-probe-secid") + 1], "1.600519");
+    assert.equal(args[args.indexOf("--lambda-name") + 1], "kline-prod");
   assert.equal(args[args.indexOf("--config") + 1], "config/kline.json");
 });
 
@@ -185,7 +195,7 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
       concurrency: "1",
       config: "config/kline.json",
       date: "20260630",
-      engine: "aws",
+      engine: "aws-router",
       force: false,
       huaweicloud_region: "cn-east-3",
       job_id: "20260630-daily-market-hs-a",
@@ -195,6 +205,12 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
       period: "daily",
       retry_attempts: "3",
       retry_concurrency: "1",
+      router_probe_attempts: "1",
+      router_probe_lmt: "1",
+      router_probe_requested: "true",
+      router_probe_secid: "1.600519",
+      router_region_requested: "auto",
+      router_region_resolved: "us-west-1,us-west-2",
       universe: "market",
     },
     {
@@ -214,6 +230,11 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
   assert.equal(args.includes("chain_depth=3"), true);
   assert.equal(args.includes("job_id=20260630-daily-market-hs-a"), true);
   assert.equal(args.includes("aws_region=ap-northeast-1,ap-southeast-1"), true);
+  assert.equal(args.includes("router_region=auto"), true);
+  assert.equal(args.includes("router_probe=true"), true);
+  assert.equal(args.includes("router_probe_attempts=1"), true);
+  assert.equal(args.includes("router_probe_lmt=1"), true);
+  assert.equal(args.includes("router_probe_secid=1.600519"), true);
   assert.equal(args.includes("huaweicloud_region=cn-east-3"), true);
 });
 
@@ -301,6 +322,15 @@ function sampleRun(overrides = {}) {
       remaining: 4534,
     },
     progress_file: "data/jobs/20260630/daily/20260630-daily-market-hs-a/progress.json",
+    router_region_requested: "auto",
+    router_region_resolved: "us-west-1,us-west-2",
+    router_probe_requested: "true",
+    router_probe_attempts: "1",
+    router_probe_lmt: "1",
+    router_probe_secid: "1.600519",
+    router_probe_summary: {
+      status: "selected",
+    },
     should_dispatch_next: true,
     universe: "market",
     date: "20260630",
@@ -353,6 +383,8 @@ test("buildIssueBody includes progress, run link, and resume command", () => {
   assert.match(body, /- pending: 4532/);
   assert.match(body, /- failed: 2/);
   assert.match(body, /- completion_rate: 18\.07%/);
+  assert.match(body, /- router_region: us-west-1,us-west-2/);
+  assert.match(body, /- router_probe: selected/);
   assert.match(body, /https:\/\/github\.com\/liqiangcc\/x\/actions\/runs\/123/);
   assert.match(body, /gh workflow run 'Daily Data Commit'/);
   assert.match(body, /chain_depth=3/);

@@ -5,9 +5,10 @@ const https = require("node:https");
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const DEFAULT_EASTMONEY_BASE_URL = "http://push2his.eastmoney.com/api/qt/stock/kline/get";
-const DEFAULT_EASTMONEY_RETRIES = 3;
-const DEFAULT_EASTMONEY_TIMEOUT_MS = 5000;
+const DEFAULT_EASTMONEY_BASE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
+const DEFAULT_EASTMONEY_RETRIES = 1;
+const DEFAULT_EASTMONEY_TIMEOUT_MS = 15000;
+const DEFAULT_KLINE_LMT = 10000;
 const VALID_KLTS = new Set([101, 106]);
 
 function nowMs() {
@@ -43,7 +44,7 @@ function normalizeTargetInput(event = {}) {
     throw invalidRequest("klt must be 101 or 106.");
   }
 
-  const lmt = parsePositiveInteger(payload.lmt, 100000, "lmt");
+  const lmt = parsePositiveInteger(payload.lmt, DEFAULT_KLINE_LMT, "lmt");
   const end = String(payload.end || "20991231").trim();
   if (!/^\d{8}$/.test(end)) {
     throw invalidRequest("end must be YYYYMMDD.");

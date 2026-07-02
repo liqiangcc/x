@@ -89,7 +89,7 @@ async function fetchPool(pool, dateValue) {
   return parseJsonOrJsonp(rawText);
 }
 
-async function getKline({ secid, klt, lmt = 100000, end = "20991231" }) {
+async function getKline({ secid, klt, lmt = 10000, end = "20991231" }) {
   const url = new URL("https://push2his.eastmoney.com/api/qt/stock/kline/get");
   url.searchParams.set("secid", secid);
   url.searchParams.set("ut", "fa5fd1943c7b386f172d6893dbfba10b");

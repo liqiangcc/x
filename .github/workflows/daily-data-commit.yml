@@ -72,6 +72,27 @@ on:
         description: "高级：AWS 区域列表，逗号分隔；一般留空使用配置轮询。"
         required: false
         default: ""
+      router_region:
+        description: "高级：aws-router target 区域，auto=自动探测，all=全部，或逗号分隔区域顺序。"
+        required: false
+        default: "auto"
+      router_probe:
+        description: "engine=aws-router 且 router_region=auto 时是否先探测区域延迟。"
+        required: false
+        default: true
+        type: boolean
+      router_probe_attempts:
+        description: "高级：job 内 aws-router 区域探测次数。"
+        required: false
+        default: "1"
+      router_probe_lmt:
+        description: "高级：job 内 aws-router 区域探测的 K 线条数，默认轻量探测连通和延迟。"
+        required: false
+        default: "1"
+      router_probe_secid:
+        description: "高级：job 内 aws-router 区域探测使用的样本 secid。"
+        required: false
+        default: "1.600519"
       huaweicloud_region:
         description: "高级：华为云区域列表或 all；一般留空使用 targets JSON 全部区域。"
         required: false
@@ -184,6 +205,11 @@ jobs:
           UNIVERSE_INPUT: ${{ github.event.inputs.universe }}
           ENGINE_INPUT: ${{ github.event.inputs.engine }}
           AWS_REGION_INPUT: ${{ github.event.inputs.aws_region }}
+          ROUTER_REGION_INPUT: ${{ github.event.inputs.router_region }}
+          ROUTER_PROBE_INPUT: ${{ github.event.inputs.router_probe }}
+          ROUTER_PROBE_ATTEMPTS_INPUT: ${{ github.event.inputs.router_probe_attempts }}
+          ROUTER_PROBE_LMT_INPUT: ${{ github.event.inputs.router_probe_lmt }}
+          ROUTER_PROBE_SECID_INPUT: ${{ github.event.inputs.router_probe_secid }}
           HUAWEICLOUD_REGION_INPUT: ${{ github.event.inputs.huaweicloud_region }}
           LAMBDA_NAME_INPUT: ${{ github.event.inputs.lambda_name }}
           CONFIG_INPUT: ${{ github.event.inputs.config }}

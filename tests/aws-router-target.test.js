@@ -30,7 +30,7 @@ test("target lambda validates kline input", async () => {
     {
       secid: "1.600519",
       klt: 101,
-      lmt: 100000,
+      lmt: 10000,
       end: "20991231",
     }
   );
@@ -40,7 +40,7 @@ test("target lambda validates kline input", async () => {
   assert.throws(() => normalizeTargetInput({ secid: "1.600519", klt: 101, end: "bad" }), /end/);
 });
 
-test("target lambda builds the Eastmoney kline URL from the HTTP endpoint by default", async () => {
+test("target lambda builds the Eastmoney kline URL from the HTTPS endpoint by default", async () => {
   const { buildEastmoneyKlineUrl } = await loadTarget();
   const url = new URL(buildEastmoneyKlineUrl({
     secid: "1.600519",
@@ -49,7 +49,7 @@ test("target lambda builds the Eastmoney kline URL from the HTTP endpoint by def
     end: "20991231",
   }));
 
-  assert.equal(url.origin, "http://push2his.eastmoney.com");
+  assert.equal(url.origin, "https://push2his.eastmoney.com");
   assert.equal(url.pathname, "/api/qt/stock/kline/get");
   assert.equal(url.searchParams.get("secid"), "1.600519");
   assert.equal(url.searchParams.get("klt"), "101");

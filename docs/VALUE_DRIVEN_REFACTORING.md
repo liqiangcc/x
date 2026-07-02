@@ -519,7 +519,7 @@ const pool = await poolClient.fetchPool({
 const kline = await klineClient.fetchKline({
   secid: "0.000035",
   period: "daily",
-  limit: 100000,
+  limit: 10000,
   endDate: "20991231"
 });
 ```

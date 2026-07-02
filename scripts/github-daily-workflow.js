@@ -51,6 +51,11 @@ function buildDailyArgs(env = process.env) {
   const chainDepth = String(env.CHAIN_DEPTH_INPUT ?? "").trim();
   const maxChainDepth = String(env.MAX_CHAIN_DEPTH_INPUT ?? "").trim();
   const awsRegion = String(env.AWS_REGION_INPUT ?? "").trim();
+  const routerRegion = String(env.ROUTER_REGION_INPUT ?? "").trim();
+  const routerProbe = String(env.ROUTER_PROBE_INPUT ?? "").trim();
+  const routerProbeAttempts = String(env.ROUTER_PROBE_ATTEMPTS_INPUT ?? "").trim();
+  const routerProbeLmt = String(env.ROUTER_PROBE_LMT_INPUT ?? "").trim();
+  const routerProbeSecid = String(env.ROUTER_PROBE_SECID_INPUT ?? "").trim();
   const huaweiCloudRegion = String(env.HUAWEICLOUD_REGION_INPUT ?? "").trim();
   const lambdaName = String(env.LAMBDA_NAME_INPUT ?? "").trim();
   const config = String(env.CONFIG_INPUT ?? "").trim();
@@ -92,6 +97,26 @@ function buildDailyArgs(env = process.env) {
 
   if (awsRegion) {
     args.push("--aws-region", awsRegion);
+  }
+
+  if (routerRegion) {
+    args.push("--router-region", routerRegion);
+  }
+
+  if (routerProbe) {
+    args.push("--router-probe", routerProbe);
+  }
+
+  if (routerProbeAttempts) {
+    args.push("--router-probe-attempts", routerProbeAttempts);
+  }
+
+  if (routerProbeLmt) {
+    args.push("--router-probe-lmt", routerProbeLmt);
+  }
+
+  if (routerProbeSecid) {
+    args.push("--router-probe-secid", routerProbeSecid);
   }
 
   if (huaweiCloudRegion) {
@@ -456,6 +481,8 @@ async function writeGithubStepSummary(args, run = null) {
     `- input_path: ${summary.input_path}`,
     `- period: ${summary.period}`,
     `- engine: ${summary.engine}`,
+    `- router_region: ${latestRun?.router_region_resolved ?? summary.router_region ?? "n/a"}`,
+    `- router_probe: ${latestRun?.router_probe_summary?.status ?? "n/a"}`,
     `- total_codes: ${summary.total_codes}`,
     `- success: ${summary.success}`,
     `- failed: ${summary.failed}`,
@@ -592,6 +619,11 @@ function buildDispatchArgs(run, env = process.env) {
   addDispatchInput(args, "chain_depth", nextChainDepth);
   addDispatchInput(args, "max_chain_depth", run.max_chain_depth);
   addDispatchInput(args, "aws_region", run.aws_region);
+  addDispatchInput(args, "router_region", run.router_region_requested ?? run.router_region ?? run.router_region_resolved);
+  addDispatchInput(args, "router_probe", run.router_probe_requested);
+  addDispatchInput(args, "router_probe_attempts", run.router_probe_attempts);
+  addDispatchInput(args, "router_probe_lmt", run.router_probe_lmt);
+  addDispatchInput(args, "router_probe_secid", run.router_probe_secid);
   addDispatchInput(args, "huaweicloud_region", run.huaweicloud_region);
   addDispatchInput(args, "lambda_name", run.lambda_name);
   addDispatchInput(args, "config", run.config);
@@ -693,6 +725,8 @@ function buildIssueBody(run, {
     `- period: ${run.period}`,
     `- universe: ${run.universe}`,
     `- engine: ${run.engine}`,
+    `- router_region: ${run.router_region_resolved ?? "n/a"}`,
+    `- router_probe: ${run.router_probe_summary?.status ?? "n/a"}`,
     `- batch_size: ${run.batch_size}`,
     `- batch_codes: ${run.progress_batch_codes}`,
     `- batch_source: ${run.progress_batch_source}`,

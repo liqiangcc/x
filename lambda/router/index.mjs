@@ -2,6 +2,7 @@ import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 
 const DEFAULT_TARGET_TIMEOUT_MS = 18000;
 const DEFAULT_MAX_FALLBACKS = 6;
+const DEFAULT_KLINE_LMT = 10000;
 const VALID_KLTS = new Set([101, 106]);
 
 function nowMs() {
@@ -110,7 +111,7 @@ function normalizeKlineRequest(payload = {}) {
     throw requestError("klt must be 101 or 106.");
   }
 
-  const lmt = payload.lmt === undefined ? 100000 : Number(payload.lmt);
+  const lmt = payload.lmt === undefined ? DEFAULT_KLINE_LMT : Number(payload.lmt);
   if (!Number.isInteger(lmt) || lmt < 1) {
     throw requestError("lmt must be a positive integer.");
   }
@@ -123,6 +124,13 @@ function normalizeKlineRequest(payload = {}) {
   return { region, secid, klt, lmt, end };
 }
 
+function parseRegionList(region) {
+  return String(region ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function resolveRegions(region, targets, { allowAll = false } = {}) {
   const targetRegions = Object.keys(targets);
   if (region === "auto") {
@@ -131,10 +139,28 @@ function resolveRegions(region, targets, { allowAll = false } = {}) {
   if (region === "all" && allowAll) {
     return targetRegions;
   }
-  if (!Object.prototype.hasOwnProperty.call(targets, region)) {
-    throw requestError(`Region is not allowed: ${region}`, "invalid_region", 400);
+  const requestedRegions = parseRegionList(region);
+  if (requestedRegions.length > 1) {
+    const resolvedRegions = [];
+    for (const requestedRegion of requestedRegions) {
+      if (!Object.prototype.hasOwnProperty.call(targets, requestedRegion)) {
+        throw requestError(`Region is not allowed: ${requestedRegion}`, "invalid_region", 400);
+      }
+      if (!resolvedRegions.includes(requestedRegion)) {
+        resolvedRegions.push(requestedRegion);
+      }
+    }
+    return resolvedRegions;
   }
-  return [region];
+  const requestedRegion = requestedRegions[0] ?? region;
+  if (!Object.prototype.hasOwnProperty.call(targets, requestedRegion)) {
+    throw requestError(`Region is not allowed: ${requestedRegion}`, "invalid_region", 400);
+  }
+  return [requestedRegion];
+}
+
+function isSingleRegionRequest(region) {
+  return !String(region).includes(",") && region !== "auto" && region !== "all";
 }
 
 function classifyInvokeError(error) {
@@ -229,10 +255,10 @@ async function handleProbe(body, context) {
 
 async function handleKline(body, context) {
   const request = normalizeKlineRequest(body);
-  const allRegions = resolveRegions(request.region, context.targets);
-  const maxAttempts = request.region === "auto"
-    ? Math.min(context.maxFallbacks, allRegions.length)
-    : 1;
+  const allRegions = resolveRegions(request.region, context.targets, { allowAll: true });
+  const maxAttempts = isSingleRegionRequest(request.region)
+    ? 1
+    : Math.min(context.maxFallbacks, allRegions.length);
   const regions = allRegions.slice(0, maxAttempts);
   const attemptedRegions = [];
   const startedAt = nowMs();

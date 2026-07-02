@@ -18,6 +18,7 @@ const PERIOD_MAP = {
   daily: "101",
   yearly: "106",
 };
+const DEFAULT_KLINE_LMT = 10000;
 const DEFAULT_AWS_REGIONS = [
   "ap-northeast-1",
   "ap-northeast-2",
@@ -89,6 +90,7 @@ function parseArguments(argv) {
     lambdaNameOverridden: false,
     outputFile: null,
     period: "daily",
+    routerRegion: "auto",
     routerTokenEnv: "AWS_ROUTER_TOKEN",
     routerUrlEnv: "AWS_ROUTER_URL",
   };
@@ -147,6 +149,16 @@ function parseArguments(argv) {
         throw new Error("Missing value for --huaweicloud-region.");
       }
       options.huaweiCloudRegionValue = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--router-region") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --router-region.");
+      }
+      options.routerRegion = nextArg.trim() || "auto";
       index += 1;
       continue;
     }
@@ -285,7 +297,7 @@ async function fetchLocalKline(secid, klt) {
       return await getKline({
         secid,
         klt,
-        lmt: 100000,
+        lmt: DEFAULT_KLINE_LMT,
         end: "20991231",
       });
     } catch (error) {
@@ -313,7 +325,7 @@ async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
   const payload = JSON.stringify({
     secid,
     klt: Number(klt),
-    lmt: 100000,
+    lmt: DEFAULT_KLINE_LMT,
     dry_run: true,
     format: "json",
     debug: false,
@@ -446,7 +458,7 @@ async function fetchHuaweiCloudKline(secid, klt, options, env = process.env, fet
         payload: {
           end: "20991231",
           klt: Number(klt),
-          lmt: 100000,
+          lmt: DEFAULT_KLINE_LMT,
           secid,
         },
         secretKey,
@@ -495,10 +507,10 @@ async function fetchAwsRouterKline(secid, klt, options, env = process.env, fetch
       "x-router-token": routerToken,
     },
     body: JSON.stringify({
-      region: "auto",
+      region: options.routerRegion ?? "auto",
       secid,
       klt: Number(klt),
-      lmt: 100000,
+      lmt: DEFAULT_KLINE_LMT,
       end: "20991231",
     }),
   });
@@ -546,7 +558,11 @@ async function resolveKline(options, deps = {}) {
   }
 
   if (options.engine === "aws-router") {
-    return withStage("fetch_kline_aws_router", { period: options.period, secid }, () =>
+    return withStage("fetch_kline_aws_router", {
+      period: options.period,
+      router_region: options.routerRegion ?? "auto",
+      secid,
+    }, () =>
       fetchRouter(secid, klt, options)
     );
   }

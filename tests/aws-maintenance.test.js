@@ -170,6 +170,13 @@ test("daily workflow uses maintained AWS access key secrets", () => {
   assert.equal(workflow.includes("secrets.AWS_SECRET_ACCESS_KEY"), true);
   assert.equal(workflow.includes("vars.AWS_REGION || 'ap-northeast-1'"), true);
   assert.equal(workflow.includes("- aws-router"), true);
+  assert.equal(workflow.includes("router_region"), true);
+  assert.equal(workflow.includes("ROUTER_REGION_INPUT"), true);
+  assert.equal(workflow.includes("ROUTER_PROBE_INPUT"), true);
+  assert.equal(workflow.includes("router_probe_lmt"), true);
+  assert.equal(workflow.includes("ROUTER_PROBE_LMT_INPUT"), true);
+  assert.equal(workflow.includes("ROUTER_PROBE_ATTEMPTS_INPUT"), true);
+  assert.equal(workflow.includes("ROUTER_PROBE_SECID_INPUT"), true);
   assert.equal(workflow.includes("- huaweicloud"), true);
   assert.equal(workflow.includes("huaweicloud_region"), true);
   assert.equal(workflow.includes("secrets.AWS_ROUTER_URL"), true);

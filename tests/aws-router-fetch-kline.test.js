@@ -18,8 +18,15 @@ function jsonResponse(payload, { ok = true, status = 200 } = {}) {
 }
 
 test("fetch_kline parses aws-router engine", () => {
-  const options = parseArguments(["600519", "--engine", "aws-router"]);
+  const options = parseArguments([
+    "600519",
+    "--engine",
+    "aws-router",
+    "--router-region",
+    "us-west-1,us-west-2",
+  ]);
   assert.equal(options.engine, "aws-router");
+  assert.equal(options.routerRegion, "us-west-1,us-west-2");
 });
 
 test("fetch_kline parses Huawei Cloud engine options", () => {
@@ -69,7 +76,11 @@ test("fetchAwsRouterKline posts to router and preserves metrics", async () => {
   const payload = await fetchAwsRouterKline(
     "1.600519",
     "101",
-    { routerUrlEnv: "AWS_ROUTER_URL", routerTokenEnv: "AWS_ROUTER_TOKEN" },
+    {
+      routerRegion: "us-west-1,us-west-2",
+      routerUrlEnv: "AWS_ROUTER_URL",
+      routerTokenEnv: "AWS_ROUTER_TOKEN",
+    },
     {
       AWS_ROUTER_URL: "https://router.example/",
       AWS_ROUTER_TOKEN: "secret",
@@ -97,10 +108,10 @@ test("fetchAwsRouterKline posts to router and preserves metrics", async () => {
   assert.equal(requests[0].url, "https://router.example/kline");
   assert.equal(requests[0].options.headers["x-router-token"], "secret");
   assert.deepEqual(JSON.parse(requests[0].options.body), {
-    region: "auto",
+    region: "us-west-1,us-west-2",
     secid: "1.600519",
     klt: 101,
-    lmt: 100000,
+    lmt: 10000,
     end: "20991231",
   });
   assert.equal(payload.source_engine, "aws-router");
@@ -176,7 +187,7 @@ test("fetchHuaweiCloudKline invokes FunctionGraph and preserves metrics", async 
   assert.deepEqual(JSON.parse(requests[0].request.body), {
     end: "20991231",
     klt: 101,
-    lmt: 100000,
+    lmt: 10000,
     secid: "1.600519",
   });
   assert.equal(payload.source_engine, "huaweicloud");

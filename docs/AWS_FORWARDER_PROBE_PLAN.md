@@ -224,7 +224,7 @@ Target Lambda 接收 Router 通过 `InvokeFunction` 传入的 JSON：
 {
   "secid": "0.000001",
   "klt": 101,
-  "lmt": 100000,
+  "lmt": 10000,
   "end": "20991231"
 }
 ```
@@ -234,7 +234,7 @@ Target Lambda 接收 Router 通过 `InvokeFunction` 传入的 JSON：
 ```text
 secid 格式：0.xxxxxx 或 1.xxxxxx
 klt 只允许 101 / 106
-lmt 必须是正整数，默认 100000
+lmt 必须是正整数，默认 10000
 end 必须是 YYYYMMDD，默认 20991231
 ```
 
@@ -411,7 +411,7 @@ all
   "region": "auto",
   "secid": "0.000001",
   "klt": 101,
-  "lmt": 100000,
+  "lmt": 10000,
   "end": "20991231"
 }
 ```

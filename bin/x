@@ -56,6 +56,9 @@ const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
+const DEFAULT_ROUTER_PROBE_ATTEMPTS = "1";
+const DEFAULT_ROUTER_PROBE_LMT = "1";
+const DEFAULT_ROUTER_PROBE_SECID = "1.600519";
 
 function rel(filePath) {
   return path.relative(ROOT, filePath).replaceAll(path.sep, "/");
@@ -71,11 +74,11 @@ function printUsage() {
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
-  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline validate [target_path] [--period daily|yearly] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -101,6 +104,10 @@ function normalizeDate(input) {
     throw new Error(`Invalid date: ${input}`);
   }
   return digits;
+}
+
+function isExplicitFalse(value) {
+  return ["0", "false", "no", "off"].includes(String(value ?? "").trim().toLowerCase());
 }
 
 function parseOptions(argv, defaults = {}) {
@@ -519,6 +526,103 @@ function appendUrlPath(baseUrl, pathname) {
   return `${String(baseUrl).replace(/\/+$/, "")}${pathname}`;
 }
 
+function probeDuration(result) {
+  return Number.isFinite(result?.router_reported_duration_ms)
+    ? result.router_reported_duration_ms
+    : result?.client_duration_ms;
+}
+
+function selectRouterProbeRegions(report) {
+  const results = Array.isArray(report?.results) ? report.results : [];
+  return results
+    .filter((result) => result.engine === "aws-router" && result.ok && result.region)
+    .sort((left, right) => {
+      const leftDuration = probeDuration(left);
+      const rightDuration = probeDuration(right);
+      if (Number.isFinite(leftDuration) && Number.isFinite(rightDuration) && leftDuration !== rightDuration) {
+        return leftDuration - rightDuration;
+      }
+      if (Number.isFinite(leftDuration)) {
+        return -1;
+      }
+      if (Number.isFinite(rightDuration)) {
+        return 1;
+      }
+      return String(left.region).localeCompare(String(right.region));
+    })
+    .map((result) => result.region)
+    .filter((region, index, regions) => regions.indexOf(region) === index);
+}
+
+function summarizeRouterProbe(report, selectedRegions, error = null) {
+  const results = Array.isArray(report?.results) ? report.results : [];
+  const routerResults = results.filter((result) => result.engine === "aws-router");
+  const failures = routerResults.filter((result) => !result.ok);
+  return {
+    status: error
+      ? "error"
+      : selectedRegions.length > 0
+        ? "selected"
+        : "fallback_auto",
+    attempts: report?.attempts ?? null,
+    lmt: report?.lmt ?? null,
+    secid: report?.secid ?? null,
+    total_regions: routerResults.length,
+    successes: selectedRegions.length,
+    failures: failures.length,
+    selected_regions: selectedRegions,
+    error: error?.message ?? null,
+  };
+}
+
+async function resolveRouterRegionForDaily(options) {
+  const requestedRegion = String(options.routerRegion ?? "auto").trim() || "auto";
+  const probeEnabled = options.engine === "aws-router" &&
+    requestedRegion === "auto" &&
+    !isExplicitFalse(options.routerProbe);
+  if (!probeEnabled) {
+    options.routerRegion = requestedRegion;
+    return {
+      enabled: false,
+      requested_region: requestedRegion,
+      resolved_region: requestedRegion,
+      summary: summarizeRouterProbe(null, []),
+    };
+  }
+
+  const configFile = options.config ? rootPath(options.config) : path.join(ROOT, "config", "kline.json");
+  const config = await readJson(configFile, {});
+  const rawLatencyOptions = {
+    attempts: options.routerProbeAttempts ?? DEFAULT_ROUTER_PROBE_ATTEMPTS,
+    engine: "aws-router",
+    lmt: options.routerProbeLmt ?? DEFAULT_ROUTER_PROBE_LMT,
+    period: options.period,
+    routerMode: "probe",
+    secid: options.routerProbeSecid ?? DEFAULT_ROUTER_PROBE_SECID,
+    targetRegion: "all",
+  };
+
+  try {
+    const report = await runLatencyBenchmark(normalizeLatencyOptions(rawLatencyOptions, config));
+    const selectedRegions = selectRouterProbeRegions(report);
+    options.routerRegion = selectedRegions.length > 0 ? selectedRegions.join(",") : "auto";
+    return {
+      enabled: true,
+      requested_region: requestedRegion,
+      resolved_region: options.routerRegion,
+      summary: summarizeRouterProbe(report, selectedRegions),
+    };
+  } catch (error) {
+    options.routerRegion = "auto";
+    return {
+      enabled: true,
+      requested_region: requestedRegion,
+      resolved_region: "auto",
+      summary: summarizeRouterProbe(null, [], error),
+    };
+  }
+}
+
 async function postRouterJson(pathname, body) {
   const routerUrl = requiredEnv("AWS_ROUTER_URL");
   const routerToken = requiredEnv("AWS_ROUTER_TOKEN");
@@ -616,6 +720,9 @@ async function commandKlineFetch(argv) {
   if (options.awsRegion) {
     args.push("--aws-region", options.awsRegion);
   }
+  if (options.routerRegion) {
+    args.push("--router-region", options.routerRegion);
+  }
   if (options.huaweicloudRegion) {
     args.push("--huaweicloud-region", options.huaweicloudRegion);
   }
@@ -670,6 +777,9 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   }
   if (options.awsRegion) {
     args.push("--aws-region", options.awsRegion);
+  }
+  if (options.routerRegion) {
+    args.push("--router-region", options.routerRegion);
   }
   if (options.huaweicloudRegion) {
     args.push("--huaweicloud-region", options.huaweicloudRegion);
@@ -1241,11 +1351,32 @@ async function commandDaily(argv) {
   if (!options.concurrency) {
     options.concurrency = "4";
   }
+  const routerProbe = await withStage("router_probe", {
+    attempts: options.routerProbeAttempts ?? DEFAULT_ROUTER_PROBE_ATTEMPTS,
+    engine: options.engine,
+    lmt: options.routerProbeLmt ?? DEFAULT_ROUTER_PROBE_LMT,
+    period: options.period,
+    router_probe: options.routerProbe ?? "true",
+    router_region: options.routerRegion ?? "auto",
+    secid: options.routerProbeSecid ?? DEFAULT_ROUTER_PROBE_SECID,
+  }, () => resolveRouterRegionForDaily(options));
+  stageLog("end", "router_probe_result", {
+    enabled: routerProbe.enabled,
+    failures: routerProbe.summary.failures,
+    lmt: routerProbe.summary.lmt,
+    requested_region: routerProbe.requested_region,
+    resolved_region: routerProbe.resolved_region,
+    secid: routerProbe.summary.secid,
+    status: routerProbe.summary.status,
+    successes: routerProbe.summary.successes,
+  });
   stageLog("start", "daily_start", {
     date: options.date ?? null,
     latest: Boolean(options.latest),
     period: options.period,
     engine: options.engine,
+    router_region: options.routerRegion ?? "auto",
+    router_probe: options.routerProbe ?? "true",
     universe: options.universe,
     job_mode: options.jobMode ?? "single",
     batch_size: options.batchSize ?? null,
@@ -1450,6 +1581,7 @@ async function commandDaily(argv) {
     freshness_codes: options.freshnessCodes ?? null,
     concurrency: options.concurrency,
     retry_attempts: options.retryAttempts ?? null,
+    router_region: options.routerRegion ?? null,
   }, () => runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs, { streamOutput }));
   writeProcessResult(klineResult);
   stageLog("end", "kline_sync_result", {
@@ -1561,6 +1693,14 @@ async function commandDaily(argv) {
     period: options.period,
     engine: options.engine,
     aws_region: options.awsRegion ?? null,
+    router_region_requested: routerProbe.requested_region,
+    router_region_resolved: routerProbe.resolved_region,
+    router_probe_requested: options.routerProbe ?? "true",
+    router_probe_attempts: options.routerProbeAttempts ?? DEFAULT_ROUTER_PROBE_ATTEMPTS,
+    router_probe_lmt: options.routerProbeLmt ?? DEFAULT_ROUTER_PROBE_LMT,
+    router_probe_secid: options.routerProbeSecid ?? DEFAULT_ROUTER_PROBE_SECID,
+    router_probe_enabled: routerProbe.enabled,
+    router_probe_summary: routerProbe.summary,
     huaweicloud_region: options.huaweicloudRegion ?? null,
     lambda_name: options.lambdaName ?? null,
     config: options.config ?? null,
@@ -1840,6 +1980,8 @@ function printDailyRunSummary(run, quality, failures) {
       `retry_failed=${run.retry_failed ?? 0}`,
       `success_rate=${run.kline_success_rate ?? "n/a"}`,
       `engine_counts=${JSON.stringify(run.kline_engine_counts ?? {})}`,
+      `router_region=${run.router_region_resolved ?? "n/a"}`,
+      `router_probe=${run.router_probe_summary?.status ?? "n/a"}`,
       `failure_reason_counts=${JSON.stringify(run.kline_failure_reason_counts ?? {})}`,
       `region_counts=${JSON.stringify(run.kline_region_counts ?? {})}`,
       `quality=${qualityStatus}`,

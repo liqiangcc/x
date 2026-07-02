@@ -12,7 +12,7 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
   );
 }
 
@@ -77,6 +77,7 @@ function parseArguments(argv) {
     retryAttempts: 0,
     retryConcurrency: null,
     retryDelayMs: 1000,
+    routerRegion: "auto",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -118,6 +119,16 @@ function parseArguments(argv) {
         throw new Error("Missing value for --huaweicloud-region.");
       }
       options.huaweiCloudRegions = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--router-region") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --router-region.");
+      }
+      options.routerRegion = nextArg.trim() || "auto";
       index += 1;
       continue;
     }
@@ -510,6 +521,10 @@ async function fetchSingleKline(secid, options) {
     args.push("--aws-region", options.awsRegions);
   }
 
+  if (options.routerRegion) {
+    args.push("--router-region", options.routerRegion);
+  }
+
   if (options.lambdaName) {
     args.push("--lambda-name", options.lambdaName);
   }
@@ -644,6 +659,23 @@ function isRetriableFailure(errorClass) {
   return ["rate_limited", "transient_network"].includes(errorClass);
 }
 
+function routerRegionStrategy(engine, routerRegion) {
+  if (engine !== "aws-router") {
+    return "none";
+  }
+  const region = String(routerRegion ?? "auto").trim() || "auto";
+  if (region === "auto") {
+    return "router_auto";
+  }
+  if (region === "all") {
+    return "router_all";
+  }
+  if (region.includes(",")) {
+    return "ordered_fallback";
+  }
+  return "single_region";
+}
+
 function createSummary(options, selection) {
   return {
     aws_regions: options.awsRegions,
@@ -675,6 +707,8 @@ function createSummary(options, selection) {
     retry_attempts: options.retryAttempts,
     retry_concurrency: options.retryConcurrency,
     retry_delay_ms: options.retryDelayMs,
+    router_region: options.routerRegion,
+    router_region_strategy: routerRegionStrategy(options.engine, options.routerRegion),
     selection_mode: selection.selectionMode,
     total_codes: selection.selectedCodes.length,
     success: 0,
@@ -1227,6 +1261,7 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     retryAttempts: options.retryAttempts ?? 0,
     retryConcurrency: options.retryConcurrency ?? 1,
     retryDelayMs: options.retryDelayMs ?? 1000,
+    routerRegion: options.routerRegion ?? "auto",
   };
   effectiveOptions.freshnessCodes = await loadFreshnessCodes({
     ...options,

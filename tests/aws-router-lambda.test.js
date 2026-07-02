@@ -152,6 +152,43 @@ test("router kline falls back across target regions", async () => {
   assert.deepEqual(payload.attempted_regions, ["us-east-1", "ap-northeast-2"]);
 });
 
+test("router kline follows explicit ordered region lists", async () => {
+  const { createHandler } = await loadRouter();
+  const attempted = [];
+  const handler = createHandler({
+    env: {
+      ROUTER_TOKEN: "secret",
+      ROUTER_MAX_FALLBACKS: "2",
+    },
+    targets,
+    invokeTarget: async (region) => {
+      attempted.push(region);
+      if (region === "ap-northeast-2") {
+        return {
+          ok: false,
+          error: "timeout",
+          error_class: "timeout",
+        };
+      }
+      return successPayload(region);
+    },
+  });
+
+  const response = await handler(event({
+    body: {
+      region: "ap-northeast-2,us-east-1",
+      secid: "1.600519",
+      klt: 101,
+    },
+  }));
+  const payload = parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(attempted, ["ap-northeast-2", "us-east-1"]);
+  assert.equal(payload.source_region, "us-east-1");
+  assert.deepEqual(payload.attempted_regions, ["ap-northeast-2", "us-east-1"]);
+});
+
 test("router probe returns per-region results", async () => {
   const { createHandler } = await loadRouter();
   const handler = createHandler({

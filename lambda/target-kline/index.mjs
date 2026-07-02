@@ -1,8 +1,12 @@
+import http from "node:http";
+import https from "node:https";
+
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const DEFAULT_EASTMONEY_BASE_URL = "http://push2his.eastmoney.com/api/qt/stock/kline/get";
-const DEFAULT_EASTMONEY_RETRIES = 3;
-const DEFAULT_EASTMONEY_TIMEOUT_MS = 5000;
+const DEFAULT_EASTMONEY_BASE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
+const DEFAULT_EASTMONEY_RETRIES = 1;
+const DEFAULT_EASTMONEY_TIMEOUT_MS = 15000;
+const DEFAULT_KLINE_LMT = 10000;
 const VALID_KLTS = new Set([101, 106]);
 
 function nowMs() {
@@ -42,7 +46,7 @@ export function normalizeTargetInput(event = {}) {
     throw invalidRequest("klt must be 101 or 106.");
   }
 
-  const lmt = parsePositiveInteger(payload?.lmt, 100000, "lmt");
+  const lmt = parsePositiveInteger(payload?.lmt, DEFAULT_KLINE_LMT, "lmt");
   const end = String(payload?.end ?? "20991231").trim();
   if (!/^\d{8}$/.test(end)) {
     throw invalidRequest("end must be YYYYMMDD.");
@@ -70,8 +74,8 @@ function defaultHeaders() {
   return {
     Accept: "*/*",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-    Connection: "keep-alive",
-    Referer: "http://quote.eastmoney.com/",
+    Connection: "close",
+    Referer: "https://quote.eastmoney.com/",
     "User-Agent": USER_AGENT,
   };
 }
@@ -91,20 +95,10 @@ async function fetchWithTimeout(
 ) {
   let lastError;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
     try {
-      const response = await fetchImpl(url, {
-        headers: defaultHeaders(),
-        redirect: "follow",
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`Eastmoney HTTP ${response.status}`);
-      }
-      return await response.text();
+      return fetchImpl === fetch
+        ? await requestText(url, timeoutMs)
+        : await requestTextWithFetch(url, timeoutMs, fetchImpl);
     } catch (error) {
       lastError = error;
       if (attempt < retries) {
@@ -112,11 +106,60 @@ async function fetchWithTimeout(
           setTimeout(resolve, attempt * 300);
         });
       }
-    } finally {
-      clearTimeout(timer);
     }
   }
   throw lastError;
+}
+
+function requestText(urlText, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlText);
+    const client = url.protocol === "https:" ? https : http;
+    const request = client.request(url, {
+      agent: false,
+      headers: defaultHeaders(),
+      method: "GET",
+      timeout: timeoutMs,
+    }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => {
+        chunks.push(Buffer.from(chunk));
+      });
+      response.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          reject(new Error(`Eastmoney HTTP ${response.statusCode}: ${text.slice(0, 200)}`));
+          return;
+        }
+        resolve(text);
+      });
+    });
+    request.on("timeout", () => {
+      request.destroy(new Error("Eastmoney request timeout."));
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function requestTextWithFetch(url, timeoutMs, fetchImpl) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+  try {
+    const response = await fetchImpl(url, {
+      headers: defaultHeaders(),
+      redirect: "follow",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Eastmoney HTTP ${response.status}`);
+    }
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function classifyError(error) {
@@ -128,7 +171,7 @@ function classifyError(error) {
   if (/abort|timeout|timed out/i.test(`${message} ${causeText}`)) {
     return "timeout";
   }
-  if (/UND_ERR_SOCKET|other side closed|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNREFUSED/i.test(`${message} ${causeText}`)) {
+  if (/UND_ERR_SOCKET|other side closed|socket hang up|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNREFUSED/i.test(`${message} ${causeText}`)) {
     return "transient_network";
   }
   if (/invalid/i.test(message)) {
