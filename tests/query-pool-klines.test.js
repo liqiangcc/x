@@ -23,6 +23,26 @@ async function writeCodes(filePath, codes) {
   await fs.writeFile(filePath, `${JSON.stringify({ codes }, null, 2)}\n`, "utf8");
 }
 
+function captureStderr(t) {
+  const originalWrite = process.stderr.write;
+  const originalStageLog = process.env.X_STAGE_LOG;
+  let output = "";
+  process.env.X_STAGE_LOG = "1";
+  process.stderr.write = function write(chunk) {
+    output += chunk.toString();
+    return true;
+  };
+  t.after(() => {
+    process.stderr.write = originalWrite;
+    if (originalStageLog === undefined) {
+      delete process.env.X_STAGE_LOG;
+    } else {
+      process.env.X_STAGE_LOG = originalStageLog;
+    }
+  });
+  return () => output;
+}
+
 function klinePayload(code, engine = "aws", region = "ap-northeast-1", metrics = {}) {
   const { klines, latestDate = "2026-06-30", ...restMetrics } = metrics;
   return {
@@ -45,6 +65,38 @@ function normalizedKlinePayload(code, period = "daily", latestDate = "2026-06-30
     klines: [`${latestDate},1,2,3,1,100,200,0,0,0,0`],
   };
 }
+
+test("queryPoolKlines emits stage logs for selected codes", async (t) => {
+  const stderrOutput = captureStderr(t);
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001", "600002"]);
+
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "aws",
+    "--output-dir",
+    outputDir,
+    "--concurrency",
+    "1",
+  ]);
+  const { exitCode } = await queryPoolKlines(options, async (secid) =>
+    klinePayload(secid.split(".")[1], "aws", "ap-northeast-1")
+  );
+
+  const lines = stderrOutput().split(/\r?\n/).filter((line) => line.startsWith("[stage] "));
+  assert.equal(exitCode, 0);
+  assert.equal(lines.some((line) => line.includes("start kline_load_codes")), true);
+  assert.equal(lines.some((line) => line.includes("end kline_select_codes")), true);
+  assert.equal(lines.filter((line) => line.includes("start kline_code")).length, 2);
+  assert.equal(lines.filter((line) => line.includes("end kline_code")).length, 2);
+  assert.equal(lines.some((line) => line.includes("progress kline_batch_progress")), true);
+  assert.equal(lines.some((line) => line.includes("end kline_summary_write")), true);
+});
 
 test("queryPoolKlines parses Huawei Cloud engine options", () => {
   const options = parseArguments([

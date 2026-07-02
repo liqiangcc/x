@@ -28,6 +28,7 @@ const {
 const { dataCommitMessage } = require("../src/core/data_commit");
 const { dataCommitPathspecs } = require("../src/core/data_paths");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
+const { isStageLogEnabled, stageLog, withStage } = require("../src/core/stage_log");
 const { generateDailyReport } = require("../src/reports/daily");
 const {
   applyProgressResults,
@@ -128,10 +129,54 @@ function parseOptions(argv, defaults = {}) {
 }
 
 async function runNode(scriptPath, args, options = {}) {
+  if (options.streamOutput) {
+    return runNodeStreaming(scriptPath, args, options);
+  }
   return execFileAsync("node", [path.join(ROOT, scriptPath), ...args], {
     cwd: ROOT,
     env: options.env ?? process.env,
     maxBuffer: options.maxBuffer ?? 50 * 1024 * 1024,
+  });
+}
+
+function runNodeStreaming(scriptPath, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(ROOT, scriptPath), ...args], {
+      cwd: ROOT,
+      env: options.env ?? process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      stdout += text;
+      if (options.echoStdout !== false) {
+        process.stdout.write(text);
+      }
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      stderr += text;
+      if (options.echoStderr !== false) {
+        process.stderr.write(text);
+      }
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      const result = { stdout, stderr, streamed: true };
+      if (code === 0) {
+        resolve(result);
+        return;
+      }
+      const error = new Error(`${scriptPath} failed with exit code ${code ?? 1}`);
+      error.code = code ?? 1;
+      error.stdout = stdout;
+      error.stderr = stderr || error.message;
+      error.streamed = true;
+      reject(error);
+    });
   });
 }
 
@@ -143,9 +188,18 @@ async function runNodeAllowFailure(scriptPath, args, options = {}) {
     return {
       stdout: error.stdout ?? "",
       stderr: error.stderr ?? error.message,
+      streamed: Boolean(error.streamed),
       exitCode: typeof error.code === "number" ? error.code : 1,
     };
   }
+}
+
+function writeProcessResult(result) {
+  if (result?.streamed) {
+    return;
+  }
+  process.stdout.write(result?.stdout ?? "");
+  process.stderr.write(result?.stderr ?? "");
 }
 
 function runCommandWithInput(command, args, input, options = {}) {
@@ -1173,6 +1227,7 @@ async function commandDaily(argv) {
     universeDir: rel(DEFAULT_UNIVERSE_DIR),
   });
   const startedAt = isoNow();
+  const streamOutput = isStageLogEnabled();
 
   if (!options.date && !options.latest) {
     options.latest = true;
@@ -1186,17 +1241,34 @@ async function commandDaily(argv) {
   if (!options.concurrency) {
     options.concurrency = "4";
   }
+  stageLog("start", "daily_start", {
+    date: options.date ?? null,
+    latest: Boolean(options.latest),
+    period: options.period,
+    engine: options.engine,
+    universe: options.universe,
+    job_mode: options.jobMode ?? "single",
+    batch_size: options.batchSize ?? null,
+    concurrency: options.concurrency,
+    force: Boolean(options.force),
+  });
 
   let date = options.date ? normalizeDate(options.date) : null;
   let poolResult;
 
-  if (date && !options.forcePool && (await hasCompletePoolSnapshot(date, options.outputDir))) {
-    poolResult = {
-      stdout: `Using existing pool snapshot: ${rel(path.join(ROOT, options.outputDir, date))}\n`,
-      stderr: "",
-      exitCode: 0,
-    };
-  } else {
+  poolResult = await withStage("pool_snapshot", {
+    date,
+    latest: Boolean(options.latest),
+    output_dir: options.outputDir,
+    force_pool: Boolean(options.forcePool),
+  }, async () => {
+    if (date && !options.forcePool && (await hasCompletePoolSnapshot(date, options.outputDir))) {
+      return {
+        stdout: `Using existing pool snapshot: ${rel(path.join(ROOT, options.outputDir, date))}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
+    }
     const poolArgs = ["--output-dir", options.outputDir, "--engine", options.poolEngine];
     if (date) {
       poolArgs.unshift(date);
@@ -1204,10 +1276,14 @@ async function commandDaily(argv) {
       poolArgs.unshift("--days", "0");
     }
 
-    poolResult = await runNodeAllowFailure("fetch/pull_pool_task.js", poolArgs);
-  }
-  process.stdout.write(poolResult.stdout);
-  process.stderr.write(poolResult.stderr);
+    return runNodeAllowFailure("fetch/pull_pool_task.js", poolArgs, { streamOutput });
+  });
+  writeProcessResult(poolResult);
+  stageLog("end", "pool_snapshot_result", {
+    exit_code: poolResult.exitCode,
+    stdout_bytes: poolResult.stdout.length,
+    stderr_bytes: poolResult.stderr.length,
+  });
 
   const poolSummaryPath = path.join(ROOT, options.outputDir, "summary.json");
   const poolSummary = await readJson(poolSummaryPath, {});
@@ -1218,6 +1294,7 @@ async function commandDaily(argv) {
   if (!(await hasCompletePoolSnapshot(date, options.outputDir))) {
     throw new Error(`Pool snapshot is incomplete or has mismatched qdate: ${rel(path.join(ROOT, options.outputDir, date))}`);
   }
+  stageLog("end", "resolve_date", { date, pool_summary: rel(poolSummaryPath) });
   const poolDir = path.join(ROOT, options.outputDir, date);
   const runId = options.runId ?? runIdFor(date, options.period);
   const runDir = path.join(DEFAULT_RUNS_DIR, runId);
@@ -1227,9 +1304,17 @@ async function commandDaily(argv) {
   let codesResult;
   let inputDir = poolDir;
   let universeSummary = null;
-  if (options.universe === "pool") {
-    codesResult = await runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"]);
-  } else {
+  codesResult = await withStage("market_universe", {
+    date,
+    universe: options.universe,
+    market: options.market,
+    force_universe: Boolean(options.forceUniverse),
+    job_id: plannedJobId,
+  }, async () => {
+    if (options.universe === "pool") {
+      return runNodeAllowFailure("utils/parse_pool_json.js", [rel(poolDir), "--codes-only"], { streamOutput });
+    }
+
     const sharedUniverseDir = rootPath(options.universeDir);
     const privateUniverseRoot = marketUniverseRootForRun({
       date,
@@ -1244,57 +1329,101 @@ async function commandDaily(argv) {
     inputDir = path.join(privateUniverseRoot, date);
     const completePrivateUniverse = await hasCompleteMarketUniverse(date, privateUniverseRoot, options.market);
     const completeSharedUniverse = await hasCompleteMarketUniverse(date, sharedUniverseDir, options.market);
+    stageLog("progress", "market_universe_cache", {
+      input_dir: rel(inputDir),
+      private_complete: completePrivateUniverse,
+      shared_complete: completeSharedUniverse,
+    });
 
     if (shouldReuseMarketUniverse({ complete: completePrivateUniverse, forceUniverse: options.forceUniverse })) {
-      codesResult = {
+      return {
         stdout: `Using existing private market universe: ${rel(inputDir)}\n`,
         stderr: "",
         exitCode: 0,
       };
-    } else if (shouldReuseMarketUniverse({ complete: completeSharedUniverse, forceUniverse: options.forceUniverse })) {
+    }
+    if (shouldReuseMarketUniverse({ complete: completeSharedUniverse, forceUniverse: options.forceUniverse })) {
       await copyMarketUniverseSnapshot(date, sharedUniverseDir, privateUniverseRoot);
-      codesResult = {
+      return {
         stdout: `Copied market universe: ${rel(path.join(sharedUniverseDir, date))} -> ${rel(inputDir)}\n`,
         stderr: "",
         exitCode: 0,
       };
     } else {
-      codesResult = await runNodeAllowFailure("fetch/fetch_market_stocks.js", [
+      return runNodeAllowFailure("fetch/fetch_market_stocks.js", [
         "--date",
         date,
         "--market",
         options.market,
         "--output-dir",
         rel(privateUniverseRoot),
-      ]);
+      ], { streamOutput });
     }
-    universeSummary = await readJson(path.join(inputDir, "summary.json"), null).catch(() => null);
-  }
-  process.stdout.write(codesResult.stdout);
-  process.stderr.write(codesResult.stderr);
+  });
+  universeSummary = options.universe === "market"
+    ? await readJson(path.join(inputDir, "summary.json"), null).catch(() => null)
+    : null;
+  writeProcessResult(codesResult);
+  stageLog("end", "market_universe_result", {
+    exit_code: codesResult.exitCode,
+    input_dir: rel(inputDir),
+    total_codes: universeSummary?.total_codes ?? null,
+  });
 
-  const freshnessContext = await buildKlineFreshnessContext({
+  const freshnessContext = await withStage("freshness_context", {
+    date,
+    period: options.period,
+    input_dir: rel(inputDir),
+  }, () => buildKlineFreshnessContext({
     date,
     inputDir,
     options,
     runDir,
-  });
+  }));
   if (freshnessContext?.expectedLatestDate && freshnessContext.codesPath) {
     options.expectedLatestDate = freshnessContext.expectedLatestDate;
     options.freshnessCodes = rel(freshnessContext.codesPath);
   }
-  const staleCodes = await findStaleKlineCodes({
+  stageLog("end", "freshness_context_result", {
+    expected_latest_date: freshnessContext?.expectedLatestDate ?? null,
+    freshness_codes: freshnessContext?.codes?.size ?? null,
+    freshness_source: freshnessContext?.source ?? null,
+    freshness_codes_path: freshnessContext?.codesPath ? rel(freshnessContext.codesPath) : null,
+  });
+  const staleCodes = await withStage("stale_scan", {
+    expected_latest_date: freshnessContext?.expectedLatestDate ?? null,
+    period: options.period,
+  }, () => findStaleKlineCodes({
     expectedLatestDate: freshnessContext?.expectedLatestDate ?? null,
     freshnessCodes: freshnessContext?.codes ?? null,
     period: options.period,
-  });
-  const jobContext = await prepareDailyJobProgress(options, {
+  }));
+  stageLog("end", "stale_scan_result", { stale_codes: staleCodes.length });
+  const jobContext = await withStage("prepare_job_progress", {
+    date,
+    period: options.period,
+    job_mode: options.jobMode ?? "single",
+    job_id: plannedJobId,
+    stale_codes: staleCodes.length,
+  }, () => prepareDailyJobProgress(options, {
     date,
     inputDir,
     preselectFailedCodes: staleCodes,
-  });
+  }));
   let progress = jobContext?.progress ?? null;
-  const cleanupSummary = await cleanupInvalidKlineFiles(options.period);
+  stageLog("end", "prepare_job_progress_result", {
+    job_id: jobContext?.jobId ?? null,
+    chain_depth: jobContext?.chainDepth ?? null,
+    max_chain_depth: progress?.max_chain_depth ?? null,
+    batch_size: progress?.batch_size ?? null,
+    batch_codes: jobContext?.selection.codes.length ?? null,
+    batch_source: jobContext?.selection.source ?? null,
+    progress_counts: progress?.counts ?? null,
+    progress_file: jobContext ? rel(jobContext.progressPath) : null,
+  });
+  const cleanupSummary = await withStage("cleanup_invalid_kline", {
+    period: options.period,
+  }, () => cleanupInvalidKlineFiles(options.period));
   if (cleanupSummary.removed_codes.length > 0) {
     console.error(
       `Removed ${cleanupSummary.removed_codes.length} invalid ${options.period} kline file(s) before sync.`
@@ -1304,15 +1433,30 @@ async function commandDaily(argv) {
       await writeJson(jobContext.progressPath, progress);
     }
   }
+  stageLog("end", "cleanup_invalid_kline_result", {
+    removed_codes: cleanupSummary.removed_codes.length,
+  });
   const klineInputPath = jobContext ? jobContext.batchCodesPath : inputDir;
   const klineOptions = jobContext
     ? { ...options, batchSize: null, limit: null, offset: null }
     : options;
   const klineArgs = [rel(klineInputPath), "--period", options.period, "--engine", options.engine];
   appendKlineSyncOptions(klineArgs, klineOptions, { includeOutputDir: false });
-  const klineResult = await runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs);
-  process.stdout.write(klineResult.stdout);
-  process.stderr.write(klineResult.stderr);
+  const klineResult = await withStage("kline_sync", {
+    period: options.period,
+    engine: options.engine,
+    kline_input: rel(klineInputPath),
+    expected_latest_date: options.expectedLatestDate ?? null,
+    freshness_codes: options.freshnessCodes ?? null,
+    concurrency: options.concurrency,
+    retry_attempts: options.retryAttempts ?? null,
+  }, () => runNodeAllowFailure("fetch/query_pool_klines.js", klineArgs, { streamOutput }));
+  writeProcessResult(klineResult);
+  stageLog("end", "kline_sync_result", {
+    exit_code: klineResult.exitCode,
+    stdout_bytes: klineResult.stdout.length,
+    stderr_bytes: klineResult.stderr.length,
+  });
 
   const defaultSummaryPath = path.join(DEFAULT_KLINE_DIR, options.period, `summary.${options.period}.json`);
   const emittedSummaryPath = parseKlineSummaryPath(klineResult.stdout, options.period);
@@ -1329,21 +1473,46 @@ async function commandDaily(argv) {
   const klineSummary = emittedSummaryPath
     ? await readJson(summaryPath, emptyKlineSummary)
     : emptyKlineSummary;
+  stageLog("end", "kline_summary_read", {
+    summary_path: rel(summaryPath),
+    emitted_summary: Boolean(emittedSummaryPath),
+    total_codes: klineSummary.total_codes ?? null,
+    success: klineSummary.success ?? null,
+    failed: klineSummary.failed ?? null,
+    skipped_existing: klineSummary.skipped_existing ?? null,
+    status: klineSummary.status ?? null,
+  });
 
   if (jobContext) {
-    progress = applyProgressResults(progress, klineSummary, {
+    progress = await withStage("apply_progress", {
+      job_id: jobContext.jobId,
+      chain_depth: jobContext.chainDepth,
+      progress_file: rel(jobContext.progressPath),
+    }, async () => applyProgressResults(progress, klineSummary, {
       chainDepth: jobContext.chainDepth,
-    });
+    }));
     await writeJson(jobContext.progressPath, progress);
+    stageLog("end", "apply_progress_result", {
+      job_id: jobContext.jobId,
+      status: progress.status,
+      counts: progress.counts,
+    });
   }
 
-  const validateResult = await runNodeAllowFailure("fetch/check_kline_empty.js", [
+  const validateResult = await withStage("validate_kline", {
+    period: options.period,
+  }, () => runNodeAllowFailure("fetch/check_kline_empty.js", [
     "data/kline",
     "--period",
     options.period,
     "--json",
-  ]);
+  ], { streamOutput }));
   const quality = await buildQuality(runId, validateResult, options.period);
+  stageLog("end", "validate_kline_result", {
+    exit_code: validateResult.exitCode,
+    quality_status: quality.status,
+    issue_count: quality.issue_count ?? null,
+  });
   const failures = {
     run_id: runId,
     failed: 0,
@@ -1458,16 +1627,34 @@ async function commandDaily(argv) {
     },
   };
 
-  await writeJson(path.join(runDir, "failures.json"), failures);
-  await writeJson(path.join(runDir, "quality.json"), quality);
-  await writeJson(path.join(runDir, "run.json"), run);
+  await withStage("write_run_artifacts", {
+    run_id: runId,
+    run_dir: rel(runDir),
+  }, async () => {
+    await writeJson(path.join(runDir, "failures.json"), failures);
+    await writeJson(path.join(runDir, "quality.json"), quality);
+    await writeJson(path.join(runDir, "run.json"), run);
+  });
   console.log(rel(path.join(runDir, "run.json")));
   printDailyRunSummary(run, quality, failures);
 
   if (options.commit) {
-    await commitData(runId);
+    await withStage("commit_data", {
+      run_id: runId,
+      status: run.status,
+      job_status: run.job_status,
+      should_dispatch_next: run.should_dispatch_next,
+    }, () => commitData(runId));
   }
 
+  stageLog("end", "daily_end", {
+    run_id: runId,
+    date,
+    period: options.period,
+    status: run.status,
+    job_status: run.job_status,
+    should_dispatch_next: run.should_dispatch_next,
+  });
   if (run.status !== "completed" && options.allowPartial && !hardFailed) {
     console.error("Daily run completed with partial kline failures; --allow-partial enabled.");
   } else if (run.status !== "completed") {

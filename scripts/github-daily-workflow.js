@@ -5,6 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { stageLog, withStage } = require("../src/core/stage_log");
 
 const ROOT = path.resolve(__dirname, "..");
 const ISSUE_LABELS = {
@@ -891,26 +892,54 @@ async function syncJobIssue(run, {
 }
 
 async function main() {
-  await runChecked("git", ["pull", "--rebase"]);
+  await withStage("git_pull", { ref: process.env.GITHUB_REF_NAME ?? null }, () =>
+    runChecked("git", ["pull", "--rebase"])
+  );
 
   const dailyArgs = buildDailyArgs();
+  stageLog("end", "build_daily_args", {
+    args: dailyArgs,
+  });
   const startedAtMs = Date.now();
-  const dailyCode = await run(process.execPath, [path.join(ROOT, "bin/x"), ...dailyArgs]);
-  const latestRun = await findLatestRun({ sinceMs: startedAtMs - 1000 });
+  const dailyCode = await withStage("run_bin_x_daily", {
+    args: dailyArgs,
+  }, () => run(process.execPath, [path.join(ROOT, "bin/x"), ...dailyArgs]));
+  stageLog("end", "run_bin_x_daily_result", { exit_code: dailyCode });
+  const latestRun = await withStage("find_latest_run", {
+    since_ms: startedAtMs - 1000,
+  }, () => findLatestRun({ sinceMs: startedAtMs - 1000 }));
+  stageLog("end", "latest_run_result", {
+    run_id: latestRun?.run_id ?? null,
+    date: latestRun?.date ?? null,
+    period: latestRun?.period ?? null,
+    job_id: latestRun?.job_id ?? null,
+    job_status: latestRun?.job_status ?? null,
+    should_dispatch_next: latestRun?.should_dispatch_next ?? null,
+  });
   const dataBranch = dataBranchNameForRun(latestRun);
   if (dataBranch) {
-    await checkoutDataBranch(dataBranch);
+    await withStage("checkout_data_branch", { branch: dataBranch }, () => checkoutDataBranch(dataBranch));
   }
-  await writeGithubStepSummary(dailyArgs, latestRun);
-  await pushDataBranch(dataBranch);
+  await withStage("write_step_summary", {
+    run_id: latestRun?.run_id ?? null,
+  }, () => writeGithubStepSummary(dailyArgs, latestRun));
+  await withStage("push_data_branch", { branch: dataBranch ?? null }, () => pushDataBranch(dataBranch));
 
   const dispatchNext = shouldDispatchNextRun(latestRun);
+  stageLog("end", "dispatch_decision", {
+    dispatch_next: dispatchNext,
+    job_status: latestRun?.job_status ?? null,
+    chain_depth: latestRun?.chain_depth ?? null,
+    max_chain_depth: latestRun?.max_chain_depth ?? null,
+  });
   let dispatchError = null;
   if (dispatchNext) {
     try {
-      await runChecked("gh", buildDispatchArgs(latestRun));
+      const dispatchArgs = buildDispatchArgs(latestRun);
+      await withStage("dispatch_next", { args: dispatchArgs }, () => runChecked("gh", dispatchArgs));
     } catch (error) {
       dispatchError = error;
+      stageLog("error", "dispatch_next", { error: error.message });
     }
   }
 
@@ -919,7 +948,11 @@ async function main() {
   let dataPullRequestError = null;
   if (!dispatchNext && !dispatchError) {
     try {
-      const setup = await setupDataPullRequest(latestRun, dataBranch);
+      const setup = await withStage("setup_data_pr", {
+        branch: dataBranch ?? null,
+        run_id: latestRun?.run_id ?? null,
+        job_status: latestRun?.job_status ?? null,
+      }, () => setupDataPullRequest(latestRun, dataBranch));
       dataPullRequest = setup?.pr ?? null;
       dataPullRequestAutoMerge = setup?.autoMerge ?? null;
       if (dataPullRequest?.url) {
@@ -931,20 +964,27 @@ async function main() {
     } catch (error) {
       dataPullRequestError = error;
       console.error(`Data PR sync failed: ${error.message}`);
+      stageLog("error", "setup_data_pr", { error: error.message });
     }
   }
 
   try {
-    await syncJobIssue(latestRun, {
+    await withStage("sync_job_issue", {
+      run_id: latestRun?.run_id ?? null,
+      job_id: latestRun?.job_id ?? null,
+      dispatch_next: dispatchNext,
+      data_pr: dataPullRequest?.url ?? null,
+    }, () => syncJobIssue(latestRun, {
       dailyCode,
       dataPullRequest,
       dataPullRequestAutoMerge,
       dataPullRequestError,
       dispatchError,
       dispatchNext,
-    });
+    }));
   } catch (error) {
     console.error(`Issue sync failed: ${error.message}`);
+    stageLog("error", "sync_job_issue", { error: error.message });
   }
 
   if (dispatchError) {
@@ -956,8 +996,17 @@ async function main() {
   }
 
   if (dailyCode !== 0 && !dispatchNext) {
+    stageLog("end", "exit_decision", {
+      exit_code: dailyCode,
+      dispatch_next: dispatchNext,
+    });
     process.exit(dailyCode);
   }
+  stageLog("end", "exit_decision", {
+    exit_code: 0,
+    daily_code: dailyCode,
+    dispatch_next: dispatchNext,
+  });
 }
 
 if (require.main === module) {

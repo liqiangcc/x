@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { getKline } = require("../src/sources/eastmoney/client");
 const { inferSecid, splitSecid } = require("../src/core/secid");
+const { stageLog, withStage } = require("../src/core/stage_log");
 const {
   ACCESS_KEY_ENV: HUAWEICLOUD_ACCESS_KEY_ENV,
   SECRET_KEY_ENV: HUAWEICLOUD_SECRET_KEY_ENV,
@@ -524,40 +525,60 @@ async function resolveKline(options, deps = {}) {
   const fetchRouter = deps.fetchAwsRouterKline ?? fetchAwsRouterKline;
   const secid = inferSecid(options.input);
   const klt = PERIOD_MAP[options.period];
+  stageLog("start", "fetch_kline_resolve", {
+    engine: options.engine,
+    input: options.input,
+    period: options.period,
+    secid,
+  });
 
   if (options.engine === "local") {
-    const rawData = await fetchLocal(secid, klt);
+    const rawData = await withStage("fetch_kline_local", { period: options.period, secid }, () =>
+      fetchLocal(secid, klt)
+    );
     return normalizeKlineData(rawData, secid, "local");
   }
 
   if (options.engine === "aws") {
-    return fetchAws(secid, klt, options.awsRegions, options.lambdaName);
+    return withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () =>
+      fetchAws(secid, klt, options.awsRegions, options.lambdaName)
+    );
   }
 
   if (options.engine === "aws-router") {
-    return fetchRouter(secid, klt, options);
+    return withStage("fetch_kline_aws_router", { period: options.period, secid }, () =>
+      fetchRouter(secid, klt, options)
+    );
   }
 
   if (options.engine === "huaweicloud") {
-    return fetchHuaweiCloud(secid, klt, options);
+    return withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () =>
+      fetchHuaweiCloud(secid, klt, options)
+    );
   }
 
   let huaweiCloudError = null;
   try {
-    return await fetchHuaweiCloud(secid, klt, options);
+    return await withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () =>
+      fetchHuaweiCloud(secid, klt, options)
+    );
   } catch (error) {
     huaweiCloudError = error;
   }
 
   let awsError = null;
   try {
-    return await fetchAws(secid, klt, options.awsRegions, options.lambdaName);
+    return await withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () =>
+      fetchAws(secid, klt, options.awsRegions, options.lambdaName)
+    );
   } catch (error) {
     awsError = error;
   }
 
   try {
-    const rawData = await fetchLocal(secid, klt);
+    const rawData = await withStage("fetch_kline_local", { period: options.period, secid }, () =>
+      fetchLocal(secid, klt)
+    );
     return normalizeKlineData(rawData, secid, "local");
   } catch (localError) {
     throw new Error(

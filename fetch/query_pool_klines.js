@@ -2,11 +2,10 @@
 
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { execFile } = require("node:child_process");
-const { promisify } = require("node:util");
+const { spawn } = require("node:child_process");
 const { getKlines, inspectKlinePayload } = require("./check_kline_empty");
+const { isStageLogEnabled, stageLog, startStageHeartbeat } = require("../src/core/stage_log");
 
-const execFileAsync = promisify(execFile);
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
 const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud"]);
 const PERIODS = new Set(["daily", "yearly"]);
@@ -535,10 +534,48 @@ async function fetchSingleKline(secid, options) {
     args.push("--huaweicloud-region-start-index", String(options.huaweiCloudRegionStartIndex));
   }
 
-  const { stdout } = await execFileAsync("node", args, {
-    maxBuffer: 25 * 1024 * 1024,
-  });
+  const { stdout } = await runFetchKlineProcess(args, extractStockCode(secid));
   return JSON.parse(stdout);
+}
+
+function prefixChildStderr(code, text) {
+  return String(text)
+    .split(/\r?\n/)
+    .map((line) => (line ? `[child ${code}] ${line}` : line))
+    .join("\n");
+}
+
+function runFetchKlineProcess(args, code) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = prefixChildStderr(code, chunk.toString());
+      stderr += text;
+      if (isStageLogEnabled()) {
+        process.stderr.write(text);
+      }
+    });
+    child.on("error", reject);
+    child.on("close", (exitCode) => {
+      if (exitCode === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      const error = new Error(stderr || `fetch_kline exited with code ${exitCode ?? 1}`);
+      error.code = exitCode ?? 1;
+      error.stdout = stdout;
+      error.stderr = stderr;
+      reject(error);
+    });
+  });
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -1034,6 +1071,98 @@ function finalizeSummary(summary, options) {
   }
 }
 
+async function runEntriesWithStage(entries, {
+  attempt,
+  concurrency,
+  fetchKline,
+  itemIndexForEntry,
+  options,
+  retry = false,
+}) {
+  const batchStage = retry ? "kline_retry_batch" : "kline_initial_batch";
+  const progressStage = retry ? "kline_retry_progress" : "kline_batch_progress";
+  const inFlight = new Map();
+  let completed = 0;
+  const total = entries.length;
+  stageLog("start", batchStage, {
+    attempt,
+    concurrency,
+    engine: options.engine,
+    period: options.period,
+    total,
+  });
+  const stopHeartbeat = startStageHeartbeat(batchStage, () => ({
+    attempt,
+    completed,
+    in_flight: [...inFlight.values()],
+    total,
+  }));
+
+  try {
+    const results = await mapWithConcurrency(entries, concurrency, async (entry, mapperIndex) => {
+      const inputCode = entry.inputCode;
+      const code = extractStockCode(inputCode);
+      const itemIndex = itemIndexForEntry(entry, mapperIndex);
+      const startedAt = Date.now();
+      inFlight.set(code, {
+        code,
+        input_code: inputCode,
+        item_index: itemIndex,
+      });
+      stageLog("start", "kline_code", {
+        attempt,
+        code,
+        engine: options.engine,
+        input_code: inputCode,
+        item_index: itemIndex,
+        period: options.period,
+      });
+      try {
+        const result = await processCode(inputCode, options, fetchKline, itemIndex);
+        completed += 1;
+        stageLog("end", "kline_code", {
+          attempt,
+          code: result.code ?? code,
+          duration_ms: Date.now() - startedAt,
+          error_class: result.file?.error_class ?? null,
+          item_index: itemIndex,
+          status: result.file?.status ?? null,
+        });
+        if (completed % 10 === 0 || completed === total) {
+          stageLog("progress", progressStage, {
+            attempt,
+            completed,
+            in_flight: [...inFlight.values()],
+            last_code: result.code ?? code,
+            total,
+          });
+        }
+        return result;
+      } catch (error) {
+        completed += 1;
+        stageLog("error", "kline_code", {
+          attempt,
+          code,
+          duration_ms: Date.now() - startedAt,
+          error: error?.message ?? String(error),
+          item_index: itemIndex,
+        });
+        throw error;
+      } finally {
+        inFlight.delete(code);
+      }
+    });
+    stageLog("end", batchStage, {
+      attempt,
+      completed,
+      total,
+    });
+    return results;
+  } finally {
+    stopHeartbeat();
+  }
+}
+
 async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   const effectiveOptions = {
     awsRegions: options.awsRegions ?? null,
@@ -1065,17 +1194,41 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     freshnessCodesPath: effectiveOptions.freshnessCodesPath,
     period: effectiveOptions.period,
   });
+  stageLog("start", "kline_load_codes", {
+    input_path: effectiveOptions.inputPath,
+    period: effectiveOptions.period,
+  });
   const codes = await loadCodes(effectiveOptions.inputPath);
+  stageLog("end", "kline_load_codes", {
+    available_codes: codes.length,
+    input_path: effectiveOptions.inputPath,
+  });
+  stageLog("start", "kline_select_codes", {
+    batch_size: effectiveOptions.batchSize,
+    force: effectiveOptions.force,
+    limit: effectiveOptions.limit,
+    offset: effectiveOptions.offset,
+  });
   const selection = await selectCodes(codes, effectiveOptions);
+  stageLog("end", "kline_select_codes", {
+    available_codes: selection.availableCodes,
+    candidate_codes: selection.candidateCodes,
+    selected_codes: selection.selectedCodes.length,
+    selection_mode: selection.selectionMode,
+  });
   const selectedCodes = selection.selectedCodes;
   const periodDir = path.join(effectiveOptions.outputDir, effectiveOptions.period);
   await fs.mkdir(periodDir, { recursive: true });
 
   const summary = createSummary(effectiveOptions, selection);
   const selectedEntries = selectedCodes.map((inputCode, itemIndex) => ({ inputCode, itemIndex }));
-  const initialResults = await mapWithConcurrency(selectedEntries, effectiveOptions.concurrency, (entry) =>
-    processCode(entry.inputCode, effectiveOptions, fetchKline, entry.itemIndex)
-  );
+  const initialResults = await runEntriesWithStage(selectedEntries, {
+    attempt: 0,
+    concurrency: effectiveOptions.concurrency,
+    fetchKline,
+    itemIndexForEntry: (entry) => entry.itemIndex,
+    options: effectiveOptions,
+  });
 
   const finalResults = new Map();
   let retryEntries = [];
@@ -1097,17 +1250,14 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   for (let attempt = 1; attempt <= effectiveOptions.retryAttempts && retryEntries.length > 0; attempt += 1) {
     await delay(effectiveOptions.retryDelayMs * (2 ** (attempt - 1)));
     const currentRetryEntries = retryEntries;
-    const retryResults = await mapWithConcurrency(
-      currentRetryEntries,
-      effectiveOptions.retryConcurrency,
-      (entry, retryIndex) =>
-        processCode(
-          entry.inputCode,
-          effectiveOptions,
-          fetchKline,
-          entry.itemIndex + selectedEntries.length * attempt + retryIndex
-        )
-    );
+    const retryResults = await runEntriesWithStage(currentRetryEntries, {
+      attempt,
+      concurrency: effectiveOptions.retryConcurrency,
+      fetchKline,
+      itemIndexForEntry: (entry, retryIndex) => entry.itemIndex + selectedEntries.length * attempt + retryIndex,
+      options: effectiveOptions,
+      retry: true,
+    });
 
     retryEntries = [];
     for (const result of retryResults) {
@@ -1131,7 +1281,17 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   finalizeSummary(summary, effectiveOptions);
 
   const summaryPath = path.join(periodDir, `summary.${effectiveOptions.period}.json`);
+  stageLog("start", "kline_summary_write", {
+    failed: summary.failed,
+    path: summaryPath,
+    success: summary.success,
+    total_codes: summary.total_codes,
+  });
   await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+  stageLog("end", "kline_summary_write", {
+    path: summaryPath,
+    status: summary.status,
+  });
   return {
     exitCode: summary.failure_reasons.length > 0 ? 1 : 0,
     summary,
