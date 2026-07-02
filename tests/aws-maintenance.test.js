@@ -161,8 +161,8 @@ test("daily workflow uses maintained AWS access key secrets", () => {
 
   assert.equal(workflow.includes("id-token: write"), false);
   assert.equal(workflow.includes("AWS_ROLE_ARN"), false);
-  assert.equal(workflow.includes("runs-on: self-hosted"), true);
-  assert.equal(workflow.includes("runs-on: ubuntu-latest"), false);
+  assert.equal(workflow.includes("runs-on: ubuntu-latest"), true);
+  assert.equal(workflow.includes("runs-on: self-hosted"), false);
   assert.equal(workflow.includes('default: "aws-router"'), true);
   assert.equal(workflow.includes("github.event.inputs.engine == 'aws' || github.event.inputs.engine == 'auto'"), true);
   assert.equal(workflow.includes("github.event_name == 'schedule' || github.event.inputs.engine == ''"), false);
