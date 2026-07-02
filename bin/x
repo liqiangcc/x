@@ -28,6 +28,7 @@ const {
 const { dataCommitMessage } = require("../src/core/data_commit");
 const { dataCommitPathspecs } = require("../src/core/data_paths");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
+const { generateDailyReport } = require("../src/reports/daily");
 const {
   applyProgressResults,
   calculateMaxChainDepth,
@@ -1520,132 +1521,6 @@ async function readExistingJson(filePath) {
   }
 }
 
-async function loadPoolCandidates(date) {
-  const poolTypes = ["zt", "qs", "zb"];
-  const candidates = new Map();
-
-  for (const poolType of poolTypes) {
-    const payload = await readExistingJson(path.join(DEFAULT_POOL_DIR, date, `${poolType}.json`));
-    const records = Array.isArray(payload?.data?.pool) ? payload.data.pool : [];
-    for (const item of records) {
-      const code = item?.c;
-      if (!code) {
-        continue;
-      }
-
-      if (!candidates.has(code)) {
-        candidates.set(code, {
-          date,
-          code,
-          name: item?.n ?? "",
-          market: item?.m ?? null,
-          pools: [],
-          signals: [],
-          score: 0,
-          reason: "",
-          data_quality: "ok",
-        });
-      }
-
-      const candidate = candidates.get(code);
-      candidate.pools.push(poolType);
-      if (poolType === "zt") {
-        candidate.signals.push("limit_up_pool");
-        candidate.score += 50;
-      } else if (poolType === "qs") {
-        candidate.signals.push("strong_pool");
-        candidate.score += 30;
-      } else if (poolType === "zb") {
-        candidate.signals.push("limit_break_pool");
-        candidate.score += 15;
-      }
-    }
-  }
-
-  return [...candidates.values()];
-}
-
-async function loadKlines(period, code) {
-  const sharded = path.join(DEFAULT_KLINE_DIR, period, code.slice(0, 3), `${code}.json`);
-  const legacy = path.join(DEFAULT_KLINE_DIR, period, `${code}.json`);
-  const payload = (await readExistingJson(sharded)) ?? (await readExistingJson(legacy));
-  if (Array.isArray(payload?.klines)) {
-    return payload.klines;
-  }
-  if (Array.isArray(payload?.data?.klines)) {
-    return payload.data.klines;
-  }
-  return [];
-}
-
-function parseKlineRow(row) {
-  const fields = String(row).split(",");
-  return {
-    date: fields[0],
-    open: Number(fields[1]),
-    close: Number(fields[2]),
-    high: Number(fields[3]),
-    low: Number(fields[4]),
-    volume: Number(fields[5]),
-    amount: Number(fields[6]),
-  };
-}
-
-async function enrichCandidateWithKlineSignals(candidate) {
-  const dailyRows = (await loadKlines("daily", candidate.code)).map(parseKlineRow);
-  if (dailyRows.length === 0) {
-    candidate.data_quality = "missing_kline";
-    return candidate;
-  }
-
-  const latest = dailyRows[dailyRows.length - 1];
-  const previousRows = dailyRows.slice(Math.max(0, dailyRows.length - 250), -1);
-  const previousHigh = previousRows.reduce(
-    (max, row) => (Number.isFinite(row.high) ? Math.max(max, row.high) : max),
-    0
-  );
-
-  if (previousHigh > 0 && Number.isFinite(latest.close) && latest.close >= previousHigh) {
-    candidate.signals.push("year_breakout");
-    candidate.score += 25;
-  }
-
-  const recentRows = dailyRows.slice(Math.max(0, dailyRows.length - 21), -1);
-  const amounts = recentRows.map((row) => row.amount).filter(Number.isFinite);
-  const avgAmount = amounts.length > 0 ? amounts.reduce((sum, value) => sum + value, 0) / amounts.length : 0;
-  if (avgAmount > 0 && Number.isFinite(latest.amount) && latest.amount >= avgAmount * 1.5) {
-    candidate.signals.push("volume_expand");
-    candidate.score += 20;
-  }
-
-  return candidate;
-}
-
-function csvEscape(value) {
-  const text = String(value ?? "");
-  if (/[",\n]/.test(text)) {
-    return `"${text.replaceAll('"', '""')}"`;
-  }
-  return text;
-}
-
-function candidatesToCsv(candidates) {
-  const header = ["date", "code", "name", "score", "pools", "signals", "data_quality", "reason"];
-  const rows = candidates.map((candidate) =>
-    [
-      candidate.date,
-      candidate.code,
-      candidate.name,
-      candidate.score,
-      candidate.pools.join("|"),
-      candidate.signals.join("|"),
-      candidate.data_quality,
-      candidate.reason,
-    ].map(csvEscape).join(",")
-  );
-  return `${header.join(",")}\n${rows.join("\n")}\n`;
-}
-
 async function commandReport(argv) {
   const subcommand = argv[0];
   if (subcommand !== "daily") {
@@ -1658,38 +1533,13 @@ async function commandReport(argv) {
   }
 
   const date = normalizeDate(options.date);
-  const candidates = await Promise.all(
-    (await loadPoolCandidates(date)).map((candidate) => enrichCandidateWithKlineSignals(candidate))
-  );
-  candidates.sort((left, right) => right.score - left.score || left.code.localeCompare(right.code));
-
-  for (const candidate of candidates) {
-    candidate.signals = [...new Set(candidate.signals)];
-    candidate.reason = candidate.signals.join(", ");
-  }
-
-  const reportDir = path.join(ROOT, "reports", date);
-  const quality = {
+  const report = await generateDailyReport({
     date,
-    status: candidates.some((candidate) => candidate.data_quality !== "ok") ? "recorded" : "ok",
-    candidate_count: candidates.length,
-    missing_kline_count: candidates.filter((candidate) => candidate.data_quality !== "ok").length,
-  };
-  const summary = [
-    `# ${date} Daily Candidates`,
-    "",
-    `- candidates: ${candidates.length}`,
-    `- missing_kline: ${quality.missing_kline_count}`,
-    `- quality: ${quality.status}`,
-    "",
-  ].join("\n");
-
-  await fs.mkdir(reportDir, { recursive: true });
-  await writeJson(path.join(reportDir, "candidates.json"), { date, candidates });
-  await fs.writeFile(path.join(reportDir, "candidates.csv"), candidatesToCsv(candidates), "utf8");
-  await writeJson(path.join(reportDir, "quality.json"), quality);
-  await fs.writeFile(path.join(reportDir, "summary.md"), summary, "utf8");
-  console.log(rel(reportDir));
+    klineDir: DEFAULT_KLINE_DIR,
+    outputDir: path.join(ROOT, "reports"),
+    poolDir: DEFAULT_POOL_DIR,
+  });
+  console.log(rel(report.reportDir));
 }
 
 function printJson(payload) {

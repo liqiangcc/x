@@ -41,6 +41,10 @@ bin/x aws status --profile default --region ap-northeast-1
 - `tests/`：Node 单元测试。
 - `legacy/`：旧 Python/Shell 脚本，仅作迁移参考。
 
+关键设计文档：
+
+- `docs/SIGNALS_DESIGN.md`：可扩展信号系统、基础能力枚举、`year_breakout` 定义和日报输出契约。
+
 ## 快速开始
 
 最小闭环：
