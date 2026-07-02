@@ -279,6 +279,137 @@ test("SEQUENCE_PATTERN is fully parameterized", () => {
   }).qualityIssues, ["insufficient_yearly_history"]);
 });
 
+test("WINDOW_AVERAGE is fully parameterized", () => {
+  const context = {
+    dailyRows: [
+      { amount: 10, date: "2026-01-01" },
+      { amount: 20, date: "2026-01-02" },
+      { amount: 30, date: "2026-01-03" },
+      { amount: 40, date: "2026-01-04" },
+      { amount: 100, date: "2026-01-05" },
+    ],
+    features: {
+      today: { amount: 100, date: "2026-01-05" },
+    },
+  };
+
+  const previousWindow = evaluateCapability(CapabilityType.WINDOW_AVERAGE, context, {
+    anchorField: "date",
+    anchorPath: "features.today.date",
+    current: "features.today.amount",
+    field: "amount",
+    multiplier: 2,
+    operator: "gte",
+    size: 3,
+    source: "dailyRows",
+  });
+  assert.equal(previousWindow.ok, true);
+  assert.equal(previousWindow.evidence.average_value, 30);
+  assert.equal(previousWindow.evidence.threshold_value, 60);
+  assert.equal(previousWindow.evidence.window_start, "2026-01-02");
+  assert.equal(previousWindow.evidence.window_end, "2026-01-04");
+
+  const includingAnchor = evaluateCapability(CapabilityType.WINDOW_AVERAGE, context, {
+    anchorPath: "features.today.date",
+    current: "features.today.amount",
+    field: "amount",
+    includeAnchor: true,
+    operator: "gte",
+    size: 2,
+    source: "dailyRows",
+  });
+  assert.equal(includingAnchor.ok, true);
+  assert.equal(includingAnchor.evidence.average_value, 70);
+
+  const tailWindow = evaluateCapability(CapabilityType.WINDOW_AVERAGE, context, {
+    current: "features.today.amount",
+    field: "amount",
+    operator: "eq",
+    size: 1,
+    source: "dailyRows",
+  });
+  assert.equal(tailWindow.ok, true);
+  assert.equal(tailWindow.evidence.average_value, 100);
+
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_AVERAGE, context, {
+    anchorPath: "features.today.date",
+    current: "features.today.amount",
+    field: "amount",
+    operator: "gte",
+    qualityIssue: "insufficient_amount_window",
+    size: 10,
+    source: "dailyRows",
+  }).qualityIssues, ["insufficient_amount_window"]);
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_AVERAGE, context, {
+    current: "features.missing",
+    field: "amount",
+    operator: "gte",
+    qualityIssue: "missing_current_amount",
+    size: 2,
+    source: "dailyRows",
+  }).qualityIssues, ["missing_current_amount"]);
+});
+
+test("WINDOW_EXTREME is fully parameterized", () => {
+  const context = {
+    dailyRows: [
+      { date: "2026-01-01", high: 6, low: 5 },
+      { date: "2026-01-02", high: 7, low: 4 },
+      { date: "2026-01-03", high: 8, low: 3 },
+      { date: "2026-01-04", high: 9, low: 2 },
+      { date: "2026-01-05", high: 11, low: 1 },
+    ],
+    features: {
+      today: { date: "2026-01-05", high: 11, low: 1 },
+    },
+  };
+
+  const maxWindow = evaluateCapability(CapabilityType.WINDOW_EXTREME, context, {
+    anchorPath: "features.today.date",
+    current: "features.today.high",
+    extreme: "max",
+    field: "high",
+    operator: "gt",
+    size: 3,
+    source: "dailyRows",
+  });
+  assert.equal(maxWindow.ok, true);
+  assert.equal(maxWindow.evidence.extreme_value, 9);
+  assert.equal(maxWindow.evidence.extreme_date, "2026-01-04");
+  assert.equal(maxWindow.evidence.window_start, "2026-01-02");
+
+  const minWindow = evaluateCapability(CapabilityType.WINDOW_EXTREME, context, {
+    anchorPath: "features.today.date",
+    current: "features.today.low",
+    extreme: "min",
+    field: "low",
+    operator: "lt",
+    size: 4,
+    source: "dailyRows",
+  });
+  assert.equal(minWindow.ok, true);
+  assert.equal(minWindow.evidence.extreme_value, 2);
+
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_EXTREME, context, {
+    current: "features.today.high",
+    extreme: "highest",
+    field: "high",
+    operator: "gt",
+    qualityIssue: "invalid_extreme_config",
+    size: 2,
+    source: "dailyRows",
+  }).qualityIssues, ["invalid_extreme_config"]);
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_EXTREME, context, {
+    current: "features.today.high",
+    extreme: "max",
+    field: "missing",
+    operator: "gt",
+    qualityIssue: "invalid_window_field",
+    size: 2,
+    source: "dailyRows",
+  }).qualityIssues, ["invalid_window_field"]);
+});
+
 test("runDailySignals scores candidates with evidence and stable sorting", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-signals-"));
   const poolDir = path.join(root, "pool");

@@ -7,6 +7,8 @@ const { evaluateRatioCompare } = require("./ratio_compare");
 const { evaluateSequencePattern } = require("./sequence_pattern");
 const { evaluateTrendAlignment } = require("./trend_alignment");
 const { evaluateValueCompare } = require("./value_compare");
+const { evaluateWindowAverage } = require("./window_average");
+const { evaluateWindowExtreme } = require("./window_extreme");
 const { getPathValue, numberAtPath } = require("./utils");
 
 const CapabilityType = Object.freeze({
@@ -29,6 +31,8 @@ const EVALUATORS = {
   [CapabilityType.SEQUENCE_PATTERN]: evaluateSequencePattern,
   [CapabilityType.TREND_ALIGNMENT]: evaluateTrendAlignment,
   [CapabilityType.VALUE_COMPARE]: evaluateValueCompare,
+  [CapabilityType.WINDOW_AVERAGE]: evaluateWindowAverage,
+  [CapabilityType.WINDOW_EXTREME]: evaluateWindowExtreme,
 };
 
 function evaluateCapability(type, context, params = {}) {

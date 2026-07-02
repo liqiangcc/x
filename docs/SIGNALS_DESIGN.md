@@ -159,12 +159,11 @@ v0.2 必须实现：
 - `RATIO_COMPARE`：判断当前值是否达到基准值的指定倍数。
 - `TREND_ALIGNMENT`：判断多个趋势值是否满足顺序关系。
 - `SEQUENCE_PATTERN`：参数化判断数组序列中的连续比较形态。
+- `WINDOW_EXTREME`：参数化计算窗口最大值或最小值，并与当前值比较。
+- `WINDOW_AVERAGE`：参数化计算窗口均值，并与当前值比较。
 - `QUALITY_GATE`：判断数据是否足够支持信号。
 
-v0.2 可预留但不必完整实现：
-
-- `WINDOW_EXTREME`
-- `WINDOW_AVERAGE`
+窗口类能力只处理 `source`、`field`、`size`、`anchor`、`operator` 等参数，不内置 N 日新高、放量、回踩等业务语义。
 
 ## 5. 能力接口
 
