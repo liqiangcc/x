@@ -146,6 +146,7 @@ const CapabilityType = Object.freeze({
   TREND_ALIGNMENT: "trend_alignment",
   WINDOW_EXTREME: "window_extreme",
   WINDOW_AVERAGE: "window_average",
+  WINDOW_BAND: "window_band",
   SEQUENCE_PATTERN: "sequence_pattern",
   QUALITY_GATE: "quality_gate",
 });
@@ -161,9 +162,11 @@ v0.2 必须实现：
 - `SEQUENCE_PATTERN`：参数化判断数组序列中的连续比较形态。
 - `WINDOW_EXTREME`：参数化计算窗口最大值或最小值，并与当前值比较。
 - `WINDOW_AVERAGE`：参数化计算窗口均值，并与当前值比较。
+- `WINDOW_BAND`：参数化计算窗口均值和标准差形成的上中下轨，并与当前值比较。
 - `QUALITY_GATE`：判断数据是否足够支持信号。
 
 窗口类能力只处理 `source`、`field`、`size`、`anchor`、`operator` 等参数，不内置 N 日新高、放量、回踩等业务语义。
+BOLL 应作为 `WINDOW_BAND` 的参数配置，例如 `source: "dailyRows"`、`field: "close"`、`size: 20`、`multiplier: 2`、`band: "upper"`，而不是能力层专用硬编码。
 
 ## 5. 能力接口
 

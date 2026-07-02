@@ -109,6 +109,10 @@ async function writeKline(klineDir, period, code, klines) {
   });
 }
 
+function assertApprox(actual, expected, epsilon = 1e-9) {
+  assert.equal(Math.abs(actual - expected) <= epsilon, true, `${actual} should be close to ${expected}`);
+}
+
 test("buildFeatures selects report day, previous trading day, previous yearly bar, and averages", () => {
   for (const yearlyDate of ["2025-12-29", "2025-12-30", "2025-12-31"]) {
     const built = buildFeatures({
@@ -408,6 +412,145 @@ test("WINDOW_EXTREME is fully parameterized", () => {
     size: 2,
     source: "dailyRows",
   }).qualityIssues, ["invalid_window_field"]);
+});
+
+test("WINDOW_BAND is fully parameterized", () => {
+  const context = {
+    dailyRows: [
+      { close: 8, date: "2026-01-01" },
+      { close: 12, date: "2026-01-02" },
+      { close: 14, date: "2026-01-03" },
+    ],
+    features: {
+      today: { close: 14, date: "2026-01-03", low: 5 },
+    },
+  };
+
+  const upperBreakout = evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    anchorPath: "features.today.date",
+    band: "upper",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 2,
+    operator: "gte",
+    size: 2,
+    source: "dailyRows",
+  });
+  assert.equal(upperBreakout.ok, true);
+  assert.equal(upperBreakout.evidence.middle, 10);
+  assert.equal(upperBreakout.evidence.stddev, 2);
+  assert.equal(upperBreakout.evidence.upper, 14);
+  assert.equal(upperBreakout.evidence.lower, 6);
+  assert.equal(upperBreakout.evidence.window_start, "2026-01-01");
+  assert.equal(upperBreakout.evidence.window_end, "2026-01-02");
+
+  const lowerBreak = evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    anchorPath: "features.today.date",
+    band: "lower",
+    current: "features.today.low",
+    field: "close",
+    multiplier: 2,
+    operator: "lt",
+    size: 2,
+    source: "dailyRows",
+  });
+  assert.equal(lowerBreak.ok, true);
+  assert.equal(lowerBreak.evidence.target_value, 6);
+
+  const includeAnchor = evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    anchorPath: "features.today.date",
+    band: "upper",
+    current: "features.today.close",
+    field: "close",
+    includeAnchor: true,
+    multiplier: 2,
+    operator: "lt",
+    size: 2,
+    source: "dailyRows",
+  });
+  assert.equal(includeAnchor.ok, true);
+  assert.equal(includeAnchor.evidence.middle, 13);
+  assert.equal(includeAnchor.evidence.upper, 15);
+
+  const sampleStddev = evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    anchorPath: "features.today.date",
+    band: "upper",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 1,
+    operator: "gt",
+    size: 2,
+    source: "dailyRows",
+    stddevMode: "sample",
+  });
+  assert.equal(sampleStddev.ok, true);
+  assertApprox(sampleStddev.evidence.stddev, Math.sqrt(8));
+  assertApprox(sampleStddev.evidence.upper, 10 + Math.sqrt(8));
+
+  const zeroStddev = evaluateCapability(CapabilityType.WINDOW_BAND, {
+    dailyRows: [
+      { close: 10, date: "2026-01-01" },
+      { close: 10, date: "2026-01-02" },
+    ],
+    features: {
+      today: { close: 10 },
+    },
+  }, {
+    band: "middle",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 2,
+    operator: "eq",
+    size: 2,
+    source: "dailyRows",
+  });
+  assert.equal(zeroStddev.ok, true);
+  assert.equal(zeroStddev.evidence.stddev, 0);
+  assert.equal(zeroStddev.evidence.upper, 10);
+  assert.equal(zeroStddev.evidence.lower, 10);
+
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    anchorPath: "features.today.date",
+    band: "upper",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 2,
+    operator: "gt",
+    qualityIssue: "insufficient_boll_window",
+    size: 5,
+    source: "dailyRows",
+  }).qualityIssues, ["insufficient_boll_window"]);
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    band: "ceiling",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 2,
+    operator: "gt",
+    qualityIssue: "invalid_boll_config",
+    size: 2,
+    source: "dailyRows",
+  }).qualityIssues, ["invalid_boll_config"]);
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    band: "upper",
+    current: "features.today.close",
+    field: "close",
+    multiplier: 2,
+    operator: "gt",
+    qualityIssue: "invalid_stddev_mode",
+    size: 2,
+    source: "dailyRows",
+    stddevMode: "weighted",
+  }).qualityIssues, ["invalid_stddev_mode"]);
+  assert.deepEqual(evaluateCapability(CapabilityType.WINDOW_BAND, context, {
+    band: "upper",
+    current: "features.missing",
+    field: "close",
+    multiplier: 2,
+    operator: "gt",
+    qualityIssue: "missing_band_current",
+    size: 2,
+    source: "dailyRows",
+  }).qualityIssues, ["missing_band_current"]);
 });
 
 test("runDailySignals scores candidates with evidence and stable sorting", async () => {

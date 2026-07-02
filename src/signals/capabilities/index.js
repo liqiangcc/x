@@ -8,6 +8,7 @@ const { evaluateSequencePattern } = require("./sequence_pattern");
 const { evaluateTrendAlignment } = require("./trend_alignment");
 const { evaluateValueCompare } = require("./value_compare");
 const { evaluateWindowAverage } = require("./window_average");
+const { evaluateWindowBand } = require("./window_band");
 const { evaluateWindowExtreme } = require("./window_extreme");
 const { getPathValue, numberAtPath } = require("./utils");
 
@@ -20,6 +21,7 @@ const CapabilityType = Object.freeze({
   TREND_ALIGNMENT: "trend_alignment",
   VALUE_COMPARE: "value_compare",
   WINDOW_AVERAGE: "window_average",
+  WINDOW_BAND: "window_band",
   WINDOW_EXTREME: "window_extreme",
 });
 
@@ -32,6 +34,7 @@ const EVALUATORS = {
   [CapabilityType.TREND_ALIGNMENT]: evaluateTrendAlignment,
   [CapabilityType.VALUE_COMPARE]: evaluateValueCompare,
   [CapabilityType.WINDOW_AVERAGE]: evaluateWindowAverage,
+  [CapabilityType.WINDOW_BAND]: evaluateWindowBand,
   [CapabilityType.WINDOW_EXTREME]: evaluateWindowExtreme,
 };
 
