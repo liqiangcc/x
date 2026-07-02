@@ -10,6 +10,8 @@ const {
   buildIssueComment,
   buildIssueSearchArgs,
   buildIssueTitle,
+  buildReportWorkflowArgs,
+  buildReportWorkflowCommand,
   dataBranchNameForRun,
   dataPullRequestBody,
   dataPullRequestTitle,
@@ -215,6 +217,35 @@ test("buildDispatchArgs resumes the next batch with stable inputs", () => {
   assert.equal(args.includes("huaweicloud_region=cn-east-3"), true);
 });
 
+test("buildReportWorkflowArgs points manual report generation at the data branch", () => {
+  const run = {
+    date: "20260701",
+    job_id: "20260701-daily-market-hs-a",
+    period: "daily",
+    universe: "market",
+  };
+
+  assert.deepEqual(
+    buildReportWorkflowArgs(run, { GITHUB_REF_NAME: "master" }),
+    [
+      "workflow",
+      "run",
+      "daily-report.yml",
+      "--ref",
+      "master",
+      "-f",
+      "date=20260701",
+      "-f",
+      "data_ref=data/daily/20260701-market-20260701-daily-market-hs-a",
+    ]
+  );
+  assert.match(
+    buildReportWorkflowCommand(run, { GITHUB_REF_NAME: "master" }),
+    /gh workflow run daily-report\.yml/
+  );
+  assert.equal(buildReportWorkflowArgs({ ...run, period: "yearly" }, { GITHUB_REF_NAME: "master" }), null);
+});
+
 test("dataBranchNameForRun separates daily and yearly data branches", () => {
   assert.equal(isDataBranch("data/daily/20260701-market-job"), true);
   assert.equal(isDataBranch("master"), false);
@@ -345,6 +376,8 @@ test("buildIssueBody records data pull request state", () => {
   assert.match(body, /- data_pr_state: OPEN/);
   assert.match(body, /- data_pr_auto_merge: enabled/);
   assert.match(body, /- data_pr_error: n\/a/);
+  assert.match(body, /## Daily report/);
+  assert.match(body, /daily-report\.yml/);
 });
 
 test("buildIssueBody keeps issues open when data pull request setup fails", () => {

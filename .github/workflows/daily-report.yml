@@ -1,0 +1,63 @@
+name: Daily Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "报告日期 YYYYMMDD。"
+        required: true
+      data_ref:
+        description: "读取数据的 branch/tag/sha；留空使用当前 ref。"
+        required: false
+        default: ""
+      commit_report:
+        description: "是否提交 reports/<date> 并创建/复用报告 PR。"
+        required: false
+        default: true
+        type: boolean
+      open_issue:
+        description: "是否创建/更新 Daily report issue。"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: daily-report-${{ github.event.inputs.date }}
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout data ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.data_ref || github.ref }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate daily report
+        env:
+          DATE_INPUT: ${{ github.event.inputs.date }}
+          DATA_REF_INPUT: ${{ github.event.inputs.data_ref || github.ref_name }}
+          COMMIT_REPORT_INPUT: ${{ github.event.inputs.commit_report }}
+          OPEN_ISSUE_INPUT: ${{ github.event.inputs.open_issue }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/github-daily-report-workflow.js

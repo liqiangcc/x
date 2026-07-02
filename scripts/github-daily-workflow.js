@@ -597,6 +597,33 @@ function buildDispatchArgs(run, env = process.env) {
   return args;
 }
 
+function buildReportWorkflowArgs(run, env = process.env) {
+  if (run?.period !== "daily" || !run?.date) {
+    return null;
+  }
+  const workflowRef = env.GITHUB_REF_NAME || "master";
+  const dataRef = dataBranchNameForRun(run, env) || workflowRef;
+  return [
+    "workflow",
+    "run",
+    "daily-report.yml",
+    "--ref",
+    workflowRef,
+    "-f",
+    `date=${run.date}`,
+    "-f",
+    `data_ref=${dataRef}`,
+  ];
+}
+
+function buildReportWorkflowCommand(run, env = process.env) {
+  const args = buildReportWorkflowArgs(run, env);
+  if (!args) {
+    return "n/a";
+  }
+  return `gh ${args.map(shellQuote).join(" ")}`;
+}
+
 function runUrl(env = process.env) {
   if (!env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID) {
     return null;
@@ -654,6 +681,7 @@ function buildIssueBody(run, {
   const resumeCommand = run?.job_status === "completed"
     ? "n/a"
     : `gh ${buildDispatchArgs(run, env).map(shellQuote).join(" ")}`;
+  const reportCommand = buildReportWorkflowCommand(run, env);
   return [
     "## Kline sync",
     "",
@@ -684,6 +712,11 @@ function buildIssueBody(run, {
     `- data_pr_state: ${dataPullRequest?.state ?? "n/a"}`,
     `- data_pr_auto_merge: ${formatDataPullRequestAutoMerge(dataPullRequestAutoMerge)}`,
     `- data_pr_error: ${dataPullRequestError?.message ?? "n/a"}`,
+    "",
+    "## Daily report",
+    "",
+    `- report_workflow: ${run?.period === "daily" ? "daily-report.yml" : "n/a"}`,
+    `- report_command: ${reportCommand}`,
     "",
     "## Failure context",
     "",
@@ -942,6 +975,8 @@ module.exports = {
   buildIssueTitle,
   buildDailyArgs,
   buildDispatchArgs,
+  buildReportWorkflowArgs,
+  buildReportWorkflowCommand,
   dataBranchNameForRun,
   dataPullRequestBody,
   dataPullRequestTitle,
