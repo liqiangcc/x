@@ -48,16 +48,17 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S01` 固化实施契约
 
-- Status: `pending`
+- Status: `done`
 - Goal: 校对实施说明与产品设计，固定目录、领域类型、状态机、API、数据库表和错误语义。
 - Steps:
   - 对照四份设计文档检查 `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`。
   - 明确首版只做手动练习、匿名候选、次日开盘订单和手机完整交易。
   - 删除仍存在的未决实现选项或相互冲突的默认值。
 - Expected files: `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Validation: `git diff --check && rg -n "P0|better-sqlite3|Fastify|React|anonymous|waiting_for_decision" docs/TRADING_SIMULATOR_IMPLEMENTATION.md`
+- Validation: `git diff --check && rg -n "P0|better-sqlite3|Fastify|React|anonymous|waiting_for_decision" docs/TRADING_SIMULATOR_IMPLEMENTATION.md` -> passed
+- Changed files: `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已固定 MVP 使用现有数据的 `legacy_approximate` 模式、npm workspace、Ajv、concurrently、会话与订单状态枚举、API 错误信封和桌面交易面板断点；P3 精确历史数据继续作为非阻塞 TODO。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S02` 增加依赖和运行脚本
 

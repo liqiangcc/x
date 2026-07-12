@@ -113,9 +113,10 @@ adapters -> application -> core
 
 - `fastify`：HTTP API 和请求 schema 校验。
 - `better-sqlite3`：同步 SQLite 事务和迁移。
-- 配置 schema 校验库，服务端和高级 JSON 配置共用 schema。
+- `ajv`：服务端和高级 JSON 编辑器共用 JSON Schema Draft 2020-12。
+- `concurrently`：本地开发时同时启动 Fastify 和 Vite。
 
-`web/simulator` 新增：
+根 `package.json` 将 `web/simulator` 声明为 npm workspace，统一使用根 `package-lock.json`。`web/simulator` 新增：
 
 - `react`、`react-dom`、`react-router-dom`。
 - `echarts`。
@@ -126,11 +127,11 @@ adapters -> application -> core
 
 ```json
 {
-  "dev:simulator": "同时启动 Fastify 和 Vite",
-  "start:simulator": "启动生产 Fastify 服务",
-  "build:web": "构建 React 前端",
-  "test:web": "运行前端组件测试",
-  "test:e2e": "运行 Playwright 端到端测试"
+  "dev:simulator": "concurrently 启动 Fastify 和 Vite",
+  "start:simulator": "node src/simulator/adapters/http/server.js",
+  "build:web": "npm run build --workspace web/simulator",
+  "test:web": "npm run test --workspace web/simulator",
+  "test:e2e": "playwright test"
 }
 ```
 
@@ -351,6 +352,28 @@ events
 - 订单、冻结资产、账户和事件必须在同一 better-sqlite3 事务中提交。
 - 迁移文件按递增编号执行，并在测试中验证空库初始化和旧库升级。
 
+会话状态只允许：
+
+```text
+created
+waiting_for_decision
+running
+completed
+cancelled
+failed
+```
+
+订单状态只允许：
+
+```text
+submitted
+accepted
+rejected
+filled
+cancelled
+expired
+```
+
 ## 10. Fastify API
 
 基础路径：`/api/simulator`。
@@ -383,6 +406,20 @@ POST   /sessions/:sessionId/export
 - Fastify `inject` 测试覆盖所有状态和匿名字段白名单。
 - 首版不引入外部任务队列；全市场候选在本地同步计算并按配置摘要缓存，UI 显示加载状态。同一日期、数据版本和配置不得重复扫描。
 
+错误响应固定为：
+
+```js
+{
+  error: {
+    code: "session_version_conflict",
+    message: "Session version does not match.",
+    issues: []
+  }
+}
+```
+
+`code` 为稳定机器码，`message` 为面向用户的英文消息，`issues` 保存字段或质量问题；不得在错误响应中包含匿名证券真实身份。
+
 ## 11. React 响应式界面
 
 ### 11.1 页面
@@ -396,7 +433,7 @@ POST   /sessions/:sessionId/export
 
 - 候选配置、列表和证据并排。
 - 日线主图与年线副视图同时可见。
-- 账户和订单使用侧栏或独立面板。
+- 账户和订单使用交易页右侧固定面板，宽度不足 1024px 时切换为下方单列区域。
 
 ### 11.3 手机
 
