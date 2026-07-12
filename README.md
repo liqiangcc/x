@@ -232,6 +232,7 @@ bin/x kline sync /tmp/stale-daily.json --period daily --policy proxy-only \
 bin/x kline retry-queue var/kline-sync/failures/daily.json --policy proxy-only --concurrency 2
 bin/x proxy pool diagnose --samples 100 --concurrency 16 --timeout-ms 3000 --json
 bin/x proxy pool probe --duration 10m --interval 30s --samples 20 --concurrency 2 --hard-deadline-ms 5000
+bin/x proxy pool select --min-samples 5 --min-success-rate 0.8 --max-p95-ms 3000 --limit 5
 bin/x benchmark proxy-sync --codes data/universe/20260701/codes.json --period daily --samples 100 --expected-latest-date 20260710 --json
 bin/x benchmark kline-engines --engines local,proxy-pool,aws,aws-router,huaweicloud --code 600519 --period daily --lmt 1 --attempts 3 --json
 ```

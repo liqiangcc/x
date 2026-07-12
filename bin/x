@@ -99,6 +99,7 @@ function printUsage() {
   x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
   x proxy pool diagnose [--samples 100] [--concurrency 16] [--timeout-ms 3000] [--json]
   x proxy pool probe [--duration 10m] [--interval 30s] [--samples 20] [--concurrency 2] [--hard-deadline-ms 5000]
+  x proxy pool select [--min-samples 5] [--min-success-rate 0.8] [--max-p95-ms 3000] [--limit 5] [--output file]
   x benchmark proxy-sync --codes codes.json [--period daily|yearly] [--samples 100] [--expected-latest-date YYYYMMDD] [--json]
   x benchmark kline-engines [--engines local,proxy-pool,aws,aws-router,huaweicloud] [--code 600519] [--period daily|yearly] [--lmt 1] [--attempts 3] [--timeout-ms 30000] [--json]
   x proxy pool verify [--concurrency 8] [--timeout-ms 6000] [--limit N] [--output file]
@@ -2215,6 +2216,27 @@ async function commandProxyPool(argv) {
     }
     const report = { duration_ms: durationMs, interval_ms: intervalMs, rounds, target: "eastmoney-kline" };
     report.report = await writeProxyBenchmarkReport(report, "probe");
+    printJson(report);
+    return;
+  }
+
+  if (action === "select") {
+    const { DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
+    const { writeSelectedProxies } = require("./../src/proxy/selection");
+    const minSuccessRate = Number(options.minSuccessRate ?? 0.8);
+    if (!Number.isFinite(minSuccessRate) || minSuccessRate < 0 || minSuccessRate > 1) {
+      throw new Error("--min-success-rate must be between 0 and 1.");
+    }
+    const outputFile = rootPath(options.output ?? "var/proxy-pool/selected.json");
+    const report = await writeSelectedProxies({
+      stateFile: DEFAULT_STATE_FILE,
+      outputFile,
+      minSamples: parsePositiveOption(options.minSamples, "--min-samples", 5),
+      minSuccessRate,
+      maxP95Ms: parsePositiveOption(options.maxP95Ms, "--max-p95-ms", 3000),
+      limit: parsePositiveOption(options.limit, "--limit", 5),
+    });
+    report.output = rel(outputFile);
     printJson(report);
     return;
   }
