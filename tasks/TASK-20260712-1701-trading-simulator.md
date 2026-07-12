@@ -101,7 +101,7 @@
 - Expected files: `tests/fixtures/simulator/`, `tests/simulator-fixtures.test.js`
 - Validation: `node --test tests/simulator-fixtures.test.js` -> passed (6 fixture invariant tests)
 - Changed files: `tests/fixtures/simulator/market.json`, `tests/simulator-fixtures.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `487dfde3`
 - Notes: 固定夹具覆盖沪深京、ST、后来退市、停牌、连续 4 年下降、首次突破、年内重复突破、一字涨停、可成交次日开盘和 T+1 可卖数量，后续数据、引擎和 API 测试复用同一市场。
 
 ### `TASK-20260712-1701-trading-simulator-T02` P0 现有数据适配
@@ -116,7 +116,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S01` 实现现有 Universe 适配
 
-- Status: `pending`
+- Status: `done`
 - Goal: 从仓库现有数据建立指定日期可扫描的代码集合。
 - Steps:
   - 优先读取 `data/universe/<date>/codes.json`。
@@ -124,9 +124,10 @@
   - 再缺失时从本地 daily/yearly 文件交集建立 `existing_kline_universe`。
   - 输出来源、覆盖数量和 `survivorship_bias_possible` 质量标记。
 - Expected files: `src/simulator/adapters/ledger/existing_universe.js`, `tests/simulator-data-existing-universe.test.js`
-- Validation: `node --test tests/simulator-data-existing-universe.test.js`
+- Validation: `node --test tests/simulator-data-existing-universe.test.js tests/fetch-market-stocks.test.js` -> passed (11 tests)
+- Changed files: `src/simulator/adapters/ledger/existing_universe.js`, `tests/simulator-data-existing-universe.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已实现 market snapshot、pool codes、daily/yearly 文件交集三层回退，统一解析 `code + market`，输出覆盖统计及 `historical_universe_unavailable`、`pool_limited_universe`、`kline_derived_universe`、`survivorship_bias_possible` 质量标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S02` 实现现有 K 线适配
 
