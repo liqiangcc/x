@@ -1,0 +1,133 @@
+{
+  "dataMode": "legacy_approximate",
+  "asOfDate": "2026-07-01",
+  "nextTradingDate": "2026-07-02",
+  "calendar": [
+    "2026-01-02",
+    "2026-06-29",
+    "2026-06-30",
+    "2026-07-01",
+    "2026-07-02",
+    "2026-07-03"
+  ],
+  "rules": {
+    "initialCashYuan": 100000,
+    "lotSize": 100,
+    "tPlusOne": true,
+    "slippageRate": 0.001,
+    "commissionRate": 0.0003,
+    "minimumCommissionYuan": 5,
+    "stampDutyRate": 0.0005
+  },
+  "securities": [
+    {
+      "code": "600001",
+      "market": 1,
+      "board": "main",
+      "status": "normal",
+      "listedDate": "2000-01-01",
+      "delistedDate": null
+    },
+    {
+      "code": "000002",
+      "market": 0,
+      "board": "main",
+      "status": "st",
+      "listedDate": "2000-01-01",
+      "delistedDate": null
+    },
+    {
+      "code": "920001",
+      "market": 0,
+      "board": "beijing",
+      "status": "normal",
+      "listedDate": "2020-01-01",
+      "delistedDate": null
+    },
+    {
+      "code": "600003",
+      "market": 1,
+      "board": "main",
+      "status": "normal",
+      "listedDate": "2000-01-01",
+      "delistedDate": "2026-12-31"
+    },
+    {
+      "code": "600004",
+      "market": 1,
+      "board": "main",
+      "status": "normal",
+      "listedDate": "2000-01-01",
+      "delistedDate": null
+    }
+  ],
+  "yearly": {
+    "1.600001": [
+      { "year": 2022, "open": 21, "close": 20, "high": 24, "low": 18 },
+      { "year": 2023, "open": 20, "close": 18, "high": 22, "low": 16 },
+      { "year": 2024, "open": 18, "close": 16, "high": 20, "low": 14 },
+      { "year": 2025, "open": 16, "close": 14, "high": 17, "low": 12 }
+    ],
+    "0.000002": [
+      { "year": 2022, "open": 11, "close": 10, "high": 12, "low": 9 },
+      { "year": 2023, "open": 10, "close": 9, "high": 11, "low": 8 },
+      { "year": 2024, "open": 9, "close": 8, "high": 10, "low": 7 },
+      { "year": 2025, "open": 8, "close": 7, "high": 9, "low": 6 }
+    ],
+    "1.600003": [
+      { "year": 2022, "open": 31, "close": 30, "high": 34, "low": 28 },
+      { "year": 2023, "open": 30, "close": 27, "high": 32, "low": 25 },
+      { "year": 2024, "open": 27, "close": 24, "high": 29, "low": 22 },
+      { "year": 2025, "open": 24, "close": 21, "high": 25, "low": 19 }
+    ],
+    "1.600004": [
+      { "year": 2022, "open": 41, "close": 40, "high": 44, "low": 38 },
+      { "year": 2023, "open": 40, "close": 36, "high": 42, "low": 34 },
+      { "year": 2024, "open": 36, "close": 32, "high": 38, "low": 30 },
+      { "year": 2025, "open": 32, "close": 28, "high": 30, "low": 26 }
+    ]
+  },
+  "daily": {
+    "1.600001": [
+      { "date": "2026-01-02", "open": 14, "close": 14.5, "high": 15, "low": 13.8, "volume": 100000 },
+      { "date": "2026-06-29", "open": 16.2, "close": 16.4, "high": 16.6, "low": 16, "volume": 110000 },
+      { "date": "2026-06-30", "open": 16.5, "close": 16.8, "high": 16.9, "low": 16.3, "volume": 120000 },
+      { "date": "2026-07-01", "open": 16.9, "close": 17.2, "high": 17.4, "low": 16.7, "volume": 150000 },
+      { "date": "2026-07-02", "open": 17.3, "close": 17.6, "high": 17.8, "low": 17.1, "volume": 160000 },
+      { "date": "2026-07-03", "open": 17.5, "close": 17.9, "high": 18, "low": 17.3, "volume": 170000 }
+    ],
+    "0.000002": [
+      { "date": "2026-06-30", "open": 8.8, "close": 8.9, "high": 9, "low": 8.7, "volume": 80000 },
+      { "date": "2026-07-01", "open": 8.9, "close": 9.1, "high": 9.2, "low": 8.8, "volume": 90000 },
+      { "date": "2026-07-02", "open": 9.1, "close": 9, "high": 9.2, "low": 8.9, "volume": 85000 }
+    ],
+    "0.920001": [
+      { "date": "2026-06-30", "open": 10, "close": 10.2, "high": 10.3, "low": 9.9, "volume": 50000 },
+      { "date": "2026-07-01", "open": 10.2, "close": 10.4, "high": 10.5, "low": 10.1, "volume": 55000 },
+      { "date": "2026-07-02", "open": null, "close": null, "high": null, "low": null, "volume": 0, "suspended": true }
+    ],
+    "1.600003": [
+      { "date": "2026-01-02", "open": 21, "close": 21.5, "high": 22, "low": 20.8, "volume": 90000 },
+      { "date": "2026-06-30", "open": 24.4, "close": 24.8, "high": 24.9, "low": 24.2, "volume": 100000 },
+      { "date": "2026-07-01", "open": 24.9, "close": 25.2, "high": 25.3, "low": 24.8, "volume": 120000 },
+      { "date": "2026-07-02", "open": 27.72, "close": 27.72, "high": 27.72, "low": 27.72, "volume": 1000, "limitUp": true }
+    ],
+    "1.600004": [
+      { "date": "2026-01-02", "open": 29, "close": 30.5, "high": 31, "low": 28.8, "volume": 100000 },
+      { "date": "2026-06-30", "open": 29.2, "close": 29.5, "high": 29.8, "low": 29, "volume": 110000 },
+      { "date": "2026-07-01", "open": 29.6, "close": 30.2, "high": 30.4, "low": 29.4, "volume": 130000 },
+      { "date": "2026-07-02", "open": 30.3, "close": 30.1, "high": 30.5, "low": 29.9, "volume": 125000 }
+    ]
+  },
+  "expected": {
+    "defaultCandidates": ["1.600001", "1.600003"],
+    "excludedSpecialTreatment": ["0.000002"],
+    "excludedRepeatedBreakout": ["1.600004"],
+    "suspendedAtNextOpen": ["0.920001"],
+    "limitUpAtNextOpen": ["1.600003"],
+    "tradableAtNextOpen": ["1.600001"],
+    "firstBuyQuantity": 100,
+    "firstBuyAvailableSameDay": 0,
+    "firstBuyAvailableNextDay": 100
+  }
+}

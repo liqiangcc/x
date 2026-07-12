@@ -38,11 +38,11 @@
 
 ### `TASK-20260712-1701-trading-simulator-T01` P0 工程契约与骨架
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `none`
 - Goal: 建立不会影响现有 CLI 和信号行为的模拟器服务端、前端及共享契约骨架。
 - Files likely touched: `package.json`, `src/simulator/`, `web/simulator/`, `tests/`
-- Validation: `npm run check && npm test && npm run build:web`
+- Validation: `npm run check && npm test && npm run build:web` -> passed (121 JavaScript files checked; 216 server tests; production web build succeeded)
 
 #### Subtasks
 
@@ -87,21 +87,22 @@
 - Expected files: `src/simulator/core/`, `src/simulator/config/`, `src/simulator/ports/`, `tests/simulator-contracts.test.js`
 - Validation: `node --test tests/simulator-contracts.test.js && npm run check` -> passed (6 contract tests; 120 JavaScript files checked)
 - Changed files: `src/simulator/`, `tests/simulator-contracts.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `59b217dd`
 - Notes: 已定义稳定会话、订单、事件、数据模式和价格视图枚举，证券 ID 契约，Ajv 2020 配置 schema 与默认值，组件注册表及市场数据/会话仓储端口；测试确认核心层没有基础设施依赖。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S04` 建立确定性测试夹具
 
-- Status: `pending`
+- Status: `done`
 - Goal: 为数据、信号、成交和 API 提供不依赖网络的固定小型市场。
 - Steps:
   - 创建包含沪深京、ST、停牌、退市和公司行为的固定证券夹具。
   - 创建连续年度、首次突破、二次突破、封板和 T+1 日线夹具。
   - 定义固定交易日历、费用规则和预期账户结果。
 - Expected files: `tests/fixtures/simulator/`, `tests/simulator-fixtures.test.js`
-- Validation: `node --test tests/simulator-fixtures.test.js`
+- Validation: `node --test tests/simulator-fixtures.test.js` -> passed (6 fixture invariant tests)
+- Changed files: `tests/fixtures/simulator/market.json`, `tests/simulator-fixtures.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 固定夹具覆盖沪深京、ST、后来退市、停牌、连续 4 年下降、首次突破、年内重复突破、一字涨停、可成交次日开盘和 T+1 可卖数量，后续数据、引擎和 API 测试复用同一市场。
 
 ### `TASK-20260712-1701-trading-simulator-T02` P0 现有数据适配
 
