@@ -39,6 +39,9 @@ async function fetchAllProxyCandidates({
 
 function classifyProxyError(error) {
   const message = String(error?.message ?? error ?? "");
+  if (/UND_ERR_CONNECT_TIMEOUT|Connect Timeout/i.test(message)) return "proxy_connect_timeout";
+  if (/headers timeout|UND_ERR_HEADERS_TIMEOUT/i.test(message)) return "headers_timeout";
+  if (/body timeout|UND_ERR_BODY_TIMEOUT/i.test(message)) return "body_timeout";
   if (/HTTP 429|Too Many Requests/i.test(message)) {
     return "rate_limited";
   }
@@ -48,8 +51,8 @@ function classifyProxyError(error) {
   if (/certificate|CERT_|TLS|SSL/i.test(message)) {
     return "tls_error";
   }
-  if (/timeout|timed out|AbortError|UND_ERR_CONNECT_TIMEOUT/i.test(message)) {
-    return "timeout";
+  if (/timeout|timed out|AbortError/i.test(message)) {
+    return "total_timeout";
   }
   if (/empty|missing data\.klines|invalid JSON|Unexpected token/i.test(message)) {
     return "invalid_payload";
@@ -65,6 +68,19 @@ function cooldownMs(errorClass) {
     return 24 * 60 * 60 * 1000;
   }
   return 30 * 60 * 1000;
+}
+
+function adaptiveTimeouts(proxy, state, { full = false } = {}) {
+  const health = state.proxies?.[proxy.id]?.targets?.[TARGET] ?? {};
+  const observed = Number(health.p95_latency_ms ?? health.ewma_latency_ms ?? 2000);
+  const headersTimeoutMs = Math.max(2000, Math.min(6000, Math.ceil(observed * 1.5)));
+  const bodyTimeoutMs = full ? 6000 : 3000;
+  return {
+    bodyTimeoutMs,
+    connectTimeoutMs: 2000,
+    headersTimeoutMs,
+    totalTimeoutMs: full ? 14000 : 10000,
+  };
 }
 
 async function requestKlineThroughProxy(proxy, input = {}, options = {}) {
@@ -126,6 +142,7 @@ async function getKlineViaProxyPool(input, options = {}) {
       random: options.random,
       release: runtime ? (proxy) => runtime.release(proxy) : null,
       strategy: options.strategy ?? "balanced",
+      timeoutResolver: (proxy, state) => adaptiveTimeouts(proxy, state, { full: Number(input.lmt ?? 1) >= 10000 }),
       timeoutMs: options.timeoutMs,
     });
     return {
@@ -340,6 +357,7 @@ module.exports = {
   buildKlineUrl,
   classifyProxyError,
   cooldownMs,
+  adaptiveTimeouts,
   fetchAllProxyCandidates,
   fetchProxyCandidates,
   getKlineViaProxyPool,

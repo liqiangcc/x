@@ -77,6 +77,7 @@ function printUsage() {
   x kline fetch <code_or_secid> [--period daily|yearly] [--policy name|--engine engine] [--proxy-pool-url url] [--proxy-max-attempts N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
   x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--refresh-mode incremental|full] [--limit N] [--batch-size N] [--proxy-preflight] [--proxy-min-available N] [--proxy-min-success-rate 0..1] [--concurrency N|auto] [--checkpoint-every N] [--retry-attempts N] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
+  x kline retry-queue <queue.json> [--policy proxy-only] [--concurrency 2]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
   x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
@@ -94,6 +95,8 @@ function printUsage() {
   x proxy pool up|down|status
   x proxy pool warmup [--duration 30m] [--samples 20] [--concurrency 4]
   x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
+  x proxy pool diagnose [--samples 100] [--concurrency 16] [--timeout-ms 3000] [--json]
+  x benchmark proxy-sync --codes codes.json [--period daily|yearly] [--samples 100] [--expected-latest-date YYYYMMDD] [--json]
   x proxy pool verify [--concurrency 8] [--timeout-ms 6000] [--limit N] [--output file]
   x run list
   x run show <run_id>
@@ -771,6 +774,7 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.proxyMinSuccessRate) args.push("--proxy-min-success-rate", String(options.proxyMinSuccessRate));
   if (options.proxyPreflightConcurrency) args.push("--proxy-preflight-concurrency", String(options.proxyPreflightConcurrency));
   if (options.proxyPreflightTimeoutMs) args.push("--proxy-preflight-timeout-ms", String(options.proxyPreflightTimeoutMs));
+  if (options.failureQueue) args.push("--failure-queue", options.failureQueue);
   if (options.limit) {
     args.push("--limit", String(options.limit));
   }
@@ -1001,6 +1005,25 @@ async function commandKlineRetry(argv) {
   if (result.exitCode !== 0) {
     process.exitCode = result.exitCode;
   }
+}
+
+async function commandKlineRetryQueue(argv) {
+  const options = parseOptions(argv, { concurrency: "2", policy: "proxy-only" });
+  const queueFile = options._[0];
+  if (!queueFile) throw new Error("kline retry-queue requires <queue.json>.");
+  const absoluteQueue = rootPath(queueFile);
+  const dueFile = path.join(path.dirname(absoluteQueue), `${path.basename(absoluteQueue, ".json")}.due.json`);
+  const { writeDueCodes } = require("./../src/kline/failure_queue");
+  const due = await writeDueCodes(absoluteQueue, dueFile);
+  if (due.codes.length === 0) {
+    printJson({ status: "no_due_items", queue: absoluteQueue, due: 0 });
+    return;
+  }
+  const args = [dueFile, "--period", due.period, "--policy", options.policy, "--concurrency", String(options.concurrency), "--retry-attempts", "0", "--failure-queue", absoluteQueue];
+  if (due.expectedLatestDate) {
+    args.push("--expected-latest-date", due.expectedLatestDate.replaceAll("-", ""), "--freshness-codes", dueFile);
+  }
+  await commandKlineSync(args);
 }
 
 async function commandKlineValidate(argv) {
@@ -2130,6 +2153,28 @@ async function commandProxyPool(argv) {
     return;
   }
 
+  if (action === "diagnose") {
+    const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
+    const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
+    const runtime = new ProxyBatchRuntime({ classifyError: classifyProxyError, cooldownForError: cooldownMs, stateFile: DEFAULT_STATE_FILE });
+    try {
+      const report = await runtime.prepare({
+        concurrency: parsePositiveOption(options.concurrency, "--concurrency", 16),
+        limit: parsePositiveOption(options.samples, "--samples", 100),
+        minAvailable: 0,
+        minSuccessRate: 0,
+        timeoutMs: parsePositiveOption(options.timeoutMs, "--timeout-ms", 3000),
+      });
+      report.target = "eastmoney-kline";
+      report.passed = report.available_count > 0;
+      report.report = await writeProxyBenchmarkReport(report, "diagnose");
+      printJson(report);
+    } finally {
+      await runtime.close();
+    }
+    return;
+  }
+
   const { runProxyBenchmark, validateAllProxies } = require("./../src/proxy/pool");
   if (action === "verify") {
     const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 8);
@@ -2191,6 +2236,39 @@ async function commandProxyPool(argv) {
   }
 
   throw new Error(`Unknown proxy pool command: ${action ?? ""}`);
+}
+
+async function commandBenchmark(argv) {
+  const kind = argv[0];
+  if (kind !== "proxy-sync") throw new Error(`Unknown benchmark: ${kind ?? ""}`);
+  const options = parseOptions(argv.slice(1), { period: "daily", samples: "100" });
+  if (!options.codes) throw new Error("benchmark proxy-sync requires --codes <codes.json>.");
+  const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const runDir = path.join(DEFAULT_RUNS_DIR, "benchmark", "proxy-sync", runId);
+  const outputDir = path.join(runDir, "data");
+  await fs.mkdir(runDir, { recursive: true });
+  const args = [rootPath(options.codes), "--period", options.period, "--policy", "proxy-only", "--refresh-mode", "incremental", "--limit", String(options.samples), "--output-dir", outputDir, "--concurrency", "auto", "--retry-attempts", "0", "--proxy-preflight"];
+  if (options.expectedLatestDate) args.push("--expected-latest-date", options.expectedLatestDate, "--freshness-codes", rootPath(options.codes));
+  const startedAt = Date.now();
+  const result = await runNodeAllowFailure("fetch/query_pool_klines.js", args);
+  const summaryPath = path.join(outputDir, options.period, `summary.${options.period}.json`);
+  let summary = null;
+  try { summary = await readJson(summaryPath); } catch {}
+  const report = {
+    benchmark: "proxy-sync",
+    codes: rootPath(options.codes),
+    duration_ms: Date.now() - startedAt,
+    error: summary ? null : result.stderr || result.stdout || null,
+    exit_code: result.exitCode,
+    period: options.period,
+    samples: Number(options.samples),
+    summary,
+  };
+  const reportFile = path.join(runDir, "report.json");
+  await fs.writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  report.report = rel(reportFile);
+  printJson(report);
+  if (result.exitCode !== 0) process.exitCode = result.exitCode;
 }
 
 async function existingDataPathspecs(candidates = ["data", "runs", "reports"]) {
@@ -2323,6 +2401,10 @@ async function main() {
     await commandKlineRetry(rest);
     return;
   }
+  if (command === "kline" && subcommand === "retry-queue") {
+    await commandKlineRetryQueue(rest);
+    return;
+  }
   if (command === "kline" && subcommand === "fetch") {
     await commandKlineFetch(rest);
     return;
@@ -2361,6 +2443,10 @@ async function main() {
   }
   if (command === "proxy") {
     await commandProxy([subcommand, ...rest]);
+    return;
+  }
+  if (command === "benchmark") {
+    await commandBenchmark([subcommand, ...rest]);
     return;
   }
   if (command === "git") {

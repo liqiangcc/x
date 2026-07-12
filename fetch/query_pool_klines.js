@@ -67,6 +67,7 @@ function parseArguments(argv) {
     huaweiCloudRegions: null,
     huaweiCloudTargetsFile: null,
     expectedLatestDate: null,
+    failureQueue: null,
     freshnessCodes: null,
     freshnessCodesPath: null,
     inputPath: null,
@@ -79,6 +80,7 @@ function parseArguments(argv) {
     refreshMode: "incremental",
     policy: null,
     proxyMaxAttempts: 3,
+    proxyMaxAttemptsExplicit: false,
     proxyMinAvailable: 5,
     proxyMinSuccessRate: 0.6,
     proxyPreflight: null,
@@ -149,6 +151,7 @@ function parseArguments(argv) {
     if (arg === "--proxy-max-attempts") {
       const nextArg = argv[index + 1];
       options.proxyMaxAttempts = parsePositiveInteger(nextArg, "--proxy-max-attempts");
+      options.proxyMaxAttemptsExplicit = true;
       index += 1;
       continue;
     }
@@ -337,6 +340,14 @@ function parseArguments(argv) {
       continue;
     }
 
+    if (arg === "--failure-queue") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) throw new Error("Missing value for --failure-queue.");
+      options.failureQueue = path.resolve(nextArg);
+      index += 1;
+      continue;
+    }
+
     if (arg === "--force") {
       options.force = true;
       continue;
@@ -363,6 +374,7 @@ function parseArguments(argv) {
   }
 
   if (options.policy && options.engine !== "auto") throw new Error("--policy and --engine cannot be used together.");
+  if (options.policy === "proxy-only" && !options.proxyMaxAttemptsExplicit) options.proxyMaxAttempts = 1;
   return options;
 }
 
@@ -1411,6 +1423,7 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     configFile: options.configFile ?? null,
     engine: options.engine ?? "auto",
     expectedLatestDate: normalizeExpectedLatestDate(options.expectedLatestDate ?? null),
+    failureQueue: options.failureQueue ?? null,
     force: Boolean(options.force),
     freshnessCodes: null,
     freshnessCodesPath: options.freshnessCodesPath ?? null,
@@ -1427,6 +1440,7 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     refreshMode: options.refreshMode ?? "incremental",
     policy: options.policy ?? null,
     proxyMaxAttempts: options.proxyMaxAttempts ?? 3,
+    proxyMaxAttemptsExplicit: options.proxyMaxAttemptsExplicit ?? false,
     proxyMinAvailable: options.proxyMinAvailable ?? 5,
     proxyMinSuccessRate: options.proxyMinSuccessRate ?? 0.6,
     proxyPreflight: options.proxyPreflight ?? options.policy === "proxy-only",
@@ -1570,6 +1584,20 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   finalizeSummary(summary, effectiveOptions);
 
   const summaryPath = path.join(periodDir, `summary.${effectiveOptions.period}.json`);
+  if (effectiveOptions.policy === "proxy-only" || effectiveOptions.failureQueue) {
+    const { updateFailureQueue } = require("../src/kline/failure_queue");
+    const queueFile = effectiveOptions.failureQueue ?? path.resolve(__dirname, `../var/kline-sync/failures/${effectiveOptions.period}.json`);
+    const queueResult = await updateFailureQueue({
+      deadLetterFile: queueFile.replace(/\.json$/, ".dead.json"),
+      expectedLatestDate: effectiveOptions.expectedLatestDate,
+      period: effectiveOptions.period,
+      queueFile,
+      results: summary.files,
+    });
+    summary.failure_queue = queueFile;
+    summary.failure_queue_count = queueResult.active.total_codes;
+    summary.dead_letter_count = queueResult.dead.total_codes;
+  }
   stageLog("start", "kline_summary_write", {
     failed: summary.failed,
     path: summaryPath,

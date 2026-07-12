@@ -98,6 +98,7 @@ function parseArguments(argv) {
     policies: null,
     policy: null,
     proxyMaxAttempts: 3,
+    proxyMaxAttemptsExplicit: false,
     proxyPoolUrl: null,
     routerRegion: "auto",
     routerTokenEnv: "AWS_ROUTER_TOKEN",
@@ -153,6 +154,7 @@ function parseArguments(argv) {
         throw new Error("--proxy-max-attempts must be at least 1.");
       }
       options.proxyMaxAttempts = value;
+      options.proxyMaxAttemptsExplicit = true;
       index += 1;
       continue;
     }
@@ -621,7 +623,9 @@ async function resolveKline(options, deps = {}) {
     local: async () => normalizeKlineData(await withStage("fetch_kline_local", { period: options.period, secid }, () => fetchLocal(secid, klt, options)), secid, "local"),
     "proxy-pool": async (entry) => withStage("fetch_kline_proxy_pool", { period: options.period, secid }, () => fetchProxyPool(secid, klt, {
       ...options,
-      proxyMaxAttempts: entry.maxAttempts ?? options.proxyMaxAttempts,
+      proxyMaxAttempts: options.proxyMaxAttemptsExplicit
+        ? options.proxyMaxAttempts
+        : entry.maxAttempts ?? options.proxyMaxAttempts,
       proxyStrategy: entry.selector ?? "balanced",
       proxyTimeoutMs: entry.timeoutMs,
     })),

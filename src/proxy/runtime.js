@@ -86,13 +86,20 @@ class ProxyBatchRuntime {
     this.leased = new Set();
   }
 
-  async prepare({ concurrency = 16, minAvailable = 5, minSuccessRate = 0.6, timeoutMs = 3000 } = {}) {
+  async prepare({ concurrency = 16, limit, minAvailable = 5, minSuccessRate = 0.6, timeoutMs = 3000 } = {}) {
     this.candidates = await this.provider.listCandidates({ all: true });
+    if (Number.isInteger(limit)) this.candidates = this.candidates.slice(0, limit);
     const results = await mapWithConcurrency(this.candidates, concurrency, async (proxy, index) => {
       const probe = createEastmoneyKlineProbe({ secid: ["1.600519", "0.000001", "0.300750", "1.601318"][index % 4], lmt: 1 });
       const started = Date.now();
       try {
-        const response = await this.transport.request(proxy, { ...probe.request, timeoutMs });
+        const response = await this.transport.request(proxy, {
+          ...probe.request,
+          bodyTimeoutMs: timeoutMs,
+          connectTimeoutMs: Math.min(2000, timeoutMs),
+          headersTimeoutMs: timeoutMs,
+          totalTimeoutMs: timeoutMs * 2,
+        });
         probe.validate(response);
         await this.healthStore.record(proxy, TARGET, { ok: true, durationMs: response.durationMs });
         return { ok: true, proxy, duration_ms: response.durationMs };
@@ -104,6 +111,10 @@ class ProxyBatchRuntime {
     });
     this.available = results.filter((item) => item.ok).map((item) => item.proxy);
     const durations = results.filter((item) => item.ok).map((item) => item.duration_ms);
+    const errorCounts = results.filter((item) => !item.ok).reduce((counts, item) => {
+      counts[item.error_class] = (counts[item.error_class] ?? 0) + 1;
+      return counts;
+    }, {});
     const successRate = results.length === 0 ? 0 : this.available.length / results.length;
     this.preflightReport = {
       candidate_count: results.length,
@@ -112,6 +123,7 @@ class ProxyBatchRuntime {
       passed: this.available.length >= minAvailable && successRate >= minSuccessRate,
       p50_duration_ms: percentile(durations, 0.5),
       p95_duration_ms: percentile(durations, 0.95),
+      error_counts: errorCounts,
     };
     if (!this.preflightReport.passed) {
       throw new Error(`Proxy preflight failed: available=${this.available.length}/${minAvailable}, success_rate=${successRate.toFixed(3)}/${minSuccessRate}`);

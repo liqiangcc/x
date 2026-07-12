@@ -120,7 +120,7 @@ test("getKlineViaProxyPool rotates after failure and exposes only a proxy id", a
 test("classifyProxyError distinguishes policy, TLS, and transient failures", () => {
   assert.equal(classifyProxyError(new Error("HTTP 429")), "rate_limited");
   assert.equal(classifyProxyError(new Error("certificate expired")), "tls_error");
-  assert.equal(classifyProxyError(new Error("request timeout")), "timeout");
+  assert.equal(classifyProxyError(new Error("request timeout")), "total_timeout");
 });
 
 test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
@@ -149,8 +149,8 @@ test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
   });
 
   assert.equal(agentConfig.requestTls.rejectUnauthorized, true);
-  assert.equal(agentConfig.proxyTls.timeout, 6000);
-  assert.equal(agentConfig.requestTls.timeout, 6000);
+  assert.equal(agentConfig.proxyTls.timeout, 2000);
+  assert.equal(agentConfig.requestTls.timeout, 2000);
   assert.equal(result.payload.data.klines.length, 1);
   assert.equal(destroyed, true);
 });
@@ -188,6 +188,6 @@ test("validateAllProxies checks every candidate once and sorts available proxies
   assert.equal(report.checked_count, 3);
   assert.equal(report.available_count, 2);
   assert.equal(report.failed_count, 1);
-  assert.equal(report.error_counts.timeout, 1);
+  assert.equal(report.error_counts.total_timeout, 1);
   assert.deepEqual(report.available.map((item) => item.proxy), ["3.3.3.3:80", "1.1.1.1:80"]);
 });

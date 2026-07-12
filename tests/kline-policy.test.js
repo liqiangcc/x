@@ -27,3 +27,9 @@ test("policy executor honors per-engine attempts", async () => {
 test("fetch CLI rejects simultaneous policy and engine", () => {
   assert.throws(() => parseArguments(["600519", "--policy", "auto", "--engine", "local"]), /cannot be used together/);
 });
+
+test("explicit proxy attempts are preserved for policy override", () => {
+  const options = parseArguments(["600519", "--policy", "proxy-only", "--proxy-max-attempts", "1"]);
+  assert.equal(options.proxyMaxAttempts, 1);
+  assert.equal(options.proxyMaxAttemptsExplicit, true);
+});

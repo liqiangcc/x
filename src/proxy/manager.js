@@ -24,7 +24,8 @@ class ProxyManager {
       attempted += 1;
       const startedAt = Date.now();
       try {
-        const response = await this.transport(proxy, { ...probe.request, timeoutMs: options.timeoutMs });
+        const adaptiveTimeouts = options.timeoutResolver ? options.timeoutResolver(proxy, state) : {};
+        const response = await this.transport(proxy, { ...probe.request, ...adaptiveTimeouts, timeoutMs: options.timeoutMs });
         const payload = probe.validate(response);
         await this.healthStore.record(proxy, probe.target, { ok: true, durationMs: response.durationMs });
         return { payload, proxy, attempts: failures.length + 1, durationMs: Date.now() - startedAt, failures };

@@ -5,6 +5,7 @@ const test = require("node:test");
 const { migrateState, summarizeSamples } = require("../src/proxy/health/store");
 const { normalizeProxy } = require("../src/proxy/model");
 const { rankCandidates } = require("../src/proxy/selectors");
+const { adaptiveTimeouts } = require("../src/proxy/pool");
 
 test("health v1 migrates into target-scoped v2 state", () => {
   const state = migrateState({ version: 1, proxies: { abc: {
@@ -39,4 +40,13 @@ test("selectors isolate health by target and support fastest and reliable polici
   } };
   assert.equal(rankCandidates([reliable, fast], state, { strategy: "fastest", target: "target" })[0].id, fast.id);
   assert.equal(rankCandidates([fast, reliable], state, { strategy: "reliable", target: "target" })[0].id, reliable.id);
+});
+
+test("adaptive response timeout is clamped between two and six seconds", () => {
+  const proxy = normalizeProxy("1.1.1.1:80");
+  const state = { proxies: { [proxy.id]: { targets: { "eastmoney-kline": { p95_latency_ms: 100 } } } } };
+  assert.equal(adaptiveTimeouts(proxy, state).headersTimeoutMs, 2000);
+  state.proxies[proxy.id].targets["eastmoney-kline"].p95_latency_ms = 10000;
+  assert.equal(adaptiveTimeouts(proxy, state).headersTimeoutMs, 6000);
+  assert.equal(adaptiveTimeouts(proxy, state, { full: true }).bodyTimeoutMs, 6000);
 });
