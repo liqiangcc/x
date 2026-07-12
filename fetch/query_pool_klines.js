@@ -12,7 +12,7 @@ const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud|proxy-pool>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--policy <name> | --engine <engine>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
   );
 }
 
@@ -74,6 +74,7 @@ function parseArguments(argv) {
     offset: 0,
     outputDir: path.resolve("data/kline"),
     period: "daily",
+    policy: null,
     proxyMaxAttempts: 3,
     proxyPoolUrl: null,
     retryAttempts: 0,
@@ -101,6 +102,14 @@ function parseArguments(argv) {
         throw new Error(`Invalid value for --engine: ${nextArg ?? ""}`);
       }
       options.engine = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--policy") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) throw new Error("Missing value for --policy.");
+      options.policy = nextArg;
       index += 1;
       continue;
     }
@@ -297,6 +306,7 @@ function parseArguments(argv) {
     options.retryConcurrency = 1;
   }
 
+  if (options.policy && options.engine !== "auto") throw new Error("--policy and --engine cannot be used together.");
   return options;
 }
 
@@ -534,7 +544,9 @@ function normalizeKlinePayload(payload, code, secid, period) {
 }
 
 async function fetchSingleKline(secid, options) {
-  const args = [FETCH_KLINE_SCRIPT, secid, "--period", options.period, "--engine", options.engine];
+  const args = [FETCH_KLINE_SCRIPT, secid, "--period", options.period];
+  if (options.policy) args.push("--policy", options.policy);
+  else args.push("--engine", options.engine);
 
   if (options.awsRegions) {
     args.push("--aws-region", options.awsRegions);
@@ -721,6 +733,7 @@ function createSummary(options, selection) {
     candidate_codes: selection.candidateCodes,
     concurrency: options.concurrency,
     engine: options.engine,
+    policy: options.policy,
     expected_latest_date: options.expectedLatestDate,
     force: options.force,
     freshness_codes: options.freshnessCodes ? options.freshnessCodes.size : null,
@@ -960,7 +973,7 @@ function canFallbackEngine(engine) {
 }
 
 function shouldFallbackToLocal(failure, options) {
-  if (!failure || !canFallbackEngine(options.engine)) {
+  if (!failure || options.policy || !canFallbackEngine(options.engine)) {
     return false;
   }
   return isFallbackEligibleFailureClass(failure.file?.error_class);
@@ -1083,6 +1096,7 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
       countKey: "success",
       file: {
         engine: data.source_engine ?? options.engine,
+        policy: data.source_policy ?? options.policy ?? null,
         region: data.source_region ?? null,
         router_duration_ms: Number.isFinite(data.router_duration_ms) ? data.router_duration_ms : null,
         target_duration_ms: Number.isFinite(data.target_duration_ms) ? data.target_duration_ms : null,
@@ -1217,6 +1231,7 @@ async function runEntriesWithStage(entries, {
     attempt,
     concurrency,
     engine: options.engine,
+    policy: options.policy,
     period: options.period,
     total,
   });
@@ -1313,6 +1328,9 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     offset: options.offset ?? 0,
     outputDir: options.outputDir ?? path.resolve("data/kline"),
     period: options.period ?? "daily",
+    policy: options.policy ?? null,
+    proxyMaxAttempts: options.proxyMaxAttempts ?? 3,
+    proxyPoolUrl: options.proxyPoolUrl ?? null,
     retryAttempts: options.retryAttempts ?? 0,
     retryConcurrency: options.retryConcurrency ?? 1,
     retryDelayMs: options.retryDelayMs ?? 1000,

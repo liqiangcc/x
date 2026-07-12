@@ -22,5 +22,11 @@
   "aws_router_url_env": "AWS_ROUTER_URL",
   "aws_router_token_env": "AWS_ROUTER_TOKEN",
   "huaweicloud_access_key_env": "HUAWEICLOUD_ACCESS_KEY",
-  "huaweicloud_secret_key_env": "HUAWEICLOUD_SECRET_KEY"
+  "huaweicloud_secret_key_env": "HUAWEICLOUD_SECRET_KEY",
+  "policies": {
+    "auto": { "engines": ["huaweicloud", "aws", "local"] },
+    "proxy-first": { "engines": [{ "name": "proxy-pool", "selector": "balanced", "maxAttempts": 5, "timeoutMs": 6000 }, "huaweicloud", "aws", "local"] },
+    "proxy-only": { "engines": [{ "name": "proxy-pool", "selector": "balanced", "maxAttempts": 5, "timeoutMs": 6000 }] },
+    "cloud-first": { "engines": ["huaweicloud", "aws", { "name": "proxy-pool", "selector": "balanced", "maxAttempts": 3, "timeoutMs": 6000 }, "local"] }
+  }
 }

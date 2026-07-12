@@ -133,6 +133,12 @@ test("queryPoolKlines parses proxy-pool engine options", () => {
   assert.equal(options.proxyMaxAttempts, 4);
 });
 
+test("queryPoolKlines parses policy without enabling legacy engine fallback", () => {
+  const options = parseArguments(["codes.json", "--policy", "proxy-only"]);
+  assert.equal(options.policy, "proxy-only");
+  assert.equal(options.engine, "auto");
+});
+
 test("queryPoolKlines handles concurrent success, failure, and skipped files", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");

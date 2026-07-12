@@ -6,6 +6,8 @@ const { getKline } = require("../src/sources/eastmoney/client");
 const { inferSecid, splitSecid } = require("../src/core/secid");
 const { getKlineViaProxyPool } = require("../src/proxy/pool");
 const { stageLog, withStage } = require("../src/core/stage_log");
+const { executePolicy, normalizePolicy } = require("../src/kline/policy");
+const { createEngineRegistry } = require("../src/kline/engines/registry");
 const {
   ACCESS_KEY_ENV: HUAWEICLOUD_ACCESS_KEY_ENV,
   SECRET_KEY_ENV: HUAWEICLOUD_SECRET_KEY_ENV,
@@ -43,7 +45,7 @@ const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweiclou
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud|proxy-pool>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output <file>]"
+    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--policy <name> | --engine <engine>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output <file>]"
   );
 }
 
@@ -80,6 +82,7 @@ function parseArguments(argv) {
     awsRegionStartIndex: 0,
     configFile: CONFIG_FILE,
     engine: "auto",
+    engineExplicit: false,
     huaweiCloudAccessKeyEnv: HUAWEICLOUD_ACCESS_KEY_ENV,
     huaweiCloudRegionStartIndex: 0,
     huaweiCloudRegionValue: "all",
@@ -91,6 +94,8 @@ function parseArguments(argv) {
     lambdaNameOverridden: false,
     outputFile: null,
     period: "daily",
+    policies: null,
+    policy: null,
     proxyMaxAttempts: 3,
     proxyPoolUrl: null,
     routerRegion: "auto",
@@ -117,6 +122,15 @@ function parseArguments(argv) {
         throw new Error(`Invalid value for --engine: ${nextArg ?? ""}`);
       }
       options.engine = nextArg;
+      options.engineExplicit = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--policy") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) throw new Error("Missing value for --policy.");
+      options.policy = nextArg;
       index += 1;
       continue;
     }
@@ -247,6 +261,8 @@ function parseArguments(argv) {
     return null;
   }
 
+  if (options.policy && options.engineExplicit) throw new Error("--policy and --engine cannot be used together.");
+
   return options;
 }
 
@@ -254,6 +270,7 @@ async function applyConfigDefaults(options) {
   try {
     const raw = await fs.readFile(options.configFile, "utf8");
     const config = JSON.parse(raw);
+    if (config?.policies && typeof config.policies === "object" && !Array.isArray(config.policies)) options.policies = config.policies;
 
     if (!options.awsRegionsOverridden && Array.isArray(config?.aws_regions) && config.aws_regions.length > 0) {
       options.awsRegions = config.aws_regions
@@ -346,6 +363,8 @@ async function fetchProxyPoolKline(secid, klt, options, env = process.env) {
     apiKey: env.X_PROXY_POOL_API_KEY ?? env.PROXY_POOL_API_KEY ?? "",
     maxAttempts: options.proxyMaxAttempts,
     poolUrl: options.proxyPoolUrl ?? env.X_PROXY_POOL_URL,
+    strategy: options.proxyStrategy ?? "balanced",
+    timeoutMs: options.proxyTimeoutMs,
   });
 }
 
@@ -575,80 +594,31 @@ async function resolveKline(options, deps = {}) {
   const fetchRouter = deps.fetchAwsRouterKline ?? fetchAwsRouterKline;
   const secid = inferSecid(options.input);
   const klt = PERIOD_MAP[options.period];
+  const policyName = options.policy ?? (options.engine && options.engine !== "auto" ? `engine:${options.engine}` : "auto");
+  const policy = policyName.startsWith("engine:")
+    ? { name: policyName, engines: [{ name: policyName.slice(7), attempts: 1 }] }
+    : normalizePolicy(policyName, options.policies ?? {});
   stageLog("start", "fetch_kline_resolve", {
     engine: options.engine,
+    policy: policy.name,
     input: options.input,
     period: options.period,
     secid,
   });
 
-  if (options.engine === "local") {
-    const rawData = await withStage("fetch_kline_local", { period: options.period, secid }, () =>
-      fetchLocal(secid, klt)
-    );
-    return normalizeKlineData(rawData, secid, "local");
-  }
-
-  if (options.engine === "proxy-pool") {
-    return withStage("fetch_kline_proxy_pool", { period: options.period, secid }, () =>
-      fetchProxyPool(secid, klt, options)
-    );
-  }
-
-  if (options.engine === "aws") {
-    return withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () =>
-      fetchAws(secid, klt, options.awsRegions, options.lambdaName)
-    );
-  }
-
-  if (options.engine === "aws-router") {
-    return withStage("fetch_kline_aws_router", {
-      period: options.period,
-      router_region: options.routerRegion ?? "auto",
-      secid,
-    }, () =>
-      fetchRouter(secid, klt, options)
-    );
-  }
-
-  if (options.engine === "huaweicloud") {
-    return withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () =>
-      fetchHuaweiCloud(secid, klt, options)
-    );
-  }
-
-  let huaweiCloudError = null;
-  try {
-    return await withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () =>
-      fetchHuaweiCloud(secid, klt, options)
-    );
-  } catch (error) {
-    huaweiCloudError = error;
-  }
-
-  let awsError = null;
-  try {
-    return await withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () =>
-      fetchAws(secid, klt, options.awsRegions, options.lambdaName)
-    );
-  } catch (error) {
-    awsError = error;
-  }
-
-  try {
-    const rawData = await withStage("fetch_kline_local", { period: options.period, secid }, () =>
-      fetchLocal(secid, klt)
-    );
-    return normalizeKlineData(rawData, secid, "local");
-  } catch (localError) {
-    throw new Error(
-      [
-        `Huawei Cloud failed: ${huaweiCloudError?.message ?? "unknown error"}`,
-        `AWS failed: ${awsError?.message ?? "unknown error"}`,
-        `Local failed: ${localError.message}`,
-      ].join(" | ")
-    );
-  }
+  const executors = createEngineRegistry({
+    local: async () => normalizeKlineData(await withStage("fetch_kline_local", { period: options.period, secid }, () => fetchLocal(secid, klt)), secid, "local"),
+    "proxy-pool": async (entry) => withStage("fetch_kline_proxy_pool", { period: options.period, secid }, () => fetchProxyPool(secid, klt, {
+      ...options,
+      proxyMaxAttempts: entry.maxAttempts ?? options.proxyMaxAttempts,
+      proxyStrategy: entry.selector ?? "balanced",
+      proxyTimeoutMs: entry.timeoutMs,
+    })),
+    aws: async () => withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () => fetchAws(secid, klt, options.awsRegions, options.lambdaName)),
+    "aws-router": async () => withStage("fetch_kline_aws_router", { period: options.period, router_region: options.routerRegion ?? "auto", secid }, () => fetchRouter(secid, klt, options)),
+    huaweicloud: async () => withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () => fetchHuaweiCloud(secid, klt, options)),
+  });
+  return executePolicy(policy, executors);
 }
 
 async function main() {
