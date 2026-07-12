@@ -156,6 +156,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   .candidate-config { display: none; }
   .mobile-config { display: block; }
   .mobile-config summary { min-height: 44px; padding: 12px 0; font-weight: 800; }
+  .mobile-config[open] { display: grid; gap: 10px; }
   .candidate-list { grid-template-columns: 1fr; }
   .trade-chart-grid { grid-template-columns: 1fr; }
   .trade-workspace { grid-template-columns: 1fr; }

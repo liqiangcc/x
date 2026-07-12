@@ -49,7 +49,7 @@ export default function CandidatesPage() {
           {session.mode !== "blind" && !session.revealedAt && <button className="text-button" disabled={busy} onClick={reveal} type="button">显式揭晓身份</button>}
           {identities.length > 0 && <ul className="identity-list">{identities.map((item) => <li key={item.candidateId}>{item.alias} · {item.code}</li>)}</ul>}
         </aside>
-        <details className="panel mobile-config"><summary>查看候选配置</summary><p>连续四年下跌，本年度今日首次收盘突破去年最高价。</p></details>
+        <details className="panel mobile-config"><summary>查看候选配置</summary><p>连续四年下跌，本年度今日首次收盘突破去年最高价。</p><button className="secondary-button" disabled={busy} onClick={clone} type="button">克隆并调整配置</button>{session.mode !== "blind" && !session.revealedAt && <button className="text-button" disabled={busy} onClick={reveal} type="button">显式揭晓身份</button>}{identities.length > 0 && <ul className="identity-list">{identities.map((item) => <li key={item.candidateId}>{item.alias} · {item.code}</li>)}</ul>}</details>
         <div className="candidate-results">
           <div className="result-toolbar"><span>{pagination ? `${pagination.total} 个候选` : "加载候选…"}</span>{pagination?.total > 20 && <button className="text-button" onClick={() => setViewAll(!viewAll)} type="button">{viewAll ? "恢复分页" : "查看全部"}</button>}</div>
           <div className="candidate-list">{pagination?.items.map((candidate) => <CandidateCard candidate={candidate} key={candidate.candidateId} onSelect={select} />)}</div>

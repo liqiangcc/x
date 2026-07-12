@@ -597,12 +597,12 @@
 - Expected files: `web/simulator/src/pages/ReviewPage.jsx`, `web/simulator/src/components/PerformanceCharts.jsx`, `web/simulator/src/components/TradeReview.jsx`
 - Validation: `node --test tests/simulator-report.test.js tests/simulator-api-anonymity.test.js && npm run test:web && npm run build:web` -> passed (6 backend tests, 13 frontend tests, production build succeeded)
 - Changed files: `src/simulator/application/reports.js`, `web/simulator/src/pages/ReviewPage.jsx`, `web/simulator/src/components/PerformanceCharts.jsx`, `web/simulator/src/components/PerformanceCharts.test.jsx`, `web/simulator/src/components/TradeReview.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `c132b2d9`
 - Notes: 复盘页展示收益/回撤/费用指标、权益和回撤曲线、基准状态、每笔订单的匿名候选证据/理由/成交差异，以及未交易候选、未平仓持仓、揭晓状态和父子关系；支持结束估值、规则允许时揭晓及 JSON 导出。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S03` 完成端到端业务验收
 
-- Status: `pending`
+- Status: `done`
 - Goal: 使用固定市场完成从创建到复盘的完整桌面和手机流程。
 - Steps:
   - 创建 D 日收盘会话并生成匿名候选。
@@ -610,9 +610,10 @@
   - 验证 T+1 后卖出、结束估值、揭晓和 JSON 导出。
   - 验证克隆分支使用新配置且父会话不变。
 - Expected files: `tests/e2e/simulator-flow.spec.js`, `tests/fixtures/simulator/`
-- Validation: `npm run test:e2e`
+- Validation: `npm run test:e2e` -> passed (8 tests; 4 representative-project/mobile-landscape skips by design)
+- Changed files: `tests/e2e/simulator-flow.spec.js`, `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 固定市场端到端流程在 390x844 手机和 1440x900 桌面完成匿名候选、买入、多次决策推进、T+1 从可卖 0 到可卖 100、卖出、结束估值、揭晓、JSON 导出和克隆请求；既有四尺寸响应式流程同时复跑。补齐了手机配置抽屉中的克隆与揭晓入口。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S04` 更新用户文档和 CLI 入口
 
