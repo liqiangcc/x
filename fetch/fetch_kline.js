@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { getKline } = require("../src/sources/eastmoney/client");
 const { inferSecid, splitSecid } = require("../src/core/secid");
+const { getKlineViaProxyPool } = require("../src/proxy/pool");
 const { stageLog, withStage } = require("../src/core/stage_log");
 const {
   ACCESS_KEY_ENV: HUAWEICLOUD_ACCESS_KEY_ENV,
@@ -38,11 +39,11 @@ const DEFAULT_AWS_REGIONS = [
   "us-west-1",
   "us-west-2",
 ];
-const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud", "proxy-pool"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output <file>]"
+    "Usage: node fetch/fetch_kline.js <code_or_secid> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud|proxy-pool>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--aws-region-start-index <N>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output <file>]"
   );
 }
 
@@ -90,6 +91,8 @@ function parseArguments(argv) {
     lambdaNameOverridden: false,
     outputFile: null,
     period: "daily",
+    proxyMaxAttempts: 3,
+    proxyPoolUrl: null,
     routerRegion: "auto",
     routerTokenEnv: "AWS_ROUTER_TOKEN",
     routerUrlEnv: "AWS_ROUTER_URL",
@@ -114,6 +117,27 @@ function parseArguments(argv) {
         throw new Error(`Invalid value for --engine: ${nextArg ?? ""}`);
       }
       options.engine = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-pool-url") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --proxy-pool-url.");
+      }
+      options.proxyPoolUrl = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-max-attempts") {
+      const nextArg = argv[index + 1];
+      const value = parseNonNegativeInteger(nextArg, "--proxy-max-attempts");
+      if (value < 1) {
+        throw new Error("--proxy-max-attempts must be at least 1.");
+      }
+      options.proxyMaxAttempts = value;
       index += 1;
       continue;
     }
@@ -310,6 +334,19 @@ async function fetchLocalKline(secid, klt) {
     }
   }
   throw lastError;
+}
+
+async function fetchProxyPoolKline(secid, klt, options, env = process.env) {
+  return getKlineViaProxyPool({
+    secid,
+    klt: Number(klt),
+    lmt: DEFAULT_KLINE_LMT,
+    end: "20991231",
+  }, {
+    apiKey: env.X_PROXY_POOL_API_KEY ?? env.PROXY_POOL_API_KEY ?? "",
+    maxAttempts: options.proxyMaxAttempts,
+    poolUrl: options.proxyPoolUrl ?? env.X_PROXY_POOL_URL,
+  });
 }
 
 async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
@@ -534,6 +571,7 @@ async function resolveKline(options, deps = {}) {
   const fetchAws = deps.fetchAwsKline ?? fetchAwsKline;
   const fetchHuaweiCloud = deps.fetchHuaweiCloudKline ?? fetchHuaweiCloudKline;
   const fetchLocal = deps.fetchLocalKline ?? fetchLocalKline;
+  const fetchProxyPool = deps.fetchProxyPoolKline ?? fetchProxyPoolKline;
   const fetchRouter = deps.fetchAwsRouterKline ?? fetchAwsRouterKline;
   const secid = inferSecid(options.input);
   const klt = PERIOD_MAP[options.period];
@@ -549,6 +587,12 @@ async function resolveKline(options, deps = {}) {
       fetchLocal(secid, klt)
     );
     return normalizeKlineData(rawData, secid, "local");
+  }
+
+  if (options.engine === "proxy-pool") {
+    return withStage("fetch_kline_proxy_pool", { period: options.period, secid }, () =>
+      fetchProxyPool(secid, klt, options)
+    );
   }
 
   if (options.engine === "aws") {
@@ -640,6 +684,7 @@ module.exports = {
   fetchAwsRouterKline,
   fetchHuaweiCloudKline,
   fetchLocalKline,
+  fetchProxyPoolKline,
   normalizeKlineData,
   parseArguments,
   resolveKline,

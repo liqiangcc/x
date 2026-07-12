@@ -74,8 +74,8 @@ function printUsage() {
   x pool pull [--latest|--date YYYYMMDD] [--range-days N] [--engine curl|node]
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
-  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
+  x kline fetch <code_or_secid> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud|proxy-pool] [--proxy-pool-url url] [--proxy-max-attempts N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--limit N] [--batch-size N] [--offset N] [--engine auto|local|aws|aws-router|huaweicloud|proxy-pool] [--proxy-pool-url url] [--proxy-max-attempts N] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
@@ -90,6 +90,9 @@ function printUsage() {
   x proxy list [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy rotate [--proxy <name>] [--config /opt/clash/runtime.yaml] [--group lx]
   x proxy check
+  x proxy pool up|down|status
+  x proxy pool warmup [--duration 30m] [--samples 20] [--concurrency 4]
+  x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
   x run list
   x run show <run_id>
   x run failures <run_id>
@@ -723,6 +726,12 @@ async function commandKlineFetch(argv) {
   if (options.routerRegion) {
     args.push("--router-region", options.routerRegion);
   }
+  if (options.proxyPoolUrl) {
+    args.push("--proxy-pool-url", options.proxyPoolUrl);
+  }
+  if (options.proxyMaxAttempts) {
+    args.push("--proxy-max-attempts", String(options.proxyMaxAttempts));
+  }
   if (options.huaweicloudRegion) {
     args.push("--huaweicloud-region", options.huaweicloudRegion);
   }
@@ -780,6 +789,12 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   }
   if (options.routerRegion) {
     args.push("--router-region", options.routerRegion);
+  }
+  if (options.proxyPoolUrl) {
+    args.push("--proxy-pool-url", options.proxyPoolUrl);
+  }
+  if (options.proxyMaxAttempts) {
+    args.push("--proxy-max-attempts", String(options.proxyMaxAttempts));
   }
   if (options.huaweicloudRegion) {
     args.push("--huaweicloud-region", options.huaweicloudRegion);
@@ -1928,6 +1943,10 @@ async function commandStats(argv) {
 
 async function commandProxy(argv) {
   const subcommand = argv[0];
+  if (subcommand === "pool") {
+    await commandProxyPool(argv.slice(1));
+    return;
+  }
   const options = parseOptions(argv.slice(1));
   const { checkEastmoneyAccess, listProxies, rotateProxy } = require("./../src/proxy/clash");
   const common = {
@@ -1951,6 +1970,128 @@ async function commandProxy(argv) {
   }
 
   throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
+}
+
+function parseDurationMs(value) {
+  const match = String(value ?? "").trim().match(/^(\d+)(s|m|h)$/i);
+  if (!match || Number(match[1]) < 1) {
+    throw new Error(`Invalid duration: ${value}. Use values such as 30s, 30m, or 1h.`);
+  }
+  const multiplier = { s: 1000, m: 60_000, h: 3_600_000 }[match[2].toLowerCase()];
+  return Number(match[1]) * multiplier;
+}
+
+function parsePositiveOption(value, name, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 1) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+  return number;
+}
+
+async function proxyCompose(args) {
+  const composeDir = path.join(ROOT, "ops/proxy-pool");
+  const envFile = path.join(composeDir, ".env");
+  try {
+    await fs.access(envFile);
+  } catch {
+    throw new Error("Missing ops/proxy-pool/.env; copy .env.example and set PROXY_POOL_API_KEY first.");
+  }
+  const result = await execFileAsync("docker", [
+    "compose",
+    "--env-file",
+    envFile,
+    "-f",
+    path.join(composeDir, "compose.yml"),
+    ...args,
+  ], { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 });
+  process.stdout.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+}
+
+async function writeProxyBenchmarkReport(report, kind) {
+  const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const outputDir = path.join(DEFAULT_RUNS_DIR, "proxy-benchmark", `${runId}_${kind}`);
+  const outputFile = path.join(outputDir, "report.json");
+  await fs.mkdir(outputDir, { recursive: true });
+  await fs.writeFile(outputFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  return rel(outputFile);
+}
+
+async function commandProxyPool(argv) {
+  const action = argv[0];
+  const options = parseOptions(argv.slice(1));
+  if (action === "up") {
+    await proxyCompose(["up", "-d", "--build"]);
+    return;
+  }
+  if (action === "down") {
+    await proxyCompose(["down"]);
+    return;
+  }
+  if (action === "status") {
+    await proxyCompose(["ps"]);
+    const { fetchAllProxyCandidates } = require("./../src/proxy/pool");
+    try {
+      const candidates = await fetchAllProxyCandidates();
+      printJson({ ok: true, cn_candidates: candidates.length });
+    } catch (error) {
+      printJson({ ok: false, error: error.message, cn_candidates: 0 });
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  const { runProxyBenchmark } = require("./../src/proxy/pool");
+  const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
+  const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
+  if (action === "benchmark") {
+    const report = await runProxyBenchmark({ samples, concurrency });
+    report.report = await writeProxyBenchmarkReport(report, "benchmark");
+    printJson(report);
+    if (!report.passed) {
+      process.exitCode = 2;
+    }
+    return;
+  }
+  if (action === "warmup") {
+    const durationMs = parseDurationMs(options.duration ?? "30m");
+    const deadline = Date.now() + durationMs;
+    const rounds = [];
+    do {
+      rounds.push(await runProxyBenchmark({ samples, concurrency }));
+      if (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(60_000, deadline - Date.now())));
+      }
+    } while (Date.now() < deadline);
+    const report = {
+      started_at: rounds[0]?.started_at ?? new Date().toISOString(),
+      finished_at: new Date().toISOString(),
+      duration_ms: durationMs,
+      rounds: rounds.map((round) => ({
+        samples: round.samples,
+        success: round.success,
+        failed: round.failed,
+        success_rate: round.success_rate,
+        eligible_proxy_count: round.eligible_proxy_count,
+        stable_proxy_count: round.stable_proxy_count,
+        p95_duration_ms: round.p95_duration_ms,
+        passed: round.passed,
+      })),
+      passed: rounds.some((round) => round.passed),
+    };
+    report.report = await writeProxyBenchmarkReport(report, "warmup");
+    printJson(report);
+    if (!report.passed) {
+      process.exitCode = 2;
+    }
+    return;
+  }
+
+  throw new Error(`Unknown proxy pool command: ${action ?? ""}`);
 }
 
 async function existingDataPathspecs(candidates = ["data", "runs", "reports"]) {

@@ -29,6 +29,22 @@ test("fetch_kline parses aws-router engine", () => {
   assert.equal(options.routerRegion, "us-west-1,us-west-2");
 });
 
+test("fetch_kline parses proxy-pool engine options", () => {
+  const options = parseArguments([
+    "600519",
+    "--engine",
+    "proxy-pool",
+    "--proxy-pool-url",
+    "http://127.0.0.1:5555",
+    "--proxy-max-attempts",
+    "4",
+  ]);
+
+  assert.equal(options.engine, "proxy-pool");
+  assert.equal(options.proxyPoolUrl, "http://127.0.0.1:5555");
+  assert.equal(options.proxyMaxAttempts, 4);
+});
+
 test("fetch_kline parses Huawei Cloud engine options", () => {
   const options = parseArguments([
     "600519",

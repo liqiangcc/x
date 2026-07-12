@@ -11,6 +11,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@aws-sdk/client-lambda": "^3.600.0"
+    "@aws-sdk/client-lambda": "^3.600.0",
+    "undici": "^7.28.0"
   }
 }

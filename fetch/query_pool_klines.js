@@ -7,12 +7,12 @@ const { getKlines, inspectKlinePayload } = require("./check_kline_empty");
 const { isStageLogEnabled, stageLog, startStageHeartbeat } = require("../src/core/stage_log");
 
 const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
-const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud"]);
+const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud", "proxy-pool"]);
 const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--engine <auto|local|aws|aws-router|huaweicloud|proxy-pool>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
   );
 }
 
@@ -74,6 +74,8 @@ function parseArguments(argv) {
     offset: 0,
     outputDir: path.resolve("data/kline"),
     period: "daily",
+    proxyMaxAttempts: 3,
+    proxyPoolUrl: null,
     retryAttempts: 0,
     retryConcurrency: null,
     retryDelayMs: 1000,
@@ -99,6 +101,23 @@ function parseArguments(argv) {
         throw new Error(`Invalid value for --engine: ${nextArg ?? ""}`);
       }
       options.engine = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-pool-url") {
+      const nextArg = argv[index + 1];
+      if (!nextArg) {
+        throw new Error("Missing value for --proxy-pool-url.");
+      }
+      options.proxyPoolUrl = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-max-attempts") {
+      const nextArg = argv[index + 1];
+      options.proxyMaxAttempts = parsePositiveInteger(nextArg, "--proxy-max-attempts");
       index += 1;
       continue;
     }
@@ -525,6 +544,14 @@ async function fetchSingleKline(secid, options) {
     args.push("--router-region", options.routerRegion);
   }
 
+  if (options.proxyPoolUrl) {
+    args.push("--proxy-pool-url", options.proxyPoolUrl);
+  }
+
+  if (options.proxyMaxAttempts) {
+    args.push("--proxy-max-attempts", String(options.proxyMaxAttempts));
+  }
+
   if (options.lambdaName) {
     args.push("--lambda-name", options.lambdaName);
   }
@@ -632,6 +659,9 @@ function percentile(sortedValues, percentileValue) {
 
 function classifyFailure(error) {
   const message = String(error?.message ?? error ?? "");
+  if (/All proxy-pool attempts failed|ProxyPool returned no valid CN proxy candidates|ProxyPool API returned HTTP/i.test(message)) {
+    return "transient_network";
+  }
   if (/blank_klines/i.test(message)) {
     return "blank_klines";
   }
@@ -707,6 +737,12 @@ function createSummary(options, selection) {
     retry_attempts: options.retryAttempts,
     retry_concurrency: options.retryConcurrency,
     retry_delay_ms: options.retryDelayMs,
+    proxy_max_attempts: options.proxyMaxAttempts,
+    proxy_pool_url: options.proxyPoolUrl ? "configured" : null,
+    proxy_attempts: 0,
+    proxy_success: 0,
+    proxy_fallback: 0,
+    proxy_error_counts: {},
     router_region: options.routerRegion,
     router_region_strategy: routerRegionStrategy(options.engine, options.routerRegion),
     selection_mode: selection.selectionMode,
@@ -920,7 +956,7 @@ function isFallbackEligibleFailureClass(errorClass) {
 }
 
 function canFallbackEngine(engine) {
-  return ["auto", "aws", "aws-router", "huaweicloud"].includes(engine);
+  return ["auto", "aws", "aws-router", "huaweicloud", "proxy-pool"].includes(engine);
 }
 
 function shouldFallbackToLocal(failure, options) {
@@ -1054,6 +1090,11 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         total_duration_ms: Number.isFinite(data.total_duration_ms) ? data.total_duration_ms : null,
         fallback_count: Number.isFinite(data.fallback_count) ? data.fallback_count : null,
         fallback_from: fallbackFrom,
+        proxy_attempts: Number.isFinite(data.proxy_attempts) ? data.proxy_attempts : null,
+        proxy_id: typeof data.proxy_id === "string" ? data.proxy_id : null,
+        proxy_error_counts: data.proxy_error_counts && typeof data.proxy_error_counts === "object"
+          ? data.proxy_error_counts
+          : null,
         attempted_regions: Array.isArray(data.attempted_regions) ? data.attempted_regions : null,
         status: "success",
         file: outputPath,
@@ -1088,6 +1129,10 @@ function summarizeFinalResults(summary, results) {
   summary.p50_duration_ms = null;
   summary.p95_duration_ms = null;
   summary.failure_reason_counts = {};
+  summary.proxy_attempts = 0;
+  summary.proxy_success = 0;
+  summary.proxy_fallback = 0;
+  summary.proxy_error_counts = {};
   summary.files = {};
 
   for (const result of results) {
@@ -1098,6 +1143,16 @@ function summarizeFinalResults(summary, results) {
       incrementCount(summary.region_counts, result.file.region);
       if (Number.isFinite(result.file.total_duration_ms)) {
         summary.duration_ms_by_code[result.code] = result.file.total_duration_ms;
+      }
+      if (result.file.engine === "proxy-pool") {
+        summary.proxy_success += 1;
+        summary.proxy_attempts += Number(result.file.proxy_attempts ?? 0);
+        for (const [errorClass, count] of Object.entries(result.file.proxy_error_counts ?? {})) {
+          summary.proxy_error_counts[errorClass] = (summary.proxy_error_counts[errorClass] ?? 0) + Number(count);
+        }
+      }
+      if (result.file.fallback_from === "proxy-pool") {
+        summary.proxy_fallback += 1;
       }
     }
     if (result.countKey === "failed") {

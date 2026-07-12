@@ -1,6 +1,9 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 const {
   buildDataPullRequestMergeArgs,
@@ -23,7 +26,40 @@ const {
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,
+  writeGithubStepSummary,
 } = require("../scripts/github-daily-workflow");
+
+test("writeGithubStepSummary uses the supplied run before rendering router details", async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "x-workflow-summary-"));
+  const summaryFile = path.join(dir, "step-summary.md");
+  const klineSummaryFile = path.join(__dirname, "..", "data", "kline", "daily", "summary.daily.json");
+  const originalSummaryFile = process.env.GITHUB_STEP_SUMMARY;
+  process.env.GITHUB_STEP_SUMMARY = summaryFile;
+  t.after(async () => {
+    if (originalSummaryFile === undefined) {
+      delete process.env.GITHUB_STEP_SUMMARY;
+    } else {
+      process.env.GITHUB_STEP_SUMMARY = originalSummaryFile;
+    }
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  try {
+    await fs.access(klineSummaryFile);
+  } catch {
+    t.skip("repository does not contain a daily kline summary fixture");
+    return;
+  }
+
+  await writeGithubStepSummary(["--period", "daily", "--universe", "market"], {
+    job_mode: "batch",
+    router_region_resolved: "ap-northeast-1",
+    router_probe_summary: { status: "completed" },
+  });
+  const output = await fs.readFile(summaryFile, "utf8");
+  assert.match(output, /router_region: ap-northeast-1/);
+  assert.match(output, /router_probe: completed/);
+});
 
 test("buildDailyArgs uses safe workflow defaults", () => {
   assert.deepEqual(buildDailyArgs({}), [

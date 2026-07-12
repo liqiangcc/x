@@ -474,6 +474,7 @@ async function writeGithubStepSummary(args, run = null) {
   const awsRouterSuccesses = Number(summary.engine_counts?.["aws-router"] ?? 0);
   const huaweiCloudSuccesses = Number(summary.engine_counts?.huaweicloud ?? 0);
   const universe = argValue(args, "--universe", "market");
+  const latestRun = run ?? await findLatestRun();
   const lines = [
     "## Kline data summary",
     "",
@@ -509,7 +510,6 @@ async function writeGithubStepSummary(args, run = null) {
     "",
   ];
 
-  const latestRun = run ?? await findLatestRun();
   if (latestRun?.job_mode === "batch") {
     lines.push(
       "## Progress",
@@ -954,10 +954,15 @@ async function main() {
   if (dataBranch) {
     await withStage("checkout_data_branch", { branch: dataBranch }, () => checkoutDataBranch(dataBranch));
   }
-  await withStage("write_step_summary", {
-    run_id: latestRun?.run_id ?? null,
-  }, () => writeGithubStepSummary(dailyArgs, latestRun));
   await withStage("push_data_branch", { branch: dataBranch ?? null }, () => pushDataBranch(dataBranch));
+  try {
+    await withStage("write_step_summary", {
+      run_id: latestRun?.run_id ?? null,
+    }, () => writeGithubStepSummary(dailyArgs, latestRun));
+  } catch (error) {
+    console.error(`Step summary failed: ${error.message}`);
+    stageLog("error", "write_step_summary", { error: error.message });
+  }
 
   const dispatchNext = shouldDispatchNextRun(latestRun);
   stageLog("end", "dispatch_decision", {
@@ -1071,4 +1076,5 @@ module.exports = {
   shouldOpenDataPullRequest,
   shouldSyncJobIssue,
   shouldDispatchNextRun,
+  writeGithubStepSummary,
 };

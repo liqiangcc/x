@@ -117,6 +117,22 @@ test("queryPoolKlines parses Huawei Cloud engine options", () => {
   assert.equal(options.huaweiCloudTargetsFile, "/tmp/huaweicloud-targets.json");
 });
 
+test("queryPoolKlines parses proxy-pool engine options", () => {
+  const options = parseArguments([
+    "codes.json",
+    "--engine",
+    "proxy-pool",
+    "--proxy-pool-url",
+    "http://127.0.0.1:5555",
+    "--proxy-max-attempts",
+    "4",
+  ]);
+
+  assert.equal(options.engine, "proxy-pool");
+  assert.equal(options.proxyPoolUrl, "http://127.0.0.1:5555");
+  assert.equal(options.proxyMaxAttempts, 4);
+});
+
 test("queryPoolKlines handles concurrent success, failure, and skipped files", async (t) => {
   const dir = await makeTempDir(t);
   const inputPath = path.join(dir, "codes.json");
@@ -900,4 +916,66 @@ test("queryPoolKlines records Huawei Cloud regions and duration metrics", async 
     "600001": 35,
     "600002": 55,
   });
+});
+
+test("queryPoolKlines records anonymized proxy-pool metrics", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "proxy-pool",
+    "--output-dir",
+    outputDir,
+    "--force",
+  ]);
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid) =>
+    klinePayload(secid.split(".")[1], "proxy-pool", "CN", {
+      proxy_attempts: 2,
+      proxy_id: "abcdef123456",
+      proxy_error_counts: { timeout: 1 },
+      total_duration_ms: 50,
+    })
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(summary.proxy_success, 1);
+  assert.equal(summary.proxy_attempts, 2);
+  assert.equal(summary.proxy_fallback, 0);
+  assert.deepEqual(summary.proxy_error_counts, { timeout: 1 });
+  assert.equal(summary.files["600001"].proxy_id, "abcdef123456");
+  assert.equal(JSON.stringify(summary).includes("1.2.3.4"), false);
+});
+
+test("queryPoolKlines falls back locally when the proxy pool is exhausted", async (t) => {
+  const dir = await makeTempDir(t);
+  const inputPath = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(inputPath, ["600001"]);
+  const options = parseArguments([
+    inputPath,
+    "--period",
+    "daily",
+    "--engine",
+    "proxy-pool",
+    "--output-dir",
+    outputDir,
+  ]);
+  const engines = [];
+  const { exitCode, summary } = await queryPoolKlines(options, async (secid, fetchOptions) => {
+    engines.push(fetchOptions.engine);
+    if (fetchOptions.engine === "proxy-pool") {
+      throw new Error("All proxy-pool attempts failed: abcdef123456:forbidden");
+    }
+    return klinePayload(secid.split(".")[1], "local", null);
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(engines, ["proxy-pool", "local"]);
+  assert.equal(summary.proxy_fallback, 1);
+  assert.equal(summary.files["600001"].fallback_from, "proxy-pool");
 });
