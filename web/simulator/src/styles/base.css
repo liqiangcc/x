@@ -86,6 +86,15 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .empty-state { display: grid; gap: 6px; padding: 42px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); text-align: center; }
 .mobile-config { display: none; }
 .identity-list { margin: 0; padding-left: 20px; font-size: 0.82rem; }
+.trade-chart-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 0.8fr); gap: 18px; }
+.chart-panel { min-width: 0; padding: 18px; }
+.chart-panel header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.chart-panel h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 1.1rem; }
+.chart-panel header span { color: var(--muted); font-size: 0.74rem; }
+.chart-canvas, .chart-loading { width: 100%; height: clamp(340px, 52vh, 580px); }
+.yearly-canvas { height: clamp(280px, 42vh, 460px); }
+.chart-loading { display: grid; place-items: center; color: var(--muted); }
+.mobile-chart-tabs { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 720px) {
@@ -103,6 +112,17 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   .mobile-config { display: block; }
   .mobile-config summary { min-height: 44px; padding: 12px 0; font-weight: 800; }
   .candidate-list { grid-template-columns: 1fr; }
+  .trade-chart-grid { grid-template-columns: 1fr; }
+  .mobile-chart-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; padding: 4px; border-radius: 12px; background: #e3e6df; }
+  .mobile-chart-tabs button { border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-weight: 800; }
+  .mobile-chart-tabs button[aria-selected="true"] { color: var(--ink); background: var(--paper); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+  .chart-panel { display: none; padding: 10px; }
+  .chart-panel.mobile-active { display: block; }
+  .chart-canvas, .chart-loading, .yearly-canvas { height: 62vh; min-height: 360px; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .chart-canvas, .yearly-canvas { height: calc(100vh - 120px); min-height: 300px; }
 }
 
 @media (min-width: 1024px) {

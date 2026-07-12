@@ -512,12 +512,12 @@
 - Expected files: `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/components/CandidateCard.jsx`, `web/simulator/src/components/CandidateEvidence.jsx`
 - Validation: `npm run test:web` -> passed (7 tests)
 - Changed files: `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/pages/CandidatesPage.test.jsx`, `web/simulator/src/components/CandidateCard.jsx`, `web/simulator/src/components/CandidateEvidence.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/state/SessionContext.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `90c2d563`
 - Notes: 匿名候选池展示别名、证据、近似质量、默认 20 条分页和查看全部；桌面采用冻结配置侧栏与双列卡片，手机为单列卡片和配置折叠。普通匿名提供显式揭晓，盲测隐藏入口，并提供克隆调整与进入交易页操作。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S04` 实现日线、年线和 BOLL 图表
 
-- Status: `pending`
+- Status: `done`
 - Goal: 用 ECharts 展示截至模拟日的匿名走势和交易标记。
 - Steps:
   - 桌面同时展示日线主图和年线副视图。
@@ -525,9 +525,10 @@
   - 日线包含 BOLL、成交量、去年最高价和首次突破点。
   - 支持触摸缩放、拖动、十字光标和横屏。
 - Expected files: `web/simulator/src/charts/DailyChart.jsx`, `web/simulator/src/charts/YearlyChart.jsx`, `web/simulator/src/pages/TradePage.jsx`
-- Validation: `npm run test:web && npm run build:web`
+- Validation: `npm run test:web && npm run build:web` -> passed (9 tests; production build succeeded, ECharts chunk-size warning is non-blocking)
+- Changed files: `web/simulator/src/charts/DailyChart.jsx`, `web/simulator/src/charts/YearlyChart.jsx`, `web/simulator/src/charts/useEChart.js`, `web/simulator/src/charts/charts.test.jsx`, `web/simulator/src/pages/TradePage.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: ECharts 日线视图包含 K 线、BOLL 三轨、成交量、去年最高价和首次突破标记，年线为独立 K 线副视图；桌面同时显示，手机标签切换，并启用触摸缩放、拖动、十字光标和横屏高度适配。所有序列来自截至模拟日的匿名 chart API。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S05` 实现账户和交易操作
 
