@@ -642,7 +642,7 @@
 - Expected files: `tasks/TASK-20260712-1701-trading-simulator.md`
 - Validation: `npm run check && npm test && npm run test:web && npm run build:web && npm run test:e2e` -> passed (178 JS files checked; 302 backend tests; 13 frontend tests; production build; 8 E2E passed and 4 scoped skips); `git status --short` -> only this subtask plus pre-existing untracked benchmark directories
 - Changed files: `src/simulator/application/runtime_service.js`, `web/simulator/src/pages/CandidatesPage.test.jsx`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `e758c331`
 - Notes: 最终审计确认 T01-T07 全部显式交付项完成；匿名白名单覆盖 API/错误/报告/导出，K 线及信号按 asOfDate 截断，候选缓存和数据清单绑定数据版本/内容摘要，交易引擎覆盖冻结资产、T+1、停牌/封板、费用与结束估值。修复全量并行测试暴露的克隆历史兼容和候选页双入口测试。T08 保持非阻塞 P3 精确历史数据 TODO，未执行或改写行情。
 
 ### `TASK-20260712-1701-trading-simulator-T08` P3 历史数据准确性 TODO
