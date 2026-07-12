@@ -6,10 +6,11 @@ const { SimulatorRepository } = require("../sqlite/repository");
 const { sessionRoutes } = require("./session_routes");
 const { orderRoutes } = require("./order_routes");
 const { queryRoutes } = require("./query_routes");
+const { reportRoutes } = require("./report_routes");
 
 function statusFor(error) {
   if (error.statusCode) return error.statusCode;
-  if (["session_version_conflict", "invalid_session_state", "decision_locked"].includes(error.code)) return 409;
+  if (["session_version_conflict", "invalid_session_state", "decision_locked", "blind_reveal_locked", "identity_already_revealed"].includes(error.code)) return 409;
   if (["session_not_found", "order_not_found", "unknown_candidate"].includes(error.code)) return 404;
   return 422;
 }
@@ -31,6 +32,7 @@ function buildServer({ logger = false, runtime = new SimulatorRuntimeService() }
   app.register(sessionRoutes, { prefix: "/api", runtime });
   app.register(orderRoutes, { prefix: "/api", runtime });
   app.register(queryRoutes, { prefix: "/api", runtime });
+  app.register(reportRoutes, { prefix: "/api", runtime });
   return app;
 }
 

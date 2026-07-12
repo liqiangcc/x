@@ -94,6 +94,18 @@ class SimulatorSession {
     return this.snapshot();
   }
 
+  reveal({ expectedVersion = this.version, revealedAt = new Date().toISOString() } = {}) {
+    this.assertVersion(expectedVersion);
+    if (this.revealedAt) throw sessionError("identity_already_revealed", "Session identities were already revealed.");
+    if (this.mode === SessionMode.BLIND && ![SessionStatus.COMPLETED, SessionStatus.CANCELLED].includes(this.status)) {
+      throw sessionError("blind_reveal_locked", "Blind-session identities remain locked until the session ends.");
+    }
+    this.version += 1;
+    this.revealedAt = revealedAt;
+    this.events.push(this.#event(EventType.IDENTITY_REVEALED, { revealedAt }));
+    return this.snapshot();
+  }
+
   snapshot() {
     return Object.freeze({
       candidateSnapshot: this.candidateSnapshot,
@@ -101,6 +113,7 @@ class SimulatorSession {
       id: this.id,
       finalAccountSnapshot: this.finalAccountSnapshot ?? null,
       mode: this.mode,
+      revealedAt: this.revealedAt ?? null,
       status: this.status,
       version: this.version,
     });

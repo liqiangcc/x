@@ -1,5 +1,7 @@
 "use strict";
 
+const fs = require("node:fs/promises");
+const path = require("node:path");
 const { Account } = require("../core/account");
 const { SimulatorSession } = require("../core/session");
 const { SessionMode } = require("../core/enums");
@@ -14,6 +16,7 @@ const { calculateBollSeries } = require("../../signals/indicators/boll");
 const { OrderApplicationService } = require("./orders");
 const { TradingSessionEngine } = require("./sessions");
 const { digest } = require("../selection/pipeline");
+const { buildSessionReport, identityRows } = require("./reports");
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -278,6 +281,38 @@ class SimulatorRuntimeService {
       });
     });
     return this.getSession(session.id);
+  }
+
+  reveal(sessionId, { expectedVersion }) {
+    const entry = this.entry(sessionId);
+    entry.session.reveal({ expectedVersion });
+    this.repository?.saveSession(entry.session.snapshot(), { config: entry.config });
+    return {
+      identities: identityRows(entry),
+      revealedAt: entry.session.revealedAt,
+      sessionVersion: entry.session.version,
+    };
+  }
+
+  async finish(sessionId, { expectedVersion }) {
+    const entry = this.entry(sessionId);
+    await entry.engine.finish({ expectedVersion });
+    this.repository?.saveSession(entry.session.snapshot(), { config: entry.config });
+    return this.getSession(sessionId);
+  }
+
+  getReport(sessionId) {
+    return buildSessionReport(this.entry(sessionId));
+  }
+
+  async exportSession(sessionId, { exportRoot = path.join("var", "simulator", "exports") } = {}) {
+    const report = this.getReport(sessionId);
+    await fs.mkdir(exportRoot, { recursive: true });
+    const filePath = path.join(exportRoot, `${sessionId}.json`);
+    const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(temporaryPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    await fs.rename(temporaryPath, filePath);
+    return { filePath };
   }
 }
 

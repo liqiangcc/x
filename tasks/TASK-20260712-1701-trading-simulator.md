@@ -428,12 +428,12 @@
 - Expected files: `src/simulator/application/sessions.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-clone.test.js`
 - Validation: `node --test tests/simulator-api-clone.test.js tests/simulator-anonymity.test.js tests/simulator-engine-account.test.js` -> passed (10 tests)
 - Changed files: `src/simulator/core/account.js`, `src/simulator/selection/aliases.js`, `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/session_routes.js`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-api-clone.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `d5f72ecb`
 - Notes: clone 从父会话当前收盘复制现金、持仓、未结算 T+1 股份、数据版本和历史分支引用，使用新盐重新匿名化；新候选配置记录为下一交易日生效，父会话对象和版本保持不变，SQLite 保存父子关系及配置摘要。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S05` 实现揭晓、结束、报告和导出 API
 
-- Status: `pending`
+- Status: `done`
 - Goal: 完成普通匿名和随机盲测的揭晓边界及审计导出。
 - Steps:
   - 普通匿名会话显式揭晓并追加 `IdentityRevealed`。
@@ -441,9 +441,10 @@
   - 实现结束、报告和 JSON 导出端点。
   - 导出使用临时文件和原子重命名。
 - Expected files: `src/simulator/application/reports.js`, `src/simulator/adapters/http/report_routes.js`, `tests/simulator-api-reveal.test.js`
-- Validation: `node --test tests/simulator-api-reveal.test.js`
+- Validation: `node --test tests/simulator-api-reveal.test.js tests/simulator-api-session.test.js` -> passed (6 tests)
+- Changed files: `src/simulator/core/session.js`, `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/report_routes.js`, `src/simulator/adapters/http/server.js`, `tests/simulator-api-reveal.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 普通匿名会话可显式揭晓并追加 IdentityRevealed；盲测在 completed/cancelled 前返回 409。结束接口保留持仓估值，报告关联配置/数据版本/候选/订单/成交/事件，未揭晓时不含身份；JSON 导出经同目录临时文件原子重命名。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S06` 审计匿名 API
 
