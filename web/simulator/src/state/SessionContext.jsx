@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { api } from "../api/client.js";
 
 const SessionContext = createContext(null);
@@ -7,8 +7,9 @@ export function SessionProvider({ children, client = api }) {
   const [session, setSession] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
-  async function run(action) {
+  const run = useCallback(async (action) => {
     setBusy(true);
     setError(null);
     try {
@@ -21,7 +22,7 @@ export function SessionProvider({ children, client = api }) {
     } finally {
       setBusy(false);
     }
-  }
+  }, []);
 
   const value = useMemo(() => ({
     busy,
@@ -30,10 +31,12 @@ export function SessionProvider({ children, client = api }) {
     run,
     session,
     sessionId: session?.id ?? null,
+    selectedCandidate,
+    setSelectedCandidate,
     setError,
     setSession,
     version: session?.version ?? null,
-  }), [busy, client, error, session]);
+  }), [busy, client, error, selectedCandidate, session]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

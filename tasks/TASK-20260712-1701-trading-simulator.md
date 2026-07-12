@@ -497,12 +497,12 @@
 - Expected files: `web/simulator/src/pages/CreateSessionPage.jsx`, `web/simulator/src/components/SelectionConfig.jsx`, `web/simulator/src/components/AdvancedConfigEditor.jsx`
 - Validation: `npm run test:web` -> passed (5 tests)
 - Changed files: `web/simulator/src/pages/CreateSessionPage.jsx`, `web/simulator/src/pages/CreateSessionPage.test.jsx`, `web/simulator/src/components/SelectionConfig.jsx`, `web/simulator/src/components/AdvancedConfigEditor.jsx`, `web/simulator/src/styles/base.css`, `web/simulator/src/test/setup.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `31380ee9`
 - Notes: 创建页支持起止日期、初始资金、普通匿名/随机盲测、默认候选参数和高级 JSON；服务端字段错误可统一展示，非法 JSON 不覆盖有效配置。会话建立后原地配置禁用并提示从候选页克隆。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S03` 实现匿名候选池
 
-- Status: `pending`
+- Status: `done`
 - Goal: 使用别名、证据、排序和分页展示候选，不依赖真实身份。
 - Steps:
   - 桌面端并排展示配置、候选列表和证据。
@@ -510,9 +510,10 @@
   - 默认 20 条并支持查看全部。
   - 普通匿名提供显式揭晓入口，盲测不显示入口。
 - Expected files: `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/components/CandidateCard.jsx`, `web/simulator/src/components/CandidateEvidence.jsx`
-- Validation: `npm run test:web`
+- Validation: `npm run test:web` -> passed (7 tests)
+- Changed files: `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/pages/CandidatesPage.test.jsx`, `web/simulator/src/components/CandidateCard.jsx`, `web/simulator/src/components/CandidateEvidence.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/state/SessionContext.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 匿名候选池展示别名、证据、近似质量、默认 20 条分页和查看全部；桌面采用冻结配置侧栏与双列卡片，手机为单列卡片和配置折叠。普通匿名提供显式揭晓，盲测隐藏入口，并提供克隆调整与进入交易页操作。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S04` 实现日线、年线和 BOLL 图表
 
