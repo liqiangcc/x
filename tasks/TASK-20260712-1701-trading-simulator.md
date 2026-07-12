@@ -201,7 +201,7 @@
 - Expected files: `tests/simulator-existing-data-integration.test.js`, `tests/fixtures/simulator/`
 - Validation: `node --test tests/simulator-existing-data-integration.test.js` -> passed (3 read-only repository integration tests)
 - Changed files: `src/simulator/data/data_manifest.js`, `tests/simulator-existing-data-integration.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `f924e327`
 - Notes: 使用仓库现有 `20260701` market Universe 和 `000001` daily/yearly 数据证明无需网络即可获得候选历史窗口、未来截断和 D+1 有效开盘价；现有负复权价格被局部排除且未改写数据。数据清单同时去重同一路径内容摘要。
 
 ### `TASK-20260712-1701-trading-simulator-T03` P0 指标与默认候选
@@ -216,7 +216,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S01` 抽取 BOLL 序列
 
-- Status: `pending`
+- Status: `done`
 - Goal: 为图表和 `WINDOW_BAND` 提供同一套 BOLL 计算。
 - Steps:
   - 实现返回完整日期序列的 `calculateBollSeries`。
@@ -224,9 +224,10 @@
   - 修改 `WINDOW_BAND` 复用指定日期结果，保持现有能力接口兼容。
   - 增加窗口不足、数值和时间截断测试。
 - Expected files: `src/signals/indicators/boll.js`, `src/signals/capabilities/window_band.js`, `tests/signals-daily-report.test.js`
-- Validation: `node --test tests/signals-daily-report.test.js`
+- Validation: `node --test tests/signals-daily-report.test.js tests/simulator-selection.test.js` -> passed (15 tests)
+- Changed files: `src/signals/indicators/boll.js`, `src/signals/capabilities/window_band.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已抽取完整 BOLL 序列和单窗口计算，默认 20 日/2 倍总体标准差，warmup 点为空；现有 `WINDOW_BAND` 复用同一计算核心并保持能力接口兼容。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S02` 实现默认复合候选
 
