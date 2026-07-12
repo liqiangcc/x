@@ -358,7 +358,7 @@
 - Expected files: `src/simulator/mechanisms/a_share_rules.js`, `src/simulator/application/sessions.js`, `tests/simulator-engine-market-rules.test.js`
 - Validation: `node --test tests/simulator-engine-*.test.js` -> passed (19 tests)
 - Changed files: `src/simulator/mechanisms/a_share_rules.js`, `src/simulator/application/sessions.js`, `src/simulator/core/order.js`, `src/simulator/core/session.js`, `tests/simulator-engine-market-rules.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `894c1ede`
 - Notes: 推进时仅处理 D 日已接受订单：D+1 停牌/无开盘、涨停开盘买入和跌停开盘卖出均失效并释放冻结资产，其余逐笔成交；结束会话会取消待处理订单，以最后真实收盘估值且保留持仓，不执行强平。
 
 ### `TASK-20260712-1701-trading-simulator-T05` P1 SQLite 与 Fastify API
@@ -373,7 +373,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S01` 建立 better-sqlite3 迁移和仓储
 
-- Status: `pending`
+- Status: `done`
 - Goal: 创建独立模拟数据库、迁移和事务仓储。
 - Steps:
   - 默认数据库使用 `var/simulator/simulator.db`。
@@ -381,9 +381,10 @@
   - 实现空库初始化、递增迁移和旧库升级测试。
   - 实现会话、候选、订单、成交、账户快照和事件仓储。
 - Expected files: `src/simulator/adapters/sqlite/migrations/`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-sqlite.test.js`
-- Validation: `node --test tests/simulator-sqlite.test.js`
+- Validation: `node --test tests/simulator-sqlite.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/adapters/sqlite/migrations/001_initial.js`, `src/simulator/adapters/sqlite/migrations/002_indexes.js`, `src/simulator/adapters/sqlite/migrate.js`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-sqlite.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 独立 SQLite 默认路径为 var/simulator/simulator.db；两级递增迁移创建全部核心表、约束和索引，仓储支持会话乐观版本、候选/别名、订单、成交、持仓、账户快照和追加事件，并用 better-sqlite3 事务验证原子回滚。金额以整数分持久化。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S02` 实现会话和推进 API
 
