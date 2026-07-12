@@ -75,11 +75,24 @@ class SimulatorSession {
     return this.snapshot();
   }
 
+  finish({ accountSnapshot, expectedVersion = this.version } = {}) {
+    this.assertVersion(expectedVersion);
+    if (![SessionStatus.WAITING_FOR_DECISION, SessionStatus.RUNNING].includes(this.status)) {
+      throw sessionError("invalid_session_state", `finish is not allowed from ${this.status}.`);
+    }
+    this.version += 1;
+    this.status = SessionStatus.COMPLETED;
+    this.finalAccountSnapshot = accountSnapshot;
+    this.events.push(this.#event(EventType.SESSION_COMPLETED, { date: this.clock.currentDate }));
+    return this.snapshot();
+  }
+
   snapshot() {
     return Object.freeze({
       candidateSnapshot: this.candidateSnapshot,
       clock: Object.freeze(this.clock.snapshot()),
       id: this.id,
+      finalAccountSnapshot: this.finalAccountSnapshot ?? null,
       mode: this.mode,
       status: this.status,
       version: this.version,

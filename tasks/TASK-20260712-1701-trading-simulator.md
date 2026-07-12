@@ -277,7 +277,7 @@
 
 ### `TASK-20260712-1701-trading-simulator-T04` P0 确定性交易引擎
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T02`
 - Goal: 实现 D 日收盘决策、D+1 开盘成交、冻结资产、T+1、费用和结束估值。
 - Files likely touched: `src/simulator/core/`, `src/simulator/mechanisms/`, `tests/`
@@ -343,12 +343,12 @@
 - Expected files: `src/simulator/mechanisms/slippage_model.js`, `src/simulator/mechanisms/fee_model.js`, `src/simulator/mechanisms/fill_model.js`, `tests/simulator-engine-fill.test.js`
 - Validation: `node --test tests/simulator-engine-fill.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/mechanisms/slippage_model.js`, `src/simulator/mechanisms/fee_model.js`, `src/simulator/mechanisms/fill_model.js`, `tests/simulator-engine-fill.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `017c8383`
 - Notes: D+1 开盘成交默认施加 0.1% 双向不利滑点和报价单位取整，并限制在真实高低价及显式涨跌停价内；佣金、最低佣金和卖出印花税可配置且逐单计算，Fill 明确标注 legacy_approximate、前复权价格视图和近似规则。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S05` 实现停牌、封板、失效和结束
 
-- Status: `pending`
+- Status: `done`
 - Goal: 完成无法成交和会话结束的确定处理。
 - Steps:
   - 停牌日不成交。
@@ -356,9 +356,10 @@
   - 未成交订单当日转为 `expired` 并释放冻结资产。
   - 结束时取消待处理订单，持仓按最后真实收盘估值，不强平。
 - Expected files: `src/simulator/mechanisms/a_share_rules.js`, `src/simulator/application/sessions.js`, `tests/simulator-engine-market-rules.test.js`
-- Validation: `node --test tests/simulator-engine-market-rules.test.js`
+- Validation: `node --test tests/simulator-engine-*.test.js` -> passed (19 tests)
+- Changed files: `src/simulator/mechanisms/a_share_rules.js`, `src/simulator/application/sessions.js`, `src/simulator/core/order.js`, `src/simulator/core/session.js`, `tests/simulator-engine-market-rules.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 推进时仅处理 D 日已接受订单：D+1 停牌/无开盘、涨停开盘买入和跌停开盘卖出均失效并释放冻结资产，其余逐笔成交；结束会话会取消待处理订单，以最后真实收盘估值且保留持仓，不执行强平。
 
 ### `TASK-20260712-1701-trading-simulator-T05` P1 SQLite 与 Fastify API
 

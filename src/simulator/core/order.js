@@ -65,6 +65,20 @@ class Order {
     this.status = OrderStatus.CANCELLED;
     return this;
   }
+
+  expire(reason) {
+    if (this.status !== OrderStatus.ACCEPTED) throw new Error("Only accepted orders can expire.");
+    this.rejectionReason = assertNonEmptyString(reason, "expirationReason");
+    this.status = OrderStatus.EXPIRED;
+    return this;
+  }
+
+  fill(fillId) {
+    if (this.status !== OrderStatus.ACCEPTED) throw new Error("Only accepted orders can fill.");
+    this.fillId = assertNonEmptyString(fillId, "fillId");
+    this.status = OrderStatus.FILLED;
+    return this;
+  }
 }
 
 module.exports = {
