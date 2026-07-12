@@ -241,12 +241,12 @@
 - Expected files: `src/signals/signals/year_decline_close_breakout.js`, `src/signals/registry.js`, `tests/simulator-selection.test.js`
 - Validation: `node --test tests/signals-daily-report.test.js tests/simulator-selection.test.js` -> passed (19 tests)
 - Changed files: `src/signals/signals/year_decline_close_breakout.js`, `src/signals/registry.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `6c3c2928`
 - Notes: 新增独立复合信号，严格要求最近 4 个连续完整自然年度收盘逐年下降；首次突破使用本年度截至今日之前的全部收盘，未来日期不会参与，并输出可审计的年度点和突破证据。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S03` 实现现有数据选择流水线
 
-- Status: `pending`
+- Status: `done`
 - Goal: 从当前可用 Universe 或本地 K 线交集筛选候选，并保留数据范围近似标记。
 - Steps:
   - 接入 T02 的 Universe 回退链。
@@ -255,9 +255,10 @@
   - 默认分页 20 条并允许查看全部。
   - 按日期、数据版本和配置摘要缓存候选快照，避免重复全市场扫描。
 - Expected files: `src/simulator/selection/historical_universe.js`, `src/simulator/selection/pipeline.js`, `tests/simulator-selection.test.js`
-- Validation: `node --test tests/simulator-selection.test.js`
+- Validation: `node --test tests/simulator-selection.test.js` -> passed (11 tests)
+- Changed files: `src/simulator/selection/historical_universe.js`, `src/simulator/selection/pipeline.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 选择流水线接入现有 Universe 回退结果和 K 线仓储，可靠状态存在时过滤 ST/*ST/退市整理，状态缺失保留候选并记录质量 TODO；按突破幅度升序稳定排序，默认分页 20，支持查看全部，并以日期、数据版本、配置摘要缓存不可变扫描快照。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S04` 实现匿名候选快照
 

@@ -9,6 +9,13 @@ const {
 const {
   evaluateYearDeclineCloseBreakout,
 } = require("../src/signals/signals/year_decline_close_breakout");
+const {
+  HistoricalUniverse,
+} = require("../src/simulator/selection/historical_universe");
+const {
+  CandidateSelectionPipeline,
+  paginate,
+} = require("../src/simulator/selection/pipeline");
 
 function candidateContext({
   closes = [20, 18, 16, 14],
@@ -114,4 +121,90 @@ test("default composite candidate never reads closes after the simulated date", 
   const context = candidateContext();
   context.dailyRows.push({ close: 99, date: "2026-07-02" });
   assert.equal(evaluateYearDeclineCloseBreakout(context).ok, true);
+});
+
+function repositoryBars(margin, { repeated = false } = {}) {
+  const previousYearHigh = 17;
+  return {
+    daily: [
+      { close: repeated ? 17.1 : 16.5, date: "2026-01-02" },
+      { close: previousYearHigh * (1 + margin / 100), date: "2026-07-01" },
+    ],
+    yearly: [20, 18, 16, 14].map((close, index) => ({
+      close,
+      date: `${2022 + index}-12-31`,
+      high: index === 3 ? previousYearHigh : close + 4,
+    })),
+  };
+}
+
+test("historical universe excludes reliable ST statuses and records missing status metadata", async () => {
+  const historicalUniverse = new HistoricalUniverse({
+    repository: {
+      async listAvailableCodes() {
+        return {
+          qualityIssues: ["historical_universe_unavailable"],
+          securities: [
+            { code: "600001", market: 1, status: "normal" },
+            { code: "000002", market: 0, status: "*ST" },
+            { code: "600003", market: 1 },
+          ],
+          source: "fixture",
+        };
+      },
+    },
+  });
+  const result = await historicalUniverse.list({ asOfDate: "20260701" });
+  assert.deepEqual(result.securities.map((item) => item.code), ["600001", "600003"]);
+  assert.equal(result.excluded.length, 1);
+  assert.equal(result.qualityIssues.includes("security_status_unavailable"), true);
+});
+
+test("selection pipeline filters, sorts, paginates and reuses a versioned snapshot", async () => {
+  let historyReads = 0;
+  const bars = new Map([
+    ["600001", repositoryBars(2)],
+    ["600002", repositoryBars(1)],
+    ["600003", repositoryBars(3, { repeated: true })],
+  ]);
+  const pipeline = new CandidateSelectionPipeline({
+    historicalUniverse: new HistoricalUniverse({
+      repository: {
+        async listAvailableCodes() {
+          return {
+            qualityIssues: [],
+            securities: [...bars.keys()].map((code) => ({ code, market: 1, status: "normal" })),
+            source: "fixture",
+          };
+        },
+      },
+    }),
+    klineRepository: {
+      async getLegacyHistory({ code, period }) {
+        historyReads += 1;
+        return { bars: bars.get(code)[period], qualityIssues: [] };
+      },
+    },
+  });
+
+  const first = await pipeline.select({ asOfDate: "20260701", dataVersion: "fixture-v1", pageSize: 1 });
+  assert.equal(first.pagination.total, 2);
+  assert.deepEqual(first.pagination.items.map((item) => item.code), ["600002"]);
+  assert.equal(first.pagination.totalPages, 2);
+  assert.equal(historyReads, 6);
+
+  const cached = await pipeline.select({ asOfDate: "20260701", dataVersion: "fixture-v1", viewAll: true });
+  assert.deepEqual(cached.pagination.items.map((item) => item.code), ["600002", "600001"]);
+  assert.equal(historyReads, 6);
+
+  await pipeline.select({ asOfDate: "20260701", dataVersion: "fixture-v2" });
+  assert.equal(historyReads, 12);
+});
+
+test("candidate pagination defaults to 20 and validates input", () => {
+  const candidates = Array.from({ length: 25 }, (_, index) => ({ index }));
+  assert.equal(paginate(candidates).items.length, 20);
+  assert.equal(paginate(candidates, { page: 2 }).items.length, 5);
+  assert.equal(paginate(candidates, { viewAll: true }).items.length, 25);
+  assert.throws(() => paginate(candidates, { page: 0 }), /page/);
 });
