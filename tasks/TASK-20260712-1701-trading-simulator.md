@@ -312,12 +312,12 @@
 - Expected files: `src/simulator/core/account.js`, `src/simulator/core/position.js`, `tests/simulator-engine-account.test.js`
 - Validation: `node --test tests/simulator-engine-account.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/core/account.js`, `src/simulator/core/position.js`, `tests/simulator-engine-account.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `d2a2ae05`
 - Notes: 账户默认 10 万元并分别跟踪可用/冻结现金、持仓、冻结股份和待 T+1 释放股份；订单取消、拒绝、失效可统一释放资产，买卖成交守恒并稳定计算成本、已实现/未实现盈亏与费用。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S03` 实现多笔订单决策
 
-- Status: `pending`
+- Status: `done`
 - Goal: 支持同日多股票和同股多笔独立订单，完成决策后统一锁定。
 - Steps:
   - 实现创建、修改、取消和状态转换。
@@ -325,9 +325,10 @@
   - 同股多单独立保留理由和费用。
   - `completeDecision` 后禁止修改，并将会话切回 `running`。
 - Expected files: `src/simulator/core/order.js`, `src/simulator/application/orders.js`, `tests/simulator-engine-orders.test.js`
-- Validation: `node --test tests/simulator-engine-orders.test.js`
+- Validation: `node --test tests/simulator-engine-orders.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/core/order.js`, `src/simulator/application/orders.js`, `tests/simulator-engine-orders.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 支持同日多标的及同标的多笔 next-open 订单，每笔独立保留理由、数量、估价、费用与冻结资产；创建、修改、取消、接受和拒绝状态明确，完成决策后会话转 running 并禁止继续编辑。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S04` 实现开盘撮合和 MVP 费用
 
