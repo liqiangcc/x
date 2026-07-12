@@ -2,6 +2,8 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const { execFileSync } = require("node:child_process");
+const path = require("node:path");
 const {
   normalizeDate,
   calculateInclusiveDays,
@@ -44,4 +46,12 @@ test("secid inference handles Shanghai and Shenzhen style codes", () => {
   assert.equal(inferSecid("000020"), "0.000020");
   assert.equal(inferSecid("300001"), "0.300001");
   assert.deepEqual(splitSecid("1.600519"), { market: 1, code: "600519", secid: "1.600519" });
+});
+
+test("CLI help documents simulator start and data preflight", () => {
+  const root = path.resolve(__dirname, "..");
+  const help = execFileSync(path.join(root, "bin", "x"), ["simulator", "--help"], { cwd: root, encoding: "utf8" });
+  assert.match(help, /simulator start/);
+  assert.match(help, /simulator check/);
+  assert.match(help, /reuses data\/universe/);
 });

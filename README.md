@@ -44,6 +44,54 @@ bin/x aws status --profile default --region ap-northeast-1
 关键设计文档：
 
 - `docs/SIGNALS_DESIGN.md`：可扩展信号系统、基础能力枚举、`year_breakout` 定义和日报输出契约。
+- `docs/TRADING_SIMULATOR_DESIGN.md`：配置驱动、核心能力与机制分离的历史交易练习设计。
+- `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`：模拟器 MVP 实施边界、任务优先级和数据 TODO。
+
+## 历史交易练习模拟器
+
+模拟器复用仓库已有 `data/universe/`、`data/pool/` 和 `data/kline/{daily,yearly}/`，不会抓取或改写行情文件。首版目标是可以手动交易：在 D 日收盘查看匿名候选、日线/年线/BOLL 并记录买卖理由，订单在 D+1 开盘按近似规则尝试成交。
+
+启动前先检查选定区间的本地数据：
+
+```bash
+bin/x simulator check --start-date 20260701 --end-date 20260710 --json
+```
+
+安装依赖并启动 Fastify API 与 React 开发服务器：
+
+```bash
+npm install
+bin/x simulator start
+# 浏览器访问 http://127.0.0.1:5173
+```
+
+也可以分别启动或构建：
+
+```bash
+npm run start:simulator       # API，默认 127.0.0.1:3001
+npm run dev --workspace web/simulator
+npm run build:web
+```
+
+模拟器数据库独立保存到 `var/simulator/simulator.db`，JSON 审计导出默认保存到 `var/simulator/exports/`。删除数据库可以重置本机练习记录；行情仍保持不变。若旧库迁移失败，先备份该文件，再移走数据库并重新启动以创建空库。
+
+数据与质量边界：
+
+- 当前成交价使用仓库已有前复权开盘价，界面、成交和报告持续标记 `legacy_approximate` / “近似价格”。
+- 历史 Universe、证券状态、停牌/封板规则或基准不足时显示质量说明；阻塞性缺失会返回结构化数据门禁错误。
+- 缺失的精确历史 Universe、不复权行情、公司行为、点时复权、历史规则与沪深300基准列在任务 T08 TODO，不阻止 MVP 手动练习。
+- 候选默认隐藏股票代码和名称；普通匿名只能显式揭晓，随机盲测在结束前不能揭晓。独立会话使用不同候选 ID。
+- 页面采用响应式布局，支持 375px 手机浏览；手机交易页使用固定底部操作区，日线和年线以标签切换。
+
+排查顺序：先运行 `bin/x simulator check`，再运行 `bin/x doctor`；API 失败查看终端中的结构化错误，候选为空时可克隆会话调整日期或规则。服务端、前端与浏览器测试命令为：
+
+```bash
+npm run check
+npm test
+npm run test:web
+npm run build:web
+npm run test:e2e
+```
 
 ## 快速开始
 

@@ -612,12 +612,12 @@
 - Expected files: `tests/e2e/simulator-flow.spec.js`, `tests/fixtures/simulator/`
 - Validation: `npm run test:e2e` -> passed (8 tests; 4 representative-project/mobile-landscape skips by design)
 - Changed files: `tests/e2e/simulator-flow.spec.js`, `web/simulator/src/pages/CandidatesPage.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `3b2c9089`
 - Notes: 固定市场端到端流程在 390x844 手机和 1440x900 桌面完成匿名候选、买入、多次决策推进、T+1 从可卖 0 到可卖 100、卖出、结束估值、揭晓、JSON 导出和克隆请求；既有四尺寸响应式流程同时复跑。补齐了手机配置抽屉中的克隆与揭晓入口。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S04` 更新用户文档和 CLI 入口
 
-- Status: `pending`
+- Status: `done`
 - Goal: 让本机用户能安装、启动、准备数据和排查问题。
 - Steps:
   - 增加模拟器启动、构建、测试和数据库路径说明。
@@ -625,9 +625,10 @@
   - 增加匿名、盲测、手机端和数据隐私说明。
   - 如增加 `bin/x simulator`，同步 CLI help 和 smoke test。
 - Expected files: `README.md`, `bin/x`, `tests/core.test.js`
-- Validation: `bin/x doctor && npm run check && rg -n "simulator|匿名|盲测|手机" README.md`
+- Validation: `bin/x doctor && npm run check && node --test tests/core.test.js && rg -n "simulator|匿名|盲测|手机" README.md` -> passed (178 JS files checked; 7 core tests); `bin/x simulator check --start-date 20260701 --end-date 20260703 --json` -> found 5,534 securities and 3 trading dates
+- Changed files: `README.md`, `bin/x`, `web/simulator/vite.config.js`, `tests/core.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 新增 `bin/x simulator start` 和只读 `simulator check` 数据预检，CLI help 与 smoke test 同步；修正 Vite API 代理至 3001。README 说明安装/启动/构建/测试、独立数据库、已有数据复用、质量与精确数据 TODO、匿名/盲测/手机边界和排错恢复。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S05` 最终检查和任务收尾
 
