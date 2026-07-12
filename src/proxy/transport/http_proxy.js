@@ -2,6 +2,30 @@
 
 const { ProxyAgent, request } = require("undici");
 
+async function boundedDestroy(dispatcher, timeoutMs = 500) {
+  if (!dispatcher) return;
+  await Promise.race([
+    Promise.resolve().then(() => dispatcher.destroy()).catch(() => {}),
+    new Promise((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+    }),
+  ]);
+}
+
+async function withHardDeadline(callback, timeoutMs) {
+  let timer;
+  try {
+    return await Promise.race([
+      callback(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Proxy request hard deadline exceeded after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function requestThroughProxy(proxy, requestOptions, deps = {}) {
   const endpoint = typeof proxy === "string" ? proxy : proxy.endpoint;
   const protocol = typeof proxy === "string" ? "http" : proxy.protocol ?? "http";
@@ -19,26 +43,28 @@ async function requestThroughProxy(proxy, requestOptions, deps = {}) {
   });
   const startedAt = Date.now();
   try {
-    const response = await requestImpl(requestOptions.url, {
-      dispatcher,
-      headers: requestOptions.headers ?? {},
-      headersTimeout: headersTimeoutMs,
-      bodyTimeout: bodyTimeoutMs,
-      maxRedirections: requestOptions.maxRedirections ?? 0,
-      method: requestOptions.method ?? "GET",
-      signal: AbortSignal.timeout(totalTimeoutMs),
-    });
-    const headersDurationMs = Date.now() - startedAt;
-    const body = await response.body.text();
-    return {
-      body,
-      bodyDurationMs: Date.now() - startedAt - headersDurationMs,
-      durationMs: Date.now() - startedAt,
-      headersDurationMs,
-      statusCode: response.statusCode,
-    };
+    return await withHardDeadline(async () => {
+      const response = await requestImpl(requestOptions.url, {
+        dispatcher,
+        headers: requestOptions.headers ?? {},
+        headersTimeout: headersTimeoutMs,
+        bodyTimeout: bodyTimeoutMs,
+        maxRedirections: requestOptions.maxRedirections ?? 0,
+        method: requestOptions.method ?? "GET",
+        signal: AbortSignal.timeout(totalTimeoutMs),
+      });
+      const headersDurationMs = Date.now() - startedAt;
+      const body = await response.body.text();
+      return {
+        body,
+        bodyDurationMs: Date.now() - startedAt - headersDurationMs,
+        durationMs: Date.now() - startedAt,
+        headersDurationMs,
+        statusCode: response.statusCode,
+      };
+    }, totalTimeoutMs);
   } finally {
-    if (ownedDispatcher) await dispatcher.destroy();
+    if (ownedDispatcher) await boundedDestroy(dispatcher);
   }
 }
 
@@ -66,15 +92,15 @@ class ProxyTransportSession {
       return await requestThroughProxy(proxy, requestOptions, { dispatcher, requestImpl: this.requestImpl });
     } catch (error) {
       this.agents.delete(endpoint);
-      await dispatcher.destroy();
+      await boundedDestroy(dispatcher);
       throw error;
     }
   }
 
   async close() {
-    await Promise.allSettled([...this.agents.values()].map((agent) => agent.destroy()));
+    await Promise.allSettled([...this.agents.values()].map((agent) => boundedDestroy(agent)));
     this.agents.clear();
   }
 }
 
-module.exports = { ProxyTransportSession, requestThroughProxy };
+module.exports = { ProxyTransportSession, boundedDestroy, requestThroughProxy, withHardDeadline };

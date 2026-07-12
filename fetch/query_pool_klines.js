@@ -1623,11 +1623,14 @@ async function main() {
     return;
   }
 
-  const result = await queryPoolKlines(options);
-  console.log(result.summaryPath);
-
-  if (result.exitCode !== 0) {
-    process.exitCode = result.exitCode;
+  const { acquireSyncLock } = require("../src/kline/sync_lock");
+  const lock = await acquireSyncLock(options.period);
+  try {
+    const result = await queryPoolKlines(options);
+    console.log(result.summaryPath);
+    if (result.exitCode !== 0) process.exitCode = result.exitCode;
+  } finally {
+    await lock.release();
   }
 }
 

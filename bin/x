@@ -78,6 +78,8 @@ function printUsage() {
   x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--refresh-mode incremental|full] [--limit N] [--batch-size N] [--proxy-preflight] [--proxy-min-available N] [--proxy-min-success-rate 0..1] [--concurrency N|auto] [--checkpoint-every N] [--retry-attempts N] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline retry-queue <queue.json> [--policy proxy-only] [--concurrency 2]
+  x kline sync-status [--period daily|yearly]
+  x kline unlock --period daily|yearly [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
   x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
@@ -96,6 +98,7 @@ function printUsage() {
   x proxy pool warmup [--duration 30m] [--samples 20] [--concurrency 4]
   x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
   x proxy pool diagnose [--samples 100] [--concurrency 16] [--timeout-ms 3000] [--json]
+  x proxy pool probe [--duration 10m] [--interval 30s] [--samples 20] [--concurrency 2] [--hard-deadline-ms 5000]
   x benchmark proxy-sync --codes codes.json [--period daily|yearly] [--samples 100] [--expected-latest-date YYYYMMDD] [--json]
   x proxy pool verify [--concurrency 8] [--timeout-ms 6000] [--limit N] [--output file]
   x run list
@@ -1024,6 +1027,18 @@ async function commandKlineRetryQueue(argv) {
     args.push("--expected-latest-date", due.expectedLatestDate.replaceAll("-", ""), "--freshness-codes", dueFile);
   }
   await commandKlineSync(args);
+}
+
+async function commandKlineSyncControl(action, argv) {
+  const options = parseOptions(argv);
+  const { readLock, unlockSync } = require("./../src/kline/sync_lock");
+  if (action === "sync-status") {
+    const periods = options.period ? [options.period] : ["daily", "yearly"];
+    printJson({ locks: await Promise.all(periods.map((period) => readLock(period))) });
+    return;
+  }
+  if (!["daily", "yearly"].includes(options.period)) throw new Error("kline unlock requires --period daily|yearly.");
+  printJson(await unlockSync(options.period, { force: Boolean(options.force) }));
 }
 
 async function commandKlineValidate(argv) {
@@ -2175,6 +2190,34 @@ async function commandProxyPool(argv) {
     return;
   }
 
+  if (action === "probe") {
+    const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
+    const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
+    const durationMs = parseDurationMs(options.duration ?? "10m");
+    const intervalMs = parseDurationMs(options.interval ?? "30s");
+    const samples = parsePositiveOption(options.samples, "--samples", 20);
+    const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 2);
+    const timeoutMs = parsePositiveOption(options.hardDeadlineMs, "--hard-deadline-ms", 5000);
+    const deadline = Date.now() + durationMs;
+    const rounds = [];
+    const runtime = new ProxyBatchRuntime({ classifyError: classifyProxyError, cooldownForError: cooldownMs, stateFile: DEFAULT_STATE_FILE });
+    try {
+      let startIndex = 0;
+      do {
+        const report = await runtime.prepare({ concurrency, limit: samples, minAvailable: 0, minSuccessRate: 0, startIndex, timeoutMs });
+        rounds.push({ ...report, passed: report.available_count > 0, started_at: new Date().toISOString() });
+        startIndex += samples;
+        if (Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, deadline - Date.now())));
+      } while (Date.now() < deadline);
+    } finally {
+      await runtime.close();
+    }
+    const report = { duration_ms: durationMs, interval_ms: intervalMs, rounds, target: "eastmoney-kline" };
+    report.report = await writeProxyBenchmarkReport(report, "probe");
+    printJson(report);
+    return;
+  }
+
   const { runProxyBenchmark, validateAllProxies } = require("./../src/proxy/pool");
   if (action === "verify") {
     const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 8);
@@ -2403,6 +2446,10 @@ async function main() {
   }
   if (command === "kline" && subcommand === "retry-queue") {
     await commandKlineRetryQueue(rest);
+    return;
+  }
+  if (command === "kline" && ["sync-status", "unlock"].includes(subcommand)) {
+    await commandKlineSyncControl(subcommand, rest);
     return;
   }
   if (command === "kline" && subcommand === "fetch") {

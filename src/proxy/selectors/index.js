@@ -23,6 +23,25 @@ function rankReliable(candidates, state, context) {
       Number(targetHealth(a, state, context.target).success_rate ?? 0));
 }
 
+function rankReliableFastest(candidates, state, context) {
+  const available = eligible(candidates, state, context.target, context.nowMs);
+  const strict = available.filter((proxy) => {
+    const health = targetHealth(proxy, state, context.target);
+    return Number(health.sample_count ?? 0) >= 3 &&
+      Number(health.success_rate ?? 0) >= 0.6 &&
+      health.last_success_at &&
+      context.nowMs - Date.parse(health.last_success_at) <= 10 * 60 * 1000;
+  });
+  const pool = strict.length > 0 ? strict : available;
+  return pool.sort((left, right) => {
+    const leftHealth = targetHealth(left, state, context.target);
+    const rightHealth = targetHealth(right, state, context.target);
+    return Number(leftHealth.p95_latency_ms ?? Infinity) - Number(rightHealth.p95_latency_ms ?? Infinity) ||
+      Number(leftHealth.ewma_latency_ms ?? Infinity) - Number(rightHealth.ewma_latency_ms ?? Infinity) ||
+      Date.parse(rightHealth.last_success_at ?? 0) - Date.parse(leftHealth.last_success_at ?? 0);
+  });
+}
+
 function balancedScore(proxy, state, context) {
   const health = targetHealth(proxy, state, context.target);
   const success = Number(health.success_rate ?? 0.5);
@@ -52,6 +71,7 @@ function rankCandidates(candidates, state, options = {}) {
   };
   if (options.strategy === "fastest") return rankFastest(candidates, state, context);
   if (options.strategy === "reliable") return rankReliable(candidates, state, context);
+  if (options.strategy === "reliable-fastest") return rankReliableFastest(candidates, state, context);
   if (options.strategy === "round-robin") return eligible(candidates, state, context.target, context.nowMs);
   return rankBalanced(candidates, state, context);
 }

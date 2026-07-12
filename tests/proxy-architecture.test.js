@@ -51,3 +51,15 @@ test("adaptive response timeout is clamped between two and ten seconds", () => {
   assert.equal(adaptiveTimeouts(proxy, state, { headersTimeoutMs: 10000 }).headersTimeoutMs, 10000);
   assert.equal(adaptiveTimeouts(proxy, state, { full: true }).bodyTimeoutMs, 6000);
 });
+
+test("reliable-fastest prefers eligible low-P95 proxies", () => {
+  const fast = normalizeProxy("3.3.3.3:80");
+  const slow = normalizeProxy("4.4.4.4:80");
+  const now = Date.now();
+  const health = (p95) => ({ sample_count: 4, success_rate: 0.75, p95_latency_ms: p95, last_success_at: new Date(now).toISOString() });
+  const state = { proxies: {
+    [fast.id]: { targets: { target: health(300) } },
+    [slow.id]: { targets: { target: health(2000) } },
+  } };
+  assert.equal(rankCandidates([slow, fast], state, { nowMs: now, strategy: "reliable-fastest", target: "target" })[0].id, fast.id);
+});

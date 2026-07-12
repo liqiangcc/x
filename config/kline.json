@@ -26,7 +26,7 @@
   "policies": {
     "auto": { "engines": ["huaweicloud", "aws", "local"] },
     "proxy-first": { "engines": [{ "name": "proxy-pool", "selector": "balanced", "maxAttempts": 5, "timeoutMs": 6000 }, "huaweicloud", "aws", "local"] },
-    "proxy-only": { "engines": [{ "name": "proxy-pool", "selector": "balanced", "maxAttempts": 1, "timeoutMs": 10000 }] },
+    "proxy-only": { "engines": [{ "name": "proxy-pool", "selector": "reliable-fastest", "maxAttempts": 1, "timeoutMs": 10000 }] },
     "cloud-first": { "engines": ["huaweicloud", "aws", { "name": "proxy-pool", "selector": "balanced", "maxAttempts": 3, "timeoutMs": 6000 }, "local"] }
   }
 }

@@ -231,10 +231,13 @@ bin/x kline sync /tmp/stale-daily.json --period daily --policy proxy-only \
 ```bash
 bin/x kline retry-queue var/kline-sync/failures/daily.json --policy proxy-only --concurrency 2
 bin/x proxy pool diagnose --samples 100 --concurrency 16 --timeout-ms 3000 --json
+bin/x proxy pool probe --duration 10m --interval 30s --samples 20 --concurrency 2 --hard-deadline-ms 5000
 bin/x benchmark proxy-sync --codes data/universe/20260701/codes.json --period daily --samples 100 --expected-latest-date 20260710 --json
 ```
 
 代理连接固定 2 秒超时；`proxy-only` 响应头最多等待 10 秒，增量请求总 deadline 为 15 秒。失败队列按错误类型退避，累计三轮失败后进入同目录的 `.dead.json` 文件。
+
+每个周期只允许一个同步进程，锁位于 `var/kline-sync/locks/`。可用 `bin/x kline sync-status` 查看；只有确认进程已结束后才使用 `bin/x kline unlock --period daily` 清理过期锁。`reliable-fastest` selector 先筛选最近 10 分钟成功、至少 3 个样本且成功率不低于 60% 的节点，再按 P95 延迟排序。
 
 代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。`verify` 会逐个验证当前所有候选，并在 `runs/proxy-verify/` 下生成完整报告和按延迟排序的 `available.txt`；可用 `--limit N` 做小规模检查，或用 `--output file` 指定 JSON 报告。健康状态保存在忽略目录 `var/proxy-pool/`。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
 

@@ -86,8 +86,12 @@ class ProxyBatchRuntime {
     this.leased = new Set();
   }
 
-  async prepare({ concurrency = 16, limit, minAvailable = 5, minSuccessRate = 0.6, timeoutMs = 3000 } = {}) {
+  async prepare({ concurrency = 16, limit, minAvailable = 5, minSuccessRate = 0.6, startIndex = 0, timeoutMs = 3000 } = {}) {
     this.candidates = await this.provider.listCandidates({ all: true });
+    if (this.candidates.length > 0 && startIndex > 0) {
+      const offset = startIndex % this.candidates.length;
+      this.candidates = [...this.candidates.slice(offset), ...this.candidates.slice(0, offset)];
+    }
     if (Number.isInteger(limit)) this.candidates = this.candidates.slice(0, limit);
     const results = await mapWithConcurrency(this.candidates, concurrency, async (proxy, index) => {
       const probe = createEastmoneyKlineProbe({ secid: ["1.600519", "0.000001", "0.300750", "1.601318"][index % 4], lmt: 1 });
@@ -98,7 +102,7 @@ class ProxyBatchRuntime {
           bodyTimeoutMs: timeoutMs,
           connectTimeoutMs: Math.min(2000, timeoutMs),
           headersTimeoutMs: timeoutMs,
-          totalTimeoutMs: timeoutMs * 2,
+          totalTimeoutMs: timeoutMs,
         });
         probe.validate(response);
         await this.healthStore.record(proxy, TARGET, { ok: true, durationMs: response.durationMs });
