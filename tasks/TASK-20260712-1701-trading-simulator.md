@@ -1,7 +1,7 @@
 # 实现历史交易模拟器
 
 - Root ID: `TASK-20260712-1701-trading-simulator`
-- Status: `pending`
+- Status: `done`
 - Created: `2026-07-12 17:01 CST`
 - Source request: 编写实现文档，拆分任务并排优先级；实施历史日线手动交易练习 MVP。
 - Task file: `tasks/TASK-20260712-1701-trading-simulator.md`
@@ -562,7 +562,7 @@
 
 ### `TASK-20260712-1701-trading-simulator-T07` P2 复盘与最终验收
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T06`
 - Goal: 完成绩效、理由复盘、基准、实名揭晓、文档和完整端到端验收。
 - Files likely touched: `src/simulator/application/reports.js`, `web/simulator/src/pages/ReviewPage.jsx`, `README.md`, `tests/`
@@ -627,12 +627,12 @@
 - Expected files: `README.md`, `bin/x`, `tests/core.test.js`
 - Validation: `bin/x doctor && npm run check && node --test tests/core.test.js && rg -n "simulator|匿名|盲测|手机" README.md` -> passed (178 JS files checked; 7 core tests); `bin/x simulator check --start-date 20260701 --end-date 20260703 --json` -> found 5,534 securities and 3 trading dates
 - Changed files: `README.md`, `bin/x`, `web/simulator/vite.config.js`, `tests/core.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `93274154`
 - Notes: 新增 `bin/x simulator start` 和只读 `simulator check` 数据预检，CLI help 与 smoke test 同步；修正 Vite API 代理至 3001。README 说明安装/启动/构建/测试、独立数据库、已有数据复用、质量与精确数据 TODO、匿名/盲测/手机边界和排错恢复。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S05` 最终检查和任务收尾
 
-- Status: `pending`
+- Status: `done`
 - Goal: 证明首版验收完成且提交范围干净。
 - Steps:
   - 运行全部服务端、前端、构建和 E2E 验证。
@@ -640,9 +640,10 @@
   - 检查工作区，区分本任务文件和用户既有变更。
   - 更新所有已完成任务状态、验证摘要和 commit hash。
 - Expected files: `tasks/TASK-20260712-1701-trading-simulator.md`
-- Validation: `npm run check && npm test && npm run test:web && npm run build:web && npm run test:e2e && git status --short`
+- Validation: `npm run check && npm test && npm run test:web && npm run build:web && npm run test:e2e` -> passed (178 JS files checked; 302 backend tests; 13 frontend tests; production build; 8 E2E passed and 4 scoped skips); `git status --short` -> only this subtask plus pre-existing untracked benchmark directories
+- Changed files: `src/simulator/application/runtime_service.js`, `web/simulator/src/pages/CandidatesPage.test.jsx`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 最终审计确认 T01-T07 全部显式交付项完成；匿名白名单覆盖 API/错误/报告/导出，K 线及信号按 asOfDate 截断，候选缓存和数据清单绑定数据版本/内容摘要，交易引擎覆盖冻结资产、T+1、停牌/封板、费用与结束估值。修复全量并行测试暴露的克隆历史兼容和候选页双入口测试。T08 保持非阻塞 P3 精确历史数据 TODO，未执行或改写行情。
 
 ### `TASK-20260712-1701-trading-simulator-T08` P3 历史数据准确性 TODO
 

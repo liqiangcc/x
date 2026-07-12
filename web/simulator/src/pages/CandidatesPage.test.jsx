@@ -30,7 +30,7 @@ describe("CandidatesPage", () => {
   it("offers reveal only in ordinary anonymous mode", async () => {
     const client = { getCandidates: vi.fn().mockResolvedValue({ pagination: { items: [], total: 0, totalPages: 0 } }), reveal: vi.fn().mockResolvedValue({ identities: [], revealedAt: "now", sessionVersion: 2 }) };
     renderPage(client);
-    const button = await screen.findByRole("button", { name: "显式揭晓身份" });
+    const [button] = await screen.findAllByRole("button", { name: "显式揭晓身份" });
     fireEvent.click(button);
     await waitFor(() => expect(client.reveal).toHaveBeenCalledWith("s1", 1));
   });

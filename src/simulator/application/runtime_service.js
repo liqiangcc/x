@@ -245,7 +245,10 @@ class SimulatorRuntimeService {
     const lineage = Object.freeze({ branchDate: startDate, parentSessionId: parent.session.id });
     const entry = {
       account,
-      accountHistory: parent.accountHistory.map((snapshot) => ({ ...snapshot })),
+      accountHistory: (parent.accountHistory ?? [{
+        date: parent.session.clock.currentDate,
+        ...parent.account.snapshot(),
+      }]).map((snapshot) => ({ ...snapshot })),
       aliases,
       config,
       dataVersion: parent.dataVersion,
