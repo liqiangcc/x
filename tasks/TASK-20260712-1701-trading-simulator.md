@@ -226,12 +226,12 @@
 - Expected files: `src/signals/indicators/boll.js`, `src/signals/capabilities/window_band.js`, `tests/signals-daily-report.test.js`
 - Validation: `node --test tests/signals-daily-report.test.js tests/simulator-selection.test.js` -> passed (15 tests)
 - Changed files: `src/signals/indicators/boll.js`, `src/signals/capabilities/window_band.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `b71f0e77`
 - Notes: 已抽取完整 BOLL 序列和单窗口计算，默认 20 日/2 倍总体标准差，warmup 点为空；现有 `WINDOW_BAND` 复用同一计算核心并保持能力接口兼容。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S02` 实现默认复合候选
 
-- Status: `pending`
+- Status: `done`
 - Goal: 实现连续 4 年下跌且本年度今日首次收盘突破去年最高价。
 - Steps:
   - 新增 `year_decline_close_breakout`，不修改 `year_breakout` 语义。
@@ -239,9 +239,10 @@
   - 使用本年度此前全部收盘判断首次突破，而非仅前一交易日。
   - 输出年度点、去年最高、此前最高收盘、今日收盘和突破幅度证据。
 - Expected files: `src/signals/signals/year_decline_close_breakout.js`, `src/signals/registry.js`, `tests/simulator-selection.test.js`
-- Validation: `node --test tests/signals-daily-report.test.js tests/simulator-selection.test.js`
+- Validation: `node --test tests/signals-daily-report.test.js tests/simulator-selection.test.js` -> passed (19 tests)
+- Changed files: `src/signals/signals/year_decline_close_breakout.js`, `src/signals/registry.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 新增独立复合信号，严格要求最近 4 个连续完整自然年度收盘逐年下降；首次突破使用本年度截至今日之前的全部收盘，未来日期不会参与，并输出可审计的年度点和突破证据。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S03` 实现现有数据选择流水线
 
