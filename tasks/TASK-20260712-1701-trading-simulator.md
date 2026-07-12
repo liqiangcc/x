@@ -457,7 +457,7 @@
 - Expected files: `tests/simulator-api-anonymity.test.js`, `src/simulator/adapters/http/dto.js`
 - Validation: `node --test tests/simulator-sqlite.test.js tests/simulator-api-*.test.js` -> passed (18 tests)
 - Changed files: `src/simulator/adapters/http/dto.js`, `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `tests/simulator-api-anonymity.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `725c5541`
 - Notes: 会话、候选、图表、portfolio、订单、成交、事件、报告和未揭晓导出均经显式匿名白名单；账户持仓不再通过嵌套 session 快照泄漏 security。测试扫描真实代码、组合键、名称及 market/security 字段，并验证不同会话 candidateId 不可关联。
 
 ### `TASK-20260712-1701-trading-simulator-T06` P2 React 响应式交易界面
@@ -472,7 +472,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S01` 建立 React 应用基础
 
-- Status: `pending`
+- Status: `done`
 - Goal: 创建路由、API客户端、状态和移动优先样式基础。
 - Steps:
   - 建立 Vite、React Router 和应用布局。
@@ -480,9 +480,10 @@
   - 定义响应式断点、颜色、间距和最小 44px 触摸目标。
   - 为创建页、候选页、交易页和复盘页建立路由。
 - Expected files: `web/simulator/src/`, `web/simulator/src/styles/`, `web/simulator/src/api/`
-- Validation: `npm run test:web && npm run build:web`
+- Validation: `npm run test:web && npm run build:web` -> passed (3 tests; production build succeeded)
+- Changed files: `web/simulator/src/App.jsx`, `web/simulator/src/App.test.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/api/client.test.js`, `web/simulator/src/state/SessionContext.jsx`, `web/simulator/src/components/ErrorNotice.jsx`, `web/simulator/src/pages/`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: React SPA 现有创建、候选、交易、复盘四条路由，统一 API 错误/expectedVersion 客户端和会话状态容器；移动优先基础定义 44px 触摸目标、响应式导航、设计变量、错误提示及 1024px 桌面断点。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S02` 实现会话创建和候选配置
 
