@@ -272,7 +272,7 @@
 - Expected files: `src/simulator/selection/aliases.js`, `src/simulator/selection/candidate_dto.js`, `tests/simulator-anonymity.test.js`
 - Validation: `node --test tests/simulator-anonymity.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/selection/aliases.js`, `src/simulator/selection/candidate_dto.js`, `tests/simulator-anonymity.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `fec1d0dc`
 - Notes: 每个会话使用随机盐生成不可跨会话关联的候选 ID 和别名顺序，真实证券映射仅保存在服务端 registry；候选、证据、图表和持仓均使用显式白名单 DTO，递归泄漏测试覆盖代码、名称、市场及组合键。
 
 ### `TASK-20260712-1701-trading-simulator-T04` P0 确定性交易引擎
@@ -287,7 +287,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S01` 实现市场时钟和会话状态
 
-- Status: `pending`
+- Status: `done`
 - Goal: 固定 D 日收盘起始、等待决策和交易日推进语义。
 - Steps:
   - 实现交易日历和 `MarketClock`。
@@ -295,9 +295,10 @@
   - 创建会话后立即生成 D 日收盘快照并进入 `waiting_for_decision`。
   - 禁止重复推进和非法状态调用。
 - Expected files: `src/simulator/core/market_clock.js`, `src/simulator/core/session.js`, `tests/simulator-engine-session.test.js`
-- Validation: `node --test tests/simulator-engine-session.test.js`
+- Validation: `node --test tests/simulator-engine-session.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/core/market_clock.js`, `src/simulator/core/session.js`, `tests/simulator-engine-session.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: MarketClock 只沿冻结交易日日历推进；会话创建即持有 D 日候选快照并进入等待决策，版本化状态机严格执行 waiting → running → 下一交易日收盘 waiting，拒绝重复、非法和过期版本写操作。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S02` 实现账户、持仓和冻结资产
 
