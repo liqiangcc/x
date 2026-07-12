@@ -383,12 +383,12 @@
 - Expected files: `src/simulator/adapters/sqlite/migrations/`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-sqlite.test.js`
 - Validation: `node --test tests/simulator-sqlite.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/adapters/sqlite/migrations/001_initial.js`, `src/simulator/adapters/sqlite/migrations/002_indexes.js`, `src/simulator/adapters/sqlite/migrate.js`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-sqlite.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `f04115d4`
 - Notes: 独立 SQLite 默认路径为 var/simulator/simulator.db；两级递增迁移创建全部核心表、约束和索引，仓储支持会话乐观版本、候选/别名、订单、成交、持仓、账户快照和追加事件，并用 better-sqlite3 事务验证原子回滚。金额以整数分持久化。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S02` 实现会话和推进 API
 
-- Status: `pending`
+- Status: `done`
 - Goal: 提供创建、查询、推进和完成决策端点。
 - Steps:
   - 建立 Fastify server 和统一错误响应。
@@ -396,9 +396,10 @@
   - 写请求校验期望会话版本，冲突返回 `409`。
   - 数据门禁或业务拒绝返回结构化 `422`。
 - Expected files: `src/simulator/adapters/http/server.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-session.test.js`
-- Validation: `node --test tests/simulator-api-session.test.js`
+- Validation: `node --test tests/simulator-api-session.test.js` -> passed (3 tests)
+- Changed files: `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/server.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-session.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: Fastify 提供健康检查及创建、查询、完成决策、推进端点；所有写请求校验 expectedVersion，统一将版本/状态冲突映射为 409、未知资源为 404、业务与数据门禁为结构化 422、请求校验为 400。默认运行时从现有日线构造近似交易日历并可持久化会话。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S03` 实现订单和查询 API
 
