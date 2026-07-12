@@ -327,12 +327,12 @@
 - Expected files: `src/simulator/core/order.js`, `src/simulator/application/orders.js`, `tests/simulator-engine-orders.test.js`
 - Validation: `node --test tests/simulator-engine-orders.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/core/order.js`, `src/simulator/application/orders.js`, `tests/simulator-engine-orders.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `825fbe27`
 - Notes: 支持同日多标的及同标的多笔 next-open 订单，每笔独立保留理由、数量、估价、费用与冻结资产；创建、修改、取消、接受和拒绝状态明确，完成决策后会话转 running 并禁止继续编辑。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S04` 实现开盘撮合和 MVP 费用
 
-- Status: `pending`
+- Status: `done`
 - Goal: 使用现有前复权开盘价和明确近似规则产生可重放的 MVP 成交。
 - Steps:
   - 实现默认 0.1% 双向不利滑点和最小报价取整。
@@ -341,9 +341,10 @@
   - 每笔订单独立计算费用并生成 `Fill`。
   - 在 Fill、事件和报告写入 `legacy_approximate` 价格及规则标记。
 - Expected files: `src/simulator/mechanisms/slippage_model.js`, `src/simulator/mechanisms/fee_model.js`, `src/simulator/mechanisms/fill_model.js`, `tests/simulator-engine-fill.test.js`
-- Validation: `node --test tests/simulator-engine-fill.test.js`
+- Validation: `node --test tests/simulator-engine-fill.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/mechanisms/slippage_model.js`, `src/simulator/mechanisms/fee_model.js`, `src/simulator/mechanisms/fill_model.js`, `tests/simulator-engine-fill.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: D+1 开盘成交默认施加 0.1% 双向不利滑点和报价单位取整，并限制在真实高低价及显式涨跌停价内；佣金、最低佣金和卖出印花税可配置且逐单计算，Fill 明确标注 legacy_approximate、前复权价格视图和近似规则。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S05` 实现停牌、封板、失效和结束
 
