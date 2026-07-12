@@ -124,7 +124,7 @@ test("classifyProxyError distinguishes policy, TLS, and transient failures", () 
 
 test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
   let agentConfig;
-  let closed = false;
+  let destroyed = false;
   const result = await requestKlineThroughProxy("1.2.3.4:8080", {
     secid: "1.600519",
     klt: 101,
@@ -132,7 +132,7 @@ test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
   }, {
     proxyAgentFactory: (config) => {
       agentConfig = config;
-      return { close: async () => { closed = true; } };
+      return { destroy: async () => { destroyed = true; } };
     },
     requestImpl: async (_url, requestOptions) => {
       assert.ok(requestOptions.dispatcher);
@@ -149,7 +149,7 @@ test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
 
   assert.equal(agentConfig.requestTls.rejectUnauthorized, true);
   assert.equal(result.payload.data.klines.length, 1);
-  assert.equal(closed, true);
+  assert.equal(destroyed, true);
 });
 
 test("resolveKline supports the explicit proxy-pool engine", async () => {

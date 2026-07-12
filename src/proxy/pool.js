@@ -217,7 +217,7 @@ async function requestKlineThroughProxy(proxy, input = {}, options = {}) {
       durationMs: Date.now() - startedAt,
     };
   } finally {
-    await dispatcher.close();
+    await dispatcher.destroy();
   }
 }
 
