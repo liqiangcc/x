@@ -156,12 +156,12 @@
 - Expected files: `src/simulator/data/legacy_trading_calendar.js`, `tests/simulator-data-calendar.test.js`
 - Validation: `node --test tests/simulator-data-calendar.test.js` -> passed (5 tests)
 - Changed files: `src/simulator/data/legacy_trading_calendar.js`, `tests/simulator-data-calendar.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `88e02c85`
 - Notes: 已实现日线日期并集日历、日期标准化、next/previous/between 查询和仓储构建；单股停牌不会移除全市场交易日，长假保持空档，所有结果携带 `trading_calendar_approximation`。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S04` 实现 MVP 近似规则配置
 
-- Status: `pending`
+- Status: `done`
 - Goal: 在历史状态数据不完整时仍提供可交易的明确规则集。
 - Steps:
   - 固定 T+1、买入 100 股整手和零股卖出处理。
@@ -169,9 +169,10 @@
   - 能可靠判断停牌或封板时应用限制，字段不足时只记录 `market_rule_approximation`。
   - 将规则版本和近似说明写入会话配置。
 - Expected files: `src/simulator/data/legacy_rules.js`, `config/simulator/default.json`, `tests/simulator-data-legacy-rules.test.js`
-- Validation: `node --test tests/simulator-data-legacy-rules.test.js`
+- Validation: `node --test tests/simulator-data-legacy-rules.test.js` -> passed (5 tests)
+- Changed files: `config/simulator/default.json`, `src/simulator/data/legacy_rules.js`, `tests/simulator-data-legacy-rules.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已固定 `legacy_approximate` 的 T+1、100 股买入整手、最终零股卖出、0.03%佣金/最低5元、卖出0.05%印花税和0.1%滑点配置；实现费用计算、订单数量校验以及停牌/一字涨跌停限制，并持续返回历史费用和市场规则近似标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S05` 实现 MVP 数据门禁和摘要
 

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "dataMode": "legacy_approximate",
+  "lotSize": 100,
+  "tPlusOne": true,
+  "slippageRate": 0.001,
+  "commissionRate": 0.0003,
+  "minimumCommissionYuan": 5,
+  "stampDutyRate": 0.0005,
+  "ruleQualityIssues": [
+    "historical_fee_rules_unavailable",
+    "market_rule_approximation"
+  ]
+}
