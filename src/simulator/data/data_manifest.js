@@ -20,13 +20,16 @@ function stableStringify(value) {
 }
 
 function createDataManifest({ asOfDate, universe, inputs = [] }) {
-  const files = inputs
-    .filter((input) => input?.sourcePath && input?.contentHash)
-    .map((input) => ({
-      contentHash: input.contentHash,
-      sourcePath: input.sourcePath,
-    }))
-    .sort((left, right) => left.sourcePath.localeCompare(right.sourcePath));
+  const byPath = new Map();
+  for (const input of inputs) {
+    if (input?.sourcePath && input?.contentHash) {
+      byPath.set(input.sourcePath, {
+        contentHash: input.contentHash,
+        sourcePath: input.sourcePath,
+      });
+    }
+  }
+  const files = [...byPath.values()].sort((left, right) => left.sourcePath.localeCompare(right.sourcePath));
   const manifest = {
     asOfDate,
     dataMode: DataMode.LEGACY_APPROXIMATE,

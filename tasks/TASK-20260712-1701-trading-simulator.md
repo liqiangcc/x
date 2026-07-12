@@ -106,11 +106,11 @@
 
 ### `TASK-20260712-1701-trading-simulator-T02` P0 现有数据适配
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T01`
 - Goal: 直接适配现有 Universe、pool、日线和年线，为候选与交易提供带近似标识的稳定数据接口。
 - Files likely touched: `src/simulator/data/`, `src/simulator/adapters/ledger/`, `tests/`
-- Validation: `npm run check && node --test tests/simulator-data-*.test.js`
+- Validation: `npm run check && node --test tests/simulator-data-*.test.js` -> passed (133 JavaScript files checked; 27 data tests)
 
 #### Subtasks
 
@@ -186,12 +186,12 @@
 - Expected files: `src/simulator/data/data_gate.js`, `src/simulator/data/data_manifest.js`, `tests/simulator-data-gate.test.js`
 - Validation: `node --test tests/simulator-data-gate.test.js` -> passed (5 tests)
 - Changed files: `src/simulator/data/data_gate.js`, `src/simulator/data/data_manifest.js`, `tests/simulator-data-gate.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `e27da482`
 - Notes: 已实现 Universe、候选历史和执行价格门禁，区分阻断问题与非阻断精确数据 TODO；数据清单按来源路径稳定排序并计算 SHA-256 摘要，所有结果公开 `dataMode: legacy_approximate` 和完整质量标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S06` 建立现有数据端到端夹具
 
-- Status: `pending`
+- Status: `done`
 - Goal: 证明不新增抓取即可从现有文件完成候选、图表和次日价格读取。
 - Steps:
   - 选择仓库内已有的少量证券和日期作为只读集成夹具。
@@ -199,9 +199,10 @@
   - 验证负价或缺失价只排除对应交易，不阻断其他候选。
   - 不生成或改写现有行情文件。
 - Expected files: `tests/simulator-existing-data-integration.test.js`, `tests/fixtures/simulator/`
-- Validation: `node --test tests/simulator-existing-data-integration.test.js`
+- Validation: `node --test tests/simulator-existing-data-integration.test.js` -> passed (3 read-only repository integration tests)
+- Changed files: `src/simulator/data/data_manifest.js`, `tests/simulator-existing-data-integration.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 使用仓库现有 `20260701` market Universe 和 `000001` daily/yearly 数据证明无需网络即可获得候选历史窗口、未来截断和 D+1 有效开盘价；现有负复权价格被局部排除且未改写数据。数据清单同时去重同一路径内容摘要。
 
 ### `TASK-20260712-1701-trading-simulator-T03` P0 指标与默认候选
 
