@@ -188,14 +188,16 @@ async function requestKlineThroughProxy(proxy, input = {}, options = {}) {
     requestTls: { rejectUnauthorized: true },
   });
   const startedAt = Date.now();
+  const timeoutMs = options.timeoutMs ?? 6000;
   try {
     const response = await requestImpl(urlText, {
       dispatcher,
       headers: defaultHeaders(),
-      headersTimeout: options.timeoutMs ?? 6000,
-      bodyTimeout: options.timeoutMs ?? 6000,
+      headersTimeout: timeoutMs,
+      bodyTimeout: timeoutMs,
       maxRedirections: 0,
       method: "GET",
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const rawText = await response.body.text();
     if (response.statusCode < 200 || response.statusCode >= 300) {
