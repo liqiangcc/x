@@ -510,3 +510,88 @@ reports/20260701/quality.json
 - 每个命中信号都有 `evidence`。
 - 缺数据不会导致整个报告失败。
 - 重复运行同一日期不产生无意义 diff。
+
+## 15. 模拟器默认复合候选信号
+
+模拟器默认使用独立信号 `year_decline_close_breakout`。它不改变现有 `year_breakout` 的兼容语义：
+
+- `year_breakout`：今天最高价相对前一交易日首次上穿去年最高价。
+- `year_decline_close_breakout`：连续 4 个完整自然年度下跌，并且今天是本年度第一次收盘突破去年最高价。
+
+默认参数：
+
+```js
+{
+  downTransitions: 3,
+  requireConsecutiveCalendarYears: true,
+  firstBreakoutScope: "current_year",
+  breakoutOperator: "gt"
+}
+```
+
+精确定义：
+
+```text
+Y-4.close > Y-3.close > Y-2.close > Y-1.close
+max(currentYearClosesBeforeToday) <= Y-1.high
+today.close > Y-1.high
+```
+
+规则：
+
+- 4 个年度必须是紧邻当前年度的连续自然年。
+- 任一年度缺失或数据质量不合格时不命中，并输出质量问题。
+- 今日最高价突破但收盘未突破时不命中。
+- 本年度此前任一收盘已经突破时，后续重新上穿不再命中。
+- 信号计算只接收 `date <= asOfDate` 的点时前复权行情。
+- 默认从模拟日期当时有效的沪深京全 A 股集合计算，不以 pool 派生的 `codes.json` 代表全市场。
+- 默认排除当日 ST、*ST 和退市整理股票，该过滤器可配置关闭。
+
+建议 evidence：
+
+```js
+{
+  completed_years: [
+    { year: 2022, close: 21.4 },
+    { year: 2023, close: 18.2 },
+    { year: 2024, close: 15.6 },
+    { year: 2025, close: 12.9 }
+  ],
+  down_transitions: 3,
+  previous_year_high: 16.8,
+  max_current_year_close_before_today: 16.5,
+  today_close: 17.1,
+  breakout_margin_pct: 1.79
+}
+```
+
+默认按 `breakout_margin_pct` 从小到大排序，展示 20 条并允许查看全部。
+
+## 16. BOLL 共享指标
+
+`WINDOW_BAND` 适合判断单个时点，不能直接为图表提供完整轨道。应抽出无副作用的共享指标函数：
+
+```js
+calculateBollSeries(rows, {
+  field: "close",
+  period: 20,
+  multiplier: 2,
+  stddevMode: "population"
+});
+```
+
+约束：
+
+- 输入只能包含模拟日期及以前的点时前复权日线。
+- 输出与输入日期一一对应，前 `period - 1` 个点为 `null`。
+- 中轨为窗口收盘均值；上下轨使用总体标准差，默认倍数为 2。
+- 图表消费完整序列；`WINDOW_BAND` 消费指定日期的同一计算结果。
+- BOLL 默认只展示，但可以通过注册配置作为辅助信号或过滤条件。
+
+新增测试：
+
+- 连续 4 年严格下降且今日为本年度首次收盘突破时命中。
+- 年度缺失、非连续或仅 3 年下降时不命中。
+- 年内已经突破后再次上穿不命中。
+- 盘中突破但收盘未突破不命中。
+- BOLL 总体标准差、空窗口和时间截断结果稳定。

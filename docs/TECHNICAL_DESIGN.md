@@ -182,3 +182,63 @@ src/runners/autoKlineRunner.js
 ```
 
 模块化必须保持现有 CLI 行为兼容。
+
+## 9. 历史交易模拟器
+
+模拟器作为现有数据账本和信号系统之上的独立应用域，不把账户、订单或 UI 逻辑写入 `src/signals/`。
+
+```text
+历史证券、行情、公司行为和规则账本
+  -> 时间截断数据端口
+  -> 选股与共享指标
+  -> 模拟器核心
+  -> Fastify 应用用例
+  -> React 响应式界面
+```
+
+建议模块：
+
+```text
+src/simulator/core/          会话、时钟、订单、成交、账户和领域事件
+src/simulator/mechanisms/    市场规则、费用、滑点、撮合和风控
+src/simulator/selection/     历史 Universe、信号适配、排序和匿名候选
+src/simulator/application/   创建、推进、决策、克隆、揭晓和报告用例
+src/simulator/ports/         行情、证券主数据、规则和持久化端口
+src/simulator/adapters/      本地账本、SQLite 和 HTTP 适配器
+web/simulator/               React + Apache ECharts 单页应用
+```
+
+依赖规则：
+
+- `core` 不依赖文件系统、SQLite、Fastify、React 或具体信号。
+- `application` 编排端口和机制，不直接解析原始 K 线文件。
+- `src/signals/` 保持纯函数，不读取账户、订单或模拟会话。
+- UI 只调用应用 API，不复制费用、风控、身份映射或成交规则。
+
+## 10. 技术栈与运行方式
+
+首版定位为本机单用户应用：
+
+- Fastify 提供 REST API 和输入 schema 校验。
+- SQLite 保存会话事务状态、冻结资产和只追加事件。
+- JSON 用于完整审计导出，不作为并发可变状态的主存储。
+- React 构建候选池和交易页面。
+- Apache ECharts 绘制日线、年线、成交量和 BOLL。
+- 内部证券标识统一为 `code + market`；匿名客户端只使用 `candidateId` 或会话内别名。
+
+候选、图表、账户、持仓、订单和成交 API 默认不返回股票名称与真实代码。匿名映射在服务端解析；随机盲测在会话完成或主动结束前禁止揭晓。
+
+界面采用移动优先响应式设计：桌面端同时展示日线和年线，手机端使用单列卡片、图表标签和底部固定交易操作区，并支持触摸缩放与横屏。
+
+## 11. 建设顺序
+
+模拟器优先交付可交易纵向切片：
+
+1. 适配现有 `data/universe`、`data/pool` 和 `data/kline`，建立明确标记的 `legacy_approximate` 模式。
+2. 使用固定夹具完成确定性账户、订单、撮合和时间隔离内核。
+3. 接入 `year_decline_close_breakout`、现有可用 Universe 和匿名候选映射。
+4. 完成 Fastify、SQLite、会话克隆、JSON 导出和复盘报告。
+5. 完成 React 桌面与手机端界面，形成可交易系统。
+6. 将历史证券状态、不复权日线、公司行为、点时复权因子和历史规则列为 P3 TODO，后续接入 `historical_accurate` 模式。
+
+MVP 可以用现有前复权 K 线近似成交，但必须在会话、接口、界面和报告展示近似标记，并拒绝非有限或非正数价格。精确模式不得在数据预检失败时静默降级。
