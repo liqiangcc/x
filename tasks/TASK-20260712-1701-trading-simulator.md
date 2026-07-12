@@ -206,7 +206,7 @@
 
 ### `TASK-20260712-1701-trading-simulator-T03` P0 指标与默认候选
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T02`
 - Goal: 实现无未来数据泄漏的 BOLL、默认复合候选、现有数据 Universe 和匿名候选快照。
 - Files likely touched: `src/signals/`, `src/simulator/selection/`, `tests/`
@@ -257,12 +257,12 @@
 - Expected files: `src/simulator/selection/historical_universe.js`, `src/simulator/selection/pipeline.js`, `tests/simulator-selection.test.js`
 - Validation: `node --test tests/simulator-selection.test.js` -> passed (11 tests)
 - Changed files: `src/simulator/selection/historical_universe.js`, `src/simulator/selection/pipeline.js`, `tests/simulator-selection.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `17daa943`
 - Notes: 选择流水线接入现有 Universe 回退结果和 K 线仓储，可靠状态存在时过滤 ST/*ST/退市整理，状态缺失保留候选并记录质量 TODO；按突破幅度升序稳定排序，默认分页 20，支持查看全部，并以日期、数据版本、配置摘要缓存不可变扫描快照。
 
 ##### `TASK-20260712-1701-trading-simulator-T03-S04` 实现匿名候选快照
 
-- Status: `pending`
+- Status: `done`
 - Goal: 生成会话内稳定、跨会话不可关联的候选别名和白名单 DTO。
 - Steps:
   - 生成随机会话盐、`candidateId` 和“候选A”等别名。
@@ -270,9 +270,10 @@
   - 实现匿名候选、证据、图表和持仓 DTO 白名单。
   - 增加真实代码、名称、市场和可反推字段泄漏测试。
 - Expected files: `src/simulator/selection/aliases.js`, `src/simulator/selection/candidate_dto.js`, `tests/simulator-anonymity.test.js`
-- Validation: `node --test tests/simulator-anonymity.test.js`
+- Validation: `node --test tests/simulator-anonymity.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/selection/aliases.js`, `src/simulator/selection/candidate_dto.js`, `tests/simulator-anonymity.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 每个会话使用随机盐生成不可跨会话关联的候选 ID 和别名顺序，真实证券映射仅保存在服务端 registry；候选、证据、图表和持仓均使用显式白名单 DTO，递归泄漏测试覆盖代码、名称、市场及组合键。
 
 ### `TASK-20260712-1701-trading-simulator-T04` P0 确定性交易引擎
 
