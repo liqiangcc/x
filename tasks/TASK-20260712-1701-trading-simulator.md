@@ -171,12 +171,12 @@
 - Expected files: `src/simulator/data/legacy_rules.js`, `config/simulator/default.json`, `tests/simulator-data-legacy-rules.test.js`
 - Validation: `node --test tests/simulator-data-legacy-rules.test.js` -> passed (5 tests)
 - Changed files: `config/simulator/default.json`, `src/simulator/data/legacy_rules.js`, `tests/simulator-data-legacy-rules.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `fc0e2fd6`
 - Notes: 已固定 `legacy_approximate` 的 T+1、100 股买入整手、最终零股卖出、0.03%佣金/最低5元、卖出0.05%印花税和0.1%滑点配置；实现费用计算、订单数量校验以及停牌/一字涨跌停限制，并持续返回历史费用和市场规则近似标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S05` 实现 MVP 数据门禁和摘要
 
-- Status: `pending`
+- Status: `done`
 - Goal: 只阻止无法运行的会话，并显式暴露不精确项。
 - Steps:
   - 检查 Universe 可用、策略历史窗口充足、D+1 开盘价格为有限正数。
@@ -184,9 +184,10 @@
   - 计算所用文件内容摘要并写入会话。
   - 在 API、界面和报告公开 `dataMode: legacy_approximate`。
 - Expected files: `src/simulator/data/data_gate.js`, `src/simulator/data/data_manifest.js`, `tests/simulator-data-gate.test.js`
-- Validation: `node --test tests/simulator-data-gate.test.js`
+- Validation: `node --test tests/simulator-data-gate.test.js` -> passed (5 tests)
+- Changed files: `src/simulator/data/data_gate.js`, `src/simulator/data/data_manifest.js`, `tests/simulator-data-gate.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已实现 Universe、候选历史和执行价格门禁，区分阻断问题与非阻断精确数据 TODO；数据清单按来源路径稳定排序并计算 SHA-256 摘要，所有结果公开 `dataMode: legacy_approximate` 和完整质量标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S06` 建立现有数据端到端夹具
 
