@@ -557,7 +557,7 @@
 - Expected files: `tests/e2e/simulator-responsive.spec.js`, `playwright.config.js`, `web/simulator/src/styles/`
 - Validation: `npm run test:e2e` -> passed (6 tests across 375x667, 390x844, 768x1024 and 1440x900; 2 non-mobile landscape cases skipped by design)
 - Changed files: `playwright.config.js`, `tests/e2e/simulator-responsive.spec.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `cfb8d761`
 - Notes: Playwright 四项目覆盖创建、匿名候选、图表、下单确认、完成决策与推进；检查页面无核心横向溢出、手机可见操作目标至少 44px、导航焦点顺序，以及两种手机宽度下横屏图表高度。失败时保留 screenshot/trace，成功生成物不提交。
 
 ### `TASK-20260712-1701-trading-simulator-T07` P2 复盘与最终验收
@@ -572,7 +572,7 @@
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S01` 实现绩效和可选基准
 
-- Status: `pending`
+- Status: `done`
 - Goal: 先生成账户绝对绩效；已有沪深300数据时增加基准，否则明确标记 TODO。
 - Steps:
   - 计算总收益、年化、最大回撤、波动率、Sharpe 和 Sortino。
@@ -580,9 +580,10 @@
   - 检测现有沪深300数据并允许启用；缺失时报告 `benchmark_unavailable`，不阻止复盘。
   - 对短会话、无成交和未平仓定义稳定输出。
 - Expected files: `src/simulator/application/reports.js`, `tests/simulator-report.test.js`
-- Validation: `node --test tests/simulator-report.test.js`
+- Validation: `node --test tests/simulator-report.test.js tests/simulator-api-reveal.test.js tests/simulator-api-anonymity.test.js` -> passed (9 tests)
+- Changed files: `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `tests/simulator-report.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 报告稳定计算总收益、年化、最大回撤、波动率、Sharpe、Sortino、已实现/未实现盈亏、费用、滑点、胜率、盈亏比和换手率；短会话、无成交和未平仓均有确定输出。可注入沪深300序列时输出基准收益，当前仓库未发现基准数据则明确 benchmark_unavailable TODO。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S02` 实现交易练习复盘页
 

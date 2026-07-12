@@ -106,7 +106,15 @@ class SimulatorRuntimeService {
     });
     const account = new Account({ initialCash: input.initialCash ?? 100000 });
     const orderService = new OrderApplicationService({ account, aliases, session });
-    const entry = { account, aliases, config: input, dataVersion, orderService, session };
+    const entry = {
+      account,
+      accountHistory: [{ date: session.clock.currentDate, ...account.snapshot() }],
+      aliases,
+      config: input,
+      dataVersion,
+      orderService,
+      session,
+    };
     entry.engine = new TradingSessionEngine({
       account,
       candidateSnapshotFactory: (date) => this.#candidateSnapshot({ aliases, asOfDate: date, config: input, dataVersion }),
@@ -140,6 +148,7 @@ class SimulatorRuntimeService {
   async advance(sessionId, { expectedVersion }) {
     const entry = this.entry(sessionId);
     await entry.engine.advance({ expectedVersion });
+    entry.accountHistory.push({ date: entry.session.clock.currentDate, ...entry.account.snapshot() });
     this.repository?.saveSession(entry.session.snapshot(), { config: entry.config });
     return this.getSession(sessionId);
   }
@@ -236,6 +245,7 @@ class SimulatorRuntimeService {
     const lineage = Object.freeze({ branchDate: startDate, parentSessionId: parent.session.id });
     const entry = {
       account,
+      accountHistory: parent.accountHistory.map((snapshot) => ({ ...snapshot })),
       aliases,
       config,
       dataVersion: parent.dataVersion,
@@ -279,6 +289,11 @@ class SimulatorRuntimeService {
   async finish(sessionId, { expectedVersion }) {
     const entry = this.entry(sessionId);
     await entry.engine.finish({ expectedVersion });
+    const final = { date: entry.session.clock.currentDate, ...entry.account.snapshot() };
+    entry.accountHistory ??= [];
+    const existing = entry.accountHistory.findIndex((snapshot) => snapshot.date === final.date);
+    if (existing >= 0) entry.accountHistory[existing] = final;
+    else entry.accountHistory.push(final);
     this.repository?.saveSession(entry.session.snapshot(), { config: entry.config });
     return this.getSession(sessionId);
   }
