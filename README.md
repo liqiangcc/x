@@ -245,7 +245,7 @@ bin/x benchmark kline-engines --engines local,proxy-pool,aws,aws-router,huaweicl
 
 `proxy pool select` 从真实 Kline 健康样本生成 `var/proxy-pool/selected.json`。`proxy-only` 只使用这份核心列表，列表缺失、为空或超过一小时未更新时快速失败，不会退回完整免费代理池；先执行 `proxy pool verify` 和 `proxy pool select` 再启动同步。
 
-`proxy-first` 同样先使用核心列表中的最佳代理，失败后只回退 AWS 和本地直连，不经过 Huawei Cloud；`proxy-only` 则不做任何引擎回退。
+`proxy-first` 同样先使用核心列表中的最佳代理，失败后依次回退 AWS Router、AWS 和本地直连，不经过 Huawei Cloud；`proxy-only` 则不做任何引擎回退。
 
 代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。`verify` 会逐个验证当前所有候选，并在 `runs/proxy-verify/` 下生成完整报告和按延迟排序的 `available.txt`；可用 `--limit N` 做小规模检查，或用 `--output file` 指定 JSON 报告。健康状态保存在忽略目录 `var/proxy-pool/`。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
 

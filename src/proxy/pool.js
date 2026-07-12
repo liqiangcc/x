@@ -143,6 +143,7 @@ async function getKlineViaProxyPool(input, options = {}) {
       acquire: runtime ? (proxy) => runtime.acquire(proxy) : null,
       attempts: options.maxAttempts ?? 3,
       explorationRate: options.explorationRate,
+      ignoreCooldown: options.selectedOnly === true,
       probe: createEastmoneyKlineProbe(input),
       random: options.random,
       release: runtime ? (proxy) => runtime.release(proxy) : null,

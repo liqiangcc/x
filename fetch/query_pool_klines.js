@@ -1363,7 +1363,7 @@ async function runEntriesWithStage(entries, {
         completed += 1;
         if (options.checkpointPath && completed % options.checkpointEvery === 0) {
           const checkpoint = { attempt, completed, total, updated_at: new Date().toISOString() };
-          const temp = `${options.checkpointPath}.${process.pid}.tmp`;
+          const temp = `${options.checkpointPath}.${process.pid}.${completed}.${crypto.randomUUID()}.tmp`;
           await fs.writeFile(temp, `${JSON.stringify(checkpoint, null, 2)}\n`, "utf8");
           await fs.rename(temp, options.checkpointPath);
         }

@@ -11,6 +11,6 @@ test("proxy-first uses selected proxies and excludes Huawei Cloud", () => {
   assert.equal(engines[0].name, "proxy-pool");
   assert.equal(engines[0].selectedOnly, true);
   assert.equal(engines[0].maxAttempts, 1);
-  assert.deepEqual(engines.slice(1), ["aws", "local"]);
+  assert.deepEqual(engines.slice(1), ["aws-router", "aws", "local"]);
   assert.ok(!engines.some((entry) => (entry.name ?? entry) === "huaweicloud"));
 });

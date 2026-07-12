@@ -4,7 +4,8 @@ function targetHealth(proxy, state, target) {
   return state.proxies?.[proxy.id]?.targets?.[target] ?? {};
 }
 
-function eligible(candidates, state, target, nowMs) {
+function eligible(candidates, state, target, nowMs, ignoreCooldown = false) {
+  if (ignoreCooldown) return [...candidates];
   return candidates.filter((proxy) => {
     const cooldown = targetHealth(proxy, state, target).cooldown_until;
     return !cooldown || Date.parse(cooldown) <= nowMs;
@@ -12,19 +13,19 @@ function eligible(candidates, state, target, nowMs) {
 }
 
 function rankFastest(candidates, state, context) {
-  return eligible(candidates, state, context.target, context.nowMs)
+  return eligible(candidates, state, context.target, context.nowMs, context.ignoreCooldown)
     .sort((a, b) => Number(targetHealth(a, state, context.target).ewma_latency_ms ?? Infinity) -
       Number(targetHealth(b, state, context.target).ewma_latency_ms ?? Infinity));
 }
 
 function rankReliable(candidates, state, context) {
-  return eligible(candidates, state, context.target, context.nowMs)
+  return eligible(candidates, state, context.target, context.nowMs, context.ignoreCooldown)
     .sort((a, b) => Number(targetHealth(b, state, context.target).success_rate ?? 0) -
       Number(targetHealth(a, state, context.target).success_rate ?? 0));
 }
 
 function rankReliableFastest(candidates, state, context) {
-  const available = eligible(candidates, state, context.target, context.nowMs);
+  const available = eligible(candidates, state, context.target, context.nowMs, context.ignoreCooldown);
   const strict = available.filter((proxy) => {
     const health = targetHealth(proxy, state, context.target);
     return Number(health.sample_count ?? 0) >= 3 &&
@@ -52,7 +53,7 @@ function balancedScore(proxy, state, context) {
 }
 
 function rankBalanced(candidates, state, context) {
-  const ranked = eligible(candidates, state, context.target, context.nowMs)
+  const ranked = eligible(candidates, state, context.target, context.nowMs, context.ignoreCooldown)
     .sort((a, b) => balancedScore(b, state, context) - balancedScore(a, state, context));
   if (ranked.length > 1 && context.random() < context.explorationRate) {
     const index = 1 + Math.floor(context.random() * (ranked.length - 1));
@@ -64,6 +65,7 @@ function rankBalanced(candidates, state, context) {
 function rankCandidates(candidates, state, options = {}) {
   const context = {
     explorationRate: options.explorationRate ?? 0.1,
+    ignoreCooldown: options.ignoreCooldown ?? false,
     nowMs: options.nowMs ?? Date.now(),
     random: options.random ?? Math.random,
     target: options.target ?? "generic-https",
@@ -72,7 +74,7 @@ function rankCandidates(candidates, state, options = {}) {
   if (options.strategy === "fastest") return rankFastest(candidates, state, context);
   if (options.strategy === "reliable") return rankReliable(candidates, state, context);
   if (options.strategy === "reliable-fastest") return rankReliableFastest(candidates, state, context);
-  if (options.strategy === "round-robin") return eligible(candidates, state, context.target, context.nowMs);
+  if (options.strategy === "round-robin") return eligible(candidates, state, context.target, context.nowMs, context.ignoreCooldown);
   return rankBalanced(candidates, state, context);
 }
 
