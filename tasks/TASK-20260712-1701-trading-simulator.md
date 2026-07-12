@@ -398,12 +398,12 @@
 - Expected files: `src/simulator/adapters/http/server.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-session.test.js`
 - Validation: `node --test tests/simulator-api-session.test.js` -> passed (3 tests)
 - Changed files: `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/server.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-session.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `fc537122`
 - Notes: Fastify 提供健康检查及创建、查询、完成决策、推进端点；所有写请求校验 expectedVersion，统一将版本/状态冲突映射为 409、未知资源为 404、业务与数据门禁为结构化 422、请求校验为 400。默认运行时从现有日线构造近似交易日历并可持久化会话。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S03` 实现订单和查询 API
 
-- Status: `pending`
+- Status: `done`
 - Goal: 提供订单编辑、候选、图表和账户查询。
 - Steps:
   - 实现订单创建、修改和取消端点。
@@ -411,9 +411,10 @@
   - 只接受 `candidateId`，服务端解析真实证券。
   - 为状态错误、未知资源和参数错误增加测试。
 - Expected files: `src/simulator/adapters/http/order_routes.js`, `src/simulator/adapters/http/query_routes.js`, `tests/simulator-api-orders.test.js`
-- Validation: `node --test tests/simulator-api-orders.test.js`
+- Validation: `node --test tests/simulator-api-session.test.js tests/simulator-api-orders.test.js tests/simulator-engine-session.test.js` -> passed (10 tests)
+- Changed files: `src/simulator/application/runtime_service.js`, `src/simulator/core/session.js`, `src/simulator/adapters/http/order_routes.js`, `src/simulator/adapters/http/query_routes.js`, `src/simulator/adapters/http/server.js`, `tests/simulator-api-orders.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 默认运行时现已执行现有数据候选扫描、会话盐匿名化、BOLL 图表截断、账户查询和真实 next-open 引擎推进；订单 API 仅接受 candidateId，支持创建/修改/取消并在每次写入后推进会话版本，查询 API 提供分页候选、匿名图表和 portfolio。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S04` 实现会话克隆
 

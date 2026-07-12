@@ -57,6 +57,13 @@ class SimulatorSession {
     return this.snapshot();
   }
 
+  touch({ expectedVersion = this.version } = {}) {
+    this.assertVersion(expectedVersion);
+    this.#assertStatus(SessionStatus.WAITING_FOR_DECISION, "session mutation");
+    this.version += 1;
+    return this.snapshot();
+  }
+
   advance({ candidateSnapshot, expectedVersion = this.version } = {}) {
     this.assertVersion(expectedVersion);
     this.#assertStatus(SessionStatus.RUNNING, "advance");

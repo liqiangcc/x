@@ -4,6 +4,8 @@ const Fastify = require("fastify");
 const { SimulatorRuntimeService } = require("../../application/runtime_service");
 const { SimulatorRepository } = require("../sqlite/repository");
 const { sessionRoutes } = require("./session_routes");
+const { orderRoutes } = require("./order_routes");
+const { queryRoutes } = require("./query_routes");
 
 function statusFor(error) {
   if (error.statusCode) return error.statusCode;
@@ -27,6 +29,8 @@ function buildServer({ logger = false, runtime = new SimulatorRuntimeService() }
   app.setErrorHandler((error, _request, reply) => reply.code(error.validation ? 400 : statusFor(error)).send(errorBody(error)));
   app.get("/health", async () => ({ ok: true }));
   app.register(sessionRoutes, { prefix: "/api", runtime });
+  app.register(orderRoutes, { prefix: "/api", runtime });
+  app.register(queryRoutes, { prefix: "/api", runtime });
   return app;
 }
 

@@ -5,6 +5,14 @@ const { SimulatorSession } = require("../core/session");
 const { SessionMode } = require("../core/enums");
 const { ExistingKlineRepository } = require("../adapters/ledger/existing_kline_repository");
 const { LegacyTradingCalendar } = require("../data/legacy_trading_calendar");
+const { ExistingUniverseRepository } = require("../adapters/ledger/existing_universe");
+const { HistoricalUniverse } = require("../selection/historical_universe");
+const { CandidateSelectionPipeline, paginate } = require("../selection/pipeline");
+const { CandidateAliasRegistry } = require("../selection/aliases");
+const { candidateDto, chartDto, holdingDto } = require("../selection/candidate_dto");
+const { calculateBollSeries } = require("../../signals/indicators/boll");
+const { OrderApplicationService } = require("./orders");
+const { TradingSessionEngine } = require("./sessions");
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -14,11 +22,60 @@ function httpError(code, message, statusCode = 422, issues = []) {
   return error;
 }
 
+function orderDto(order) {
+  return {
+    candidateId: order.candidateId,
+    estimatedFees: order.estimatedFees,
+    estimatedPrice: order.estimatedPrice,
+    id: order.id,
+    quantity: order.quantity,
+    reason: order.reason,
+    rejectionReason: order.rejectionReason,
+    reservedAmount: order.reservedAmount,
+    side: order.side,
+    status: order.status,
+    tradingDate: order.tradingDate,
+    type: order.type,
+  };
+}
+
 class SimulatorRuntimeService {
-  constructor({ klineRepository = new ExistingKlineRepository(), repository = null } = {}) {
+  constructor({
+    klineRepository = new ExistingKlineRepository(),
+    repository = null,
+    selectionPipeline = null,
+    universeRepository = new ExistingUniverseRepository(),
+  } = {}) {
     this.klineRepository = klineRepository;
     this.repository = repository;
+    this.selectionPipeline = selectionPipeline ?? new CandidateSelectionPipeline({
+      historicalUniverse: new HistoricalUniverse({ repository: universeRepository }),
+      klineRepository,
+    });
     this.entries = new Map();
+  }
+
+  async #candidateSnapshot({ aliases, asOfDate, config, dataVersion }) {
+    const selected = await this.selectionPipeline.select({
+      asOfDate,
+      config: config.selection ?? {},
+      dataVersion,
+      viewAll: true,
+    });
+    const rawCandidates = selected.pagination.items;
+    const identities = aliases.register(rawCandidates.map((candidate) => ({ code: candidate.code, market: candidate.market })));
+    const candidates = rawCandidates.map((candidate, index) => candidateDto(
+      { ...candidate, qualityIssues: selected.qualityIssues, rank: index + 1 },
+      identities[index],
+    ));
+    return Object.freeze({
+      asOfDate,
+      candidates: Object.freeze(candidates),
+      configHash: selected.configHash,
+      dataMode: "legacy_approximate",
+      dataVersion,
+      qualityIssues: selected.qualityIssues,
+    });
   }
 
   async createSession(input) {
@@ -33,7 +90,9 @@ class SimulatorRuntimeService {
     if (!calendar.has(startDate) || calendar.dates.length < 2) {
       throw httpError("data_gate_failed", "The selected range does not contain enough trading dates.", 422, ["insufficient_trading_calendar"]);
     }
-    const candidateSnapshot = Object.freeze({ candidates: [], date: String(startDate), qualityIssues: ["candidate_scan_pending"] });
+    const aliases = new CandidateAliasRegistry();
+    const dataVersion = input.dataVersion ?? "existing-data-current";
+    const candidateSnapshot = await this.#candidateSnapshot({ aliases, asOfDate: startDate, config: input, dataVersion });
     const session = new SimulatorSession({
       candidateSnapshot,
       dates: calendar.dates,
@@ -41,7 +100,17 @@ class SimulatorRuntimeService {
       startDate,
     });
     const account = new Account({ initialCash: input.initialCash ?? 100000 });
-    this.entries.set(session.id, { account, config: input, session });
+    const orderService = new OrderApplicationService({ account, aliases, session });
+    const entry = { account, aliases, config: input, dataVersion, orderService, session };
+    entry.engine = new TradingSessionEngine({
+      account,
+      candidateSnapshotFactory: (date) => this.#candidateSnapshot({ aliases, asOfDate: date, config: input, dataVersion }),
+      executionConfig: input.execution,
+      klineRepository: this.klineRepository,
+      orderService,
+      session,
+    });
+    this.entries.set(session.id, entry);
     this.repository?.saveSession(session.snapshot(), { config: input });
     return this.getSession(session.id);
   }
@@ -71,15 +140,92 @@ class SimulatorRuntimeService {
 
   async advance(sessionId, { expectedVersion }) {
     const entry = this.entry(sessionId);
-    const nextDate = entry.session.clock.nextDate;
-    if (!nextDate) throw httpError("end_of_calendar", "No next trading date is available.", 422);
-    entry.session.advance({ candidateSnapshot: { candidates: [], date: nextDate }, expectedVersion });
+    await entry.engine.advance({ expectedVersion });
     this.repository?.saveSession(entry.session.snapshot(), { config: entry.config });
     return this.getSession(sessionId);
+  }
+
+  getCandidates(sessionId, options = {}) {
+    const snapshot = this.entry(sessionId).session.candidateSnapshot;
+    return { ...snapshot, pagination: paginate(snapshot.candidates, options), candidates: undefined };
+  }
+
+  async getChart(sessionId, candidateId) {
+    const entry = this.entry(sessionId);
+    const security = entry.aliases.resolve(candidateId);
+    if (!security) throw httpError("unknown_candidate", "Candidate was not found in this session.", 404);
+    const identity = entry.aliases.publicForSecurity(security);
+    const endDate = entry.session.clock.currentDate;
+    const [dailyHistory, yearlyHistory] = await Promise.all([
+      this.klineRepository.getLegacyHistory({ ...security, endDate, period: "daily" }),
+      this.klineRepository.getLegacyHistory({ ...security, endDate, period: "yearly" }),
+    ]);
+    const boll = calculateBollSeries(dailyHistory.bars);
+    const daily = dailyHistory.bars.map((bar, index) => ({
+      ...bar,
+      bollLower: boll[index].lower,
+      bollMiddle: boll[index].middle,
+      bollUpper: boll[index].upper,
+    }));
+    const yearly = yearlyHistory.bars.map((bar) => ({ ...bar, year: Number(bar.date.slice(0, 4)) }));
+    return chartDto({ ...identity, daily, yearly });
+  }
+
+  getPortfolio(sessionId) {
+    const entry = this.entry(sessionId);
+    const account = entry.account.snapshot();
+    return {
+      cash: account.cash,
+      cashAvailable: account.cashAvailable,
+      equity: account.equity,
+      frozenCash: account.frozenCash,
+      marketValue: account.marketValue,
+      positions: account.positions.map((position) => holdingDto(position, entry.aliases.publicForSecurity(position.security))),
+      realizedPnl: account.realizedPnl,
+      totalFees: account.totalFees,
+      unrealizedPnl: account.unrealizedPnl,
+    };
+  }
+
+  createOrder(sessionId, input) {
+    const entry = this.entry(sessionId);
+    entry.session.assertVersion(input.expectedVersion);
+    const order = entry.orderService.create(input);
+    entry.session.touch({ expectedVersion: input.expectedVersion });
+    this.repository?.transaction(() => {
+      this.repository.saveOrder(sessionId, order);
+      this.repository.saveSession(entry.session.snapshot(), { config: entry.config });
+    });
+    return { order: orderDto(order), sessionVersion: entry.session.version };
+  }
+
+  updateOrder(sessionId, orderId, input) {
+    const entry = this.entry(sessionId);
+    entry.session.assertVersion(input.expectedVersion);
+    const order = entry.orderService.update(orderId, input);
+    entry.session.touch({ expectedVersion: input.expectedVersion });
+    this.repository?.transaction(() => {
+      this.repository.saveOrder(sessionId, order);
+      this.repository.saveSession(entry.session.snapshot(), { config: entry.config });
+    });
+    return { order: orderDto(order), sessionVersion: entry.session.version };
+  }
+
+  cancelOrder(sessionId, orderId, input) {
+    const entry = this.entry(sessionId);
+    entry.session.assertVersion(input.expectedVersion);
+    const order = entry.orderService.cancel(orderId);
+    entry.session.touch({ expectedVersion: input.expectedVersion });
+    this.repository?.transaction(() => {
+      this.repository.saveOrder(sessionId, order);
+      this.repository.saveSession(entry.session.snapshot(), { config: entry.config });
+    });
+    return { order: orderDto(order), sessionVersion: entry.session.version };
   }
 }
 
 module.exports = {
   SimulatorRuntimeService,
   httpError,
+  orderDto,
 };

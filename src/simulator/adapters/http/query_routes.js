@@ -1,0 +1,15 @@
+"use strict";
+
+async function queryRoutes(app, { runtime }) {
+  app.get("/sessions/:sessionId/candidates", async (request) => runtime.getCandidates(request.params.sessionId, {
+    page: request.query.page === undefined ? 1 : Number(request.query.page),
+    pageSize: request.query.pageSize === undefined ? 20 : Number(request.query.pageSize),
+    viewAll: request.query.viewAll === "true",
+  }));
+  app.get("/sessions/:sessionId/chart/:candidateId", async (request) => runtime.getChart(request.params.sessionId, request.params.candidateId));
+  app.get("/sessions/:sessionId/portfolio", async (request) => runtime.getPortfolio(request.params.sessionId));
+}
+
+module.exports = {
+  queryRoutes,
+};
