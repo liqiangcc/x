@@ -297,12 +297,12 @@
 - Expected files: `src/simulator/core/market_clock.js`, `src/simulator/core/session.js`, `tests/simulator-engine-session.test.js`
 - Validation: `node --test tests/simulator-engine-session.test.js` -> passed (4 tests)
 - Changed files: `src/simulator/core/market_clock.js`, `src/simulator/core/session.js`, `tests/simulator-engine-session.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `ebbffe18`
 - Notes: MarketClock 只沿冻结交易日日历推进；会话创建即持有 D 日候选快照并进入等待决策，版本化状态机严格执行 waiting → running → 下一交易日收盘 waiting，拒绝重复、非法和过期版本写操作。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S02` 实现账户、持仓和冻结资产
 
-- Status: `pending`
+- Status: `done`
 - Goal: 保证现金、持仓、冻结资金和冻结股份守恒。
 - Steps:
   - 实现默认 10 万元账户和整数股数。
@@ -310,9 +310,10 @@
   - 实现买入成本、已实现和未实现盈亏。
   - 实现 T+1 可卖数量跨交易日释放。
 - Expected files: `src/simulator/core/account.js`, `src/simulator/core/position.js`, `tests/simulator-engine-account.test.js`
-- Validation: `node --test tests/simulator-engine-account.test.js`
+- Validation: `node --test tests/simulator-engine-account.test.js` -> passed (4 tests)
+- Changed files: `src/simulator/core/account.js`, `src/simulator/core/position.js`, `tests/simulator-engine-account.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 账户默认 10 万元并分别跟踪可用/冻结现金、持仓、冻结股份和待 T+1 释放股份；订单取消、拒绝、失效可统一释放资产，买卖成交守恒并稳定计算成本、已实现/未实现盈亏与费用。
 
 ##### `TASK-20260712-1701-trading-simulator-T04-S03` 实现多笔订单决策
 
