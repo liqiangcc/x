@@ -482,12 +482,12 @@
 - Expected files: `web/simulator/src/`, `web/simulator/src/styles/`, `web/simulator/src/api/`
 - Validation: `npm run test:web && npm run build:web` -> passed (3 tests; production build succeeded)
 - Changed files: `web/simulator/src/App.jsx`, `web/simulator/src/App.test.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/api/client.test.js`, `web/simulator/src/state/SessionContext.jsx`, `web/simulator/src/components/ErrorNotice.jsx`, `web/simulator/src/pages/`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `2e6cb111`
 - Notes: React SPA 现有创建、候选、交易、复盘四条路由，统一 API 错误/expectedVersion 客户端和会话状态容器；移动优先基础定义 44px 触摸目标、响应式导航、设计变量、错误提示及 1024px 桌面断点。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S02` 实现会话创建和候选配置
 
-- Status: `pending`
+- Status: `done`
 - Goal: 支持指定日期、随机盲测、候选预设和冻结配置。
 - Steps:
   - 实现日期、初始资金和模式表单。
@@ -495,9 +495,10 @@
   - 使用服务端 schema 显示字段级校验错误。
   - 会话开始后禁用原地修改，并提供克隆入口。
 - Expected files: `web/simulator/src/pages/CreateSessionPage.jsx`, `web/simulator/src/components/SelectionConfig.jsx`, `web/simulator/src/components/AdvancedConfigEditor.jsx`
-- Validation: `npm run test:web`
+- Validation: `npm run test:web` -> passed (5 tests)
+- Changed files: `web/simulator/src/pages/CreateSessionPage.jsx`, `web/simulator/src/pages/CreateSessionPage.test.jsx`, `web/simulator/src/components/SelectionConfig.jsx`, `web/simulator/src/components/AdvancedConfigEditor.jsx`, `web/simulator/src/styles/base.css`, `web/simulator/src/test/setup.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 创建页支持起止日期、初始资金、普通匿名/随机盲测、默认候选参数和高级 JSON；服务端字段错误可统一展示，非法 JSON 不覆盖有效配置。会话建立后原地配置禁用并提示从候选页克隆。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S03` 实现匿名候选池
 
