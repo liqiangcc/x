@@ -17,6 +17,7 @@ const { OrderApplicationService } = require("./orders");
 const { TradingSessionEngine } = require("./sessions");
 const { digest } = require("../selection/pipeline");
 const { buildSessionReport, identityRows } = require("./reports");
+const { accountDto, sessionDto } = require("../adapters/http/dto");
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -126,15 +127,7 @@ class SimulatorRuntimeService {
   }
 
   getSession(sessionId) {
-    const { account, config, lineage = null, selectionEffectiveDate = null, session } = this.entry(sessionId);
-    return {
-      account: account.snapshot(),
-      config,
-      dataMode: "legacy_approximate",
-      lineage,
-      selectionEffectiveDate,
-      ...session.snapshot(),
-    };
+    return sessionDto(this.entry(sessionId));
   }
 
   completeDecision(sessionId, { expectedVersion }) {
@@ -179,18 +172,7 @@ class SimulatorRuntimeService {
 
   getPortfolio(sessionId) {
     const entry = this.entry(sessionId);
-    const account = entry.account.snapshot();
-    return {
-      cash: account.cash,
-      cashAvailable: account.cashAvailable,
-      equity: account.equity,
-      frozenCash: account.frozenCash,
-      marketValue: account.marketValue,
-      positions: account.positions.map((position) => holdingDto(position, entry.aliases.publicForSecurity(position.security))),
-      realizedPnl: account.realizedPnl,
-      totalFees: account.totalFees,
-      unrealizedPnl: account.unrealizedPnl,
-    };
+    return accountDto(entry.account.snapshot(), entry.aliases);
   }
 
   createOrder(sessionId, input) {

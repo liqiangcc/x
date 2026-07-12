@@ -363,7 +363,7 @@
 
 ### `TASK-20260712-1701-trading-simulator-T05` P1 SQLite 与 Fastify API
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T03`, `TASK-20260712-1701-trading-simulator-T04`
 - Goal: 持久化会话事务和事件，并通过匿名安全 REST API 暴露全部手动练习用例。
 - Files likely touched: `src/simulator/adapters/sqlite/`, `src/simulator/adapters/http/`, `tests/`
@@ -443,21 +443,22 @@
 - Expected files: `src/simulator/application/reports.js`, `src/simulator/adapters/http/report_routes.js`, `tests/simulator-api-reveal.test.js`
 - Validation: `node --test tests/simulator-api-reveal.test.js tests/simulator-api-session.test.js` -> passed (6 tests)
 - Changed files: `src/simulator/core/session.js`, `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/report_routes.js`, `src/simulator/adapters/http/server.js`, `tests/simulator-api-reveal.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `c9078c41`
 - Notes: 普通匿名会话可显式揭晓并追加 IdentityRevealed；盲测在 completed/cancelled 前返回 409。结束接口保留持仓估值，报告关联配置/数据版本/候选/订单/成交/事件，未揭晓时不含身份；JSON 导出经同目录临时文件原子重命名。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S06` 审计匿名 API
 
-- Status: `pending`
+- Status: `done`
 - Goal: 证明运行期响应中不存在真实身份泄漏。
 - Steps:
   - 为候选、图表、portfolio、订单、成交和事件建立白名单响应测试。
   - 扫描嵌套对象、错误信息、日志和导出文件中的真实代码、名称及市场字段。
   - 验证独立会话不能用别名或 `candidateId` 关联同一证券。
 - Expected files: `tests/simulator-api-anonymity.test.js`, `src/simulator/adapters/http/dto.js`
-- Validation: `node --test tests/simulator-api-anonymity.test.js`
+- Validation: `node --test tests/simulator-sqlite.test.js tests/simulator-api-*.test.js` -> passed (18 tests)
+- Changed files: `src/simulator/adapters/http/dto.js`, `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `tests/simulator-api-anonymity.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 会话、候选、图表、portfolio、订单、成交、事件、报告和未揭晓导出均经显式匿名白名单；账户持仓不再通过嵌套 session 快照泄漏 security。测试扫描真实代码、组合键、名称及 market/security 字段，并验证不同会话 candidateId 不可关联。
 
 ### `TASK-20260712-1701-trading-simulator-T06` P2 React 响应式交易界面
 

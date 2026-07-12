@@ -1,5 +1,7 @@
 "use strict";
 
+const { accountDto, eventDto, fillDto, sessionDto } = require("../adapters/http/dto");
+
 function identityRows(entry) {
   if (!entry.session.revealedAt) return [];
   return entry.session.candidateSnapshot.candidates.map((candidate) => ({
@@ -10,15 +12,15 @@ function identityRows(entry) {
 }
 
 function buildSessionReport(entry) {
-  const account = entry.session.finalAccountSnapshot ?? entry.account.snapshot();
+  const account = accountDto(entry.session.finalAccountSnapshot ?? entry.account.snapshot(), entry.aliases);
   return {
     account,
     benchmark: { status: "benchmark_unavailable" },
     candidates: entry.session.candidateSnapshot.candidates,
     dataMode: "legacy_approximate",
     dataVersion: entry.dataVersion,
-    events: entry.session.events,
-    fills: entry.engine?.fills ?? [],
+    events: entry.session.events.map(eventDto),
+    fills: (entry.engine?.fills ?? []).map(fillDto),
     identities: identityRows(entry),
     lineage: entry.lineage ?? null,
     orders: entry.orderService ? [...entry.orderService.orders.values()].map((order) => ({
@@ -34,7 +36,7 @@ function buildSessionReport(entry) {
       tradingDate: order.tradingDate,
     })) : [],
     revealedAt: entry.session.revealedAt ?? null,
-    session: entry.session.snapshot(),
+    session: sessionDto(entry),
   };
 }
 
