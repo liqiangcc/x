@@ -141,12 +141,12 @@
 - Expected files: `src/simulator/adapters/ledger/existing_kline_repository.js`, `tests/simulator-data-existing-kline.test.js`
 - Validation: `node --test tests/simulator-data-existing-kline.test.js tests/signals-daily-report.test.js` -> passed (17 tests)
 - Changed files: `src/simulator/adapters/ledger/existing_kline_repository.js`, `tests/simulator-data-existing-kline.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `fa9f4812`
 - Notes: 已兼容分片与 legacy K 线路径，复用现有解析器，强制按 `endDate` 截断，支持窗口 limit，保存 SHA-256 内容摘要，并以 `legacy_forward_adjusted` 标识价格；缺失、损坏和非正执行价格均返回稳定质量问题。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S03` 实现近似交易日历
 
-- Status: `pending`
+- Status: `done`
 - Goal: 从现有行情构建可以推进的交易日期序列。
 - Steps:
   - 从候选 Universe 的日线日期并集生成有序交易日历。
@@ -154,9 +154,10 @@
   - 缺少权威基准日历时写入 `trading_calendar_approximation`。
   - 为周末、长假和单股停牌夹具增加测试。
 - Expected files: `src/simulator/data/legacy_trading_calendar.js`, `tests/simulator-data-calendar.test.js`
-- Validation: `node --test tests/simulator-data-calendar.test.js`
+- Validation: `node --test tests/simulator-data-calendar.test.js` -> passed (5 tests)
+- Changed files: `src/simulator/data/legacy_trading_calendar.js`, `tests/simulator-data-calendar.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已实现日线日期并集日历、日期标准化、next/previous/between 查询和仓储构建；单股停牌不会移除全市场交易日，长假保持空档，所有结果携带 `trading_calendar_approximation`。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S04` 实现 MVP 近似规则配置
 
