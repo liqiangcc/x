@@ -126,11 +126,14 @@ async function getKlineViaProxyPool(input, options = {}) {
     const manager = new ProxyManager({
       classifyError: classifyProxyError,
       healthStore: runtime?.healthStore ?? new JsonHealthStore({ stateFile, cooldownForError: cooldownMs }),
-      provider: runtime ? { listCandidates: async () => runtime.listCandidates() } : new ProxyPoolProvider({
+      provider: runtime && !options.selectedOnly ? { listCandidates: async () => runtime.listCandidates() } : new ProxyPoolProvider({
         apiKey: options.apiKey,
         count: options.count,
         fetchImpl: options.fetchImpl,
         poolUrl: options.poolUrl,
+        selectedFile: options.selectedFile,
+        selectedMaxAgeMs: options.selectedMaxAgeMs,
+        selectedOnly: options.selectedOnly,
       }),
       transport: runtime
         ? (proxy, requestOptions) => runtime.transport.request(proxy, requestOptions)

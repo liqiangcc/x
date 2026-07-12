@@ -378,6 +378,9 @@ async function fetchProxyPoolKline(secid, klt, options, env = process.env) {
     strategy: options.proxyStrategy ?? "balanced",
     timeoutMs: options.proxyTimeoutMs,
     proxyRuntime: options.proxyRuntime,
+    selectedFile: options.proxySelectedFile,
+    selectedMaxAgeMs: options.proxySelectedMaxAgeMs,
+    selectedOnly: options.proxySelectedOnly,
   });
 }
 
@@ -628,6 +631,9 @@ async function resolveKline(options, deps = {}) {
         : entry.maxAttempts ?? options.proxyMaxAttempts,
       proxyStrategy: entry.selector ?? "balanced",
       proxyTimeoutMs: entry.timeoutMs,
+      proxySelectedFile: entry.selectedFile,
+      proxySelectedMaxAgeMs: entry.selectedMaxAgeMs,
+      proxySelectedOnly: entry.selectedOnly === true,
     })),
     aws: async () => withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () => fetchAws(secid, klt, options.awsRegions, options.lambdaName, options.klineLimit)),
     "aws-router": async () => withStage("fetch_kline_aws_router", { period: options.period, router_region: options.routerRegion ?? "auto", secid }, () => fetchRouter(secid, klt, options)),

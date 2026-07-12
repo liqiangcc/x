@@ -7,6 +7,7 @@ const { normalizeProxy } = require("../model");
 const ROOT = path.resolve(__dirname, "../../..");
 const DEFAULT_POOL_URL = "http://127.0.0.1:5555";
 const DEFAULT_ENV_FILE = path.join(ROOT, "ops/proxy-pool/.env");
+const DEFAULT_SELECTED_FILE = path.join(ROOT, "var/proxy-pool/selected.json");
 
 function parseProxyList(text) {
   return [...new Set(String(text ?? "").split(/\s+/).map((item) => item.trim())
@@ -35,6 +36,25 @@ class ProxyPoolProvider {
 
   async listCandidates(context = {}) {
     const options = { ...this.options, ...context };
+    if (options.selectedOnly) {
+      const selectedFile = path.resolve(options.selectedFile ?? DEFAULT_SELECTED_FILE);
+      let payload;
+      try { payload = JSON.parse(await fs.readFile(selectedFile, "utf8")); } catch (error) {
+        if (error.code === "ENOENT") throw new Error(`Selected proxy list not found: ${selectedFile}. Run bin/x proxy pool select first.`);
+        throw new Error(`Failed to read selected proxy list ${selectedFile}: ${error.message}`);
+      }
+      const maxAgeMs = Number(options.selectedMaxAgeMs ?? 3_600_000);
+      const generatedAt = Date.parse(payload.generated_at ?? "");
+      if (!Number.isFinite(generatedAt) || Date.now() - generatedAt > maxAgeMs) {
+        throw new Error(`Selected proxy list is stale: ${selectedFile}. Run bin/x proxy pool verify and select.`);
+      }
+      const endpoints = (payload.proxies ?? []).map((item) => typeof item === "string" ? item : item.endpoint);
+      const proxies = parseProxyList(endpoints.join("\n")).map((endpoint) => normalizeProxy(endpoint, {
+        protocol: "http", region: "CN", source: "selected",
+      }));
+      if (proxies.length === 0) throw new Error(`Selected proxy list is empty: ${selectedFile}.`);
+      return proxies;
+    }
     const localEnv = options.apiKey ? {} : await readLocalPoolEnv(options.envFile);
     const apiKey = options.apiKey || localEnv.PROXY_POOL_API_KEY || "";
     let poolUrl = options.poolUrl ?? process.env.X_PROXY_POOL_URL ?? DEFAULT_POOL_URL;
@@ -62,4 +82,4 @@ class ProxyPoolProvider {
   }
 }
 
-module.exports = { DEFAULT_ENV_FILE, DEFAULT_POOL_URL, ProxyPoolProvider, parseProxyList, readLocalPoolEnv };
+module.exports = { DEFAULT_ENV_FILE, DEFAULT_POOL_URL, DEFAULT_SELECTED_FILE, ProxyPoolProvider, parseProxyList, readLocalPoolEnv };

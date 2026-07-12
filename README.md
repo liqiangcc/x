@@ -243,6 +243,8 @@ bin/x benchmark kline-engines --engines local,proxy-pool,aws,aws-router,huaweicl
 
 `benchmark kline-engines` 使用相同股票、周期、K线条数和尝试次数依次比较各引擎，输出成功率、平均值、P50/P95/P99、实际区域和错误分类。缺少凭证或目标配置的引擎会记录为 `unconfigured`，不会中断其他引擎测试；完整报告写入 `runs/benchmark/kline-engines/`。
 
+`proxy pool select` 从真实 Kline 健康样本生成 `var/proxy-pool/selected.json`。`proxy-only` 只使用这份核心列表，列表缺失、为空或超过一小时未更新时快速失败，不会退回完整免费代理池；先执行 `proxy pool verify` 和 `proxy pool select` 再启动同步。
+
 代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。`verify` 会逐个验证当前所有候选，并在 `runs/proxy-verify/` 下生成完整报告和按延迟排序的 `available.txt`；可用 `--limit N` 做小规模检查，或用 `--output file` 指定 JSON 报告。健康状态保存在忽略目录 `var/proxy-pool/`。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
 
 Kline 数据源通过 `config/kline.json` 中的命名策略编排。默认 `auto` 保持云端到本地的安全链路；另有 `proxy-first`、`proxy-only` 和 `cloud-first`。`--engine` 仍可作为单引擎快捷方式，但新调用应优先使用 `--policy`。代理内部按 provider、transport、目标探针、健康存储和 selector 分层；健康 JSON v2 按目标保存最近 20 次样本，默认 `balanced` selector 综合近期成功率和延迟并保留少量新节点探索。
