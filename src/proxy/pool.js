@@ -70,16 +70,18 @@ function cooldownMs(errorClass) {
   return 30 * 60 * 1000;
 }
 
-function adaptiveTimeouts(proxy, state, { full = false } = {}) {
+function adaptiveTimeouts(proxy, state, { full = false, headersTimeoutMs } = {}) {
   const health = state.proxies?.[proxy.id]?.targets?.[TARGET] ?? {};
   const observed = Number(health.p95_latency_ms ?? health.ewma_latency_ms ?? 2000);
-  const headersTimeoutMs = Math.max(2000, Math.min(6000, Math.ceil(observed * 1.5)));
+  const adaptiveHeadersTimeoutMs = Number.isFinite(headersTimeoutMs)
+    ? Math.max(2000, Math.min(10000, headersTimeoutMs))
+    : Math.max(2000, Math.min(10000, Math.ceil(observed * 1.5)));
   const bodyTimeoutMs = full ? 6000 : 3000;
   return {
     bodyTimeoutMs,
     connectTimeoutMs: 2000,
-    headersTimeoutMs,
-    totalTimeoutMs: full ? 14000 : 10000,
+    headersTimeoutMs: adaptiveHeadersTimeoutMs,
+    totalTimeoutMs: full ? 20000 : 15000,
   };
 }
 
@@ -142,7 +144,10 @@ async function getKlineViaProxyPool(input, options = {}) {
       random: options.random,
       release: runtime ? (proxy) => runtime.release(proxy) : null,
       strategy: options.strategy ?? "balanced",
-      timeoutResolver: (proxy, state) => adaptiveTimeouts(proxy, state, { full: Number(input.lmt ?? 1) >= 10000 }),
+      timeoutResolver: (proxy, state) => adaptiveTimeouts(proxy, state, {
+        full: Number(input.lmt ?? 1) >= 10000,
+        headersTimeoutMs: options.timeoutMs,
+      }),
       timeoutMs: options.timeoutMs,
     });
     return {

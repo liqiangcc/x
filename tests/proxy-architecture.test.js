@@ -42,11 +42,12 @@ test("selectors isolate health by target and support fastest and reliable polici
   assert.equal(rankCandidates([fast, reliable], state, { strategy: "reliable", target: "target" })[0].id, reliable.id);
 });
 
-test("adaptive response timeout is clamped between two and six seconds", () => {
+test("adaptive response timeout is clamped between two and ten seconds", () => {
   const proxy = normalizeProxy("1.1.1.1:80");
   const state = { proxies: { [proxy.id]: { targets: { "eastmoney-kline": { p95_latency_ms: 100 } } } } };
   assert.equal(adaptiveTimeouts(proxy, state).headersTimeoutMs, 2000);
   state.proxies[proxy.id].targets["eastmoney-kline"].p95_latency_ms = 10000;
-  assert.equal(adaptiveTimeouts(proxy, state).headersTimeoutMs, 6000);
+  assert.equal(adaptiveTimeouts(proxy, state).headersTimeoutMs, 10000);
+  assert.equal(adaptiveTimeouts(proxy, state, { headersTimeoutMs: 10000 }).headersTimeoutMs, 10000);
   assert.equal(adaptiveTimeouts(proxy, state, { full: true }).bodyTimeoutMs, 6000);
 });
