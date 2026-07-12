@@ -105,6 +105,24 @@ class Account {
       unrealizedPnl: positions.reduce((sum, position) => sum + position.unrealizedPnl, 0),
     });
   }
+
+  clone() {
+    const cloned = new Account({ initialCash: this.initialCash });
+    cloned.cashAvailable = this.cashAvailable + this.frozenCashTotal;
+    cloned.realizedPnl = this.realizedPnl;
+    cloned.totalFees = this.totalFees;
+    for (const [key, position] of this.positions) {
+      const copied = new Position({
+        averageCost: position.averageCost,
+        quantity: position.quantity,
+        security: position.security,
+      });
+      copied.realizedPnl = position.realizedPnl;
+      copied.unsettled = position.unsettled.map((lot) => ({ ...lot }));
+      cloned.positions.set(key, copied);
+    }
+    return cloned;
+  }
 }
 
 module.exports = {

@@ -413,12 +413,12 @@
 - Expected files: `src/simulator/adapters/http/order_routes.js`, `src/simulator/adapters/http/query_routes.js`, `tests/simulator-api-orders.test.js`
 - Validation: `node --test tests/simulator-api-session.test.js tests/simulator-api-orders.test.js tests/simulator-engine-session.test.js` -> passed (10 tests)
 - Changed files: `src/simulator/application/runtime_service.js`, `src/simulator/core/session.js`, `src/simulator/adapters/http/order_routes.js`, `src/simulator/adapters/http/query_routes.js`, `src/simulator/adapters/http/server.js`, `tests/simulator-api-orders.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `cf449454`
 - Notes: 默认运行时现已执行现有数据候选扫描、会话盐匿名化、BOLL 图表截断、账户查询和真实 next-open 引擎推进；订单 API 仅接受 candidateId，支持创建/修改/取消并在每次写入后推进会话版本，查询 API 提供分页候选、匿名图表和 portfolio。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S04` 实现会话克隆
 
-- Status: `pending`
+- Status: `done`
 - Goal: 从当前收盘状态创建采用新候选配置的父子分支。
 - Steps:
   - 复制当前现金、持仓、历史引用和数据版本。
@@ -426,9 +426,10 @@
   - 新配置从下一交易日生效，父会话保持不变。
   - 增加父子恢复和报告关联测试。
 - Expected files: `src/simulator/application/sessions.js`, `src/simulator/adapters/http/session_routes.js`, `tests/simulator-api-clone.test.js`
-- Validation: `node --test tests/simulator-api-clone.test.js`
+- Validation: `node --test tests/simulator-api-clone.test.js tests/simulator-anonymity.test.js tests/simulator-engine-account.test.js` -> passed (10 tests)
+- Changed files: `src/simulator/core/account.js`, `src/simulator/selection/aliases.js`, `src/simulator/application/runtime_service.js`, `src/simulator/adapters/http/session_routes.js`, `src/simulator/adapters/sqlite/repository.js`, `tests/simulator-api-clone.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: clone 从父会话当前收盘复制现金、持仓、未结算 T+1 股份、数据版本和历史分支引用，使用新盐重新匿名化；新候选配置记录为下一交易日生效，父会话对象和版本保持不变，SQLite 保存父子关系及配置摘要。
 
 ##### `TASK-20260712-1701-trading-simulator-T05-S05` 实现揭晓、结束、报告和导出 API
 

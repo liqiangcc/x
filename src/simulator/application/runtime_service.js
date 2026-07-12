@@ -13,6 +13,7 @@ const { candidateDto, chartDto, holdingDto } = require("../selection/candidate_d
 const { calculateBollSeries } = require("../../signals/indicators/boll");
 const { OrderApplicationService } = require("./orders");
 const { TradingSessionEngine } = require("./sessions");
+const { digest } = require("../selection/pipeline");
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -122,11 +123,13 @@ class SimulatorRuntimeService {
   }
 
   getSession(sessionId) {
-    const { account, config, session } = this.entry(sessionId);
+    const { account, config, lineage = null, selectionEffectiveDate = null, session } = this.entry(sessionId);
     return {
       account: account.snapshot(),
       config,
       dataMode: "legacy_approximate",
+      lineage,
+      selectionEffectiveDate,
       ...session.snapshot(),
     };
   }
@@ -221,6 +224,60 @@ class SimulatorRuntimeService {
       this.repository.saveSession(entry.session.snapshot(), { config: entry.config });
     });
     return { order: orderDto(order), sessionVersion: entry.session.version };
+  }
+
+  cloneSession(sessionId, { expectedVersion, selection = {} }) {
+    const parent = this.entry(sessionId);
+    parent.session.assertVersion(expectedVersion);
+    const startDate = parent.session.clock.currentDate;
+    const dates = parent.session.clock.dates.slice(parent.session.clock.index);
+    const aliases = new CandidateAliasRegistry();
+    const identities = aliases.register(parent.session.candidateSnapshot.candidates.map((candidate) => {
+      const security = parent.aliases.resolve(candidate.candidateId);
+      if (!security) throw httpError("unknown_candidate", "A parent candidate mapping is unavailable.", 422);
+      return security;
+    }));
+    const candidates = parent.session.candidateSnapshot.candidates.map((candidate, index) => ({
+      ...candidate,
+      alias: identities[index].alias,
+      candidateId: identities[index].candidateId,
+    }));
+    const candidateSnapshot = Object.freeze({ ...parent.session.candidateSnapshot, candidates: Object.freeze(candidates) });
+    const session = new SimulatorSession({ candidateSnapshot, dates, mode: parent.session.mode, startDate });
+    const account = parent.account.clone();
+    for (const position of account.positions.values()) aliases.register([position.security]);
+    const config = { ...parent.config, selection };
+    const orderService = new OrderApplicationService({ account, aliases, session });
+    const lineage = Object.freeze({ branchDate: startDate, parentSessionId: parent.session.id });
+    const entry = {
+      account,
+      aliases,
+      config,
+      dataVersion: parent.dataVersion,
+      lineage,
+      orderService,
+      selectionEffectiveDate: session.clock.nextDate,
+      session,
+    };
+    entry.engine = new TradingSessionEngine({
+      account,
+      candidateSnapshotFactory: (date) => this.#candidateSnapshot({ aliases, asOfDate: date, config, dataVersion: entry.dataVersion }),
+      executionConfig: config.execution,
+      klineRepository: this.klineRepository,
+      orderService,
+      session,
+    });
+    this.entries.set(session.id, entry);
+    this.repository?.transaction(() => {
+      this.repository.saveSession(session.snapshot(), { config });
+      this.repository.saveLineage({
+        branchDate: startDate,
+        configHash: digest(selection),
+        parentSessionId: parent.session.id,
+        sessionId: session.id,
+      });
+    });
+    return this.getSession(session.id);
   }
 }
 

@@ -30,15 +30,16 @@ class CandidateAliasRegistry {
   register(securities) {
     const normalized = securities.map(normalizeSecurityId);
     const shuffled = normalized
+      .filter((security) => !this.#bySecurityKey.has(securityKey(security)))
       .map((security) => ({ security, sortKey: keyedHash(this.#salt, `alias:${securityKey(security)}`) }))
       .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
 
+    const firstAliasIndex = this.#bySecurityKey.size;
     for (const [index, item] of shuffled.entries()) {
       const key = securityKey(item.security);
-      if (this.#bySecurityKey.has(key)) continue;
       const candidateId = `cand_${keyedHash(this.#salt, `id:${key}`).slice(0, 24)}`;
       const record = Object.freeze({
-        alias: `候选${aliasSuffix(index)}`,
+        alias: `候选${aliasSuffix(firstAliasIndex + index)}`,
         candidateId,
         security: Object.freeze({ ...item.security }),
       });

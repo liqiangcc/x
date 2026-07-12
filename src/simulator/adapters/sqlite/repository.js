@@ -103,6 +103,12 @@ class SimulatorRepository {
     for (const alias of aliases) aliasStatement.run(snapshot.sessionId, alias.candidateId, alias.alias, json(alias.security));
   }
 
+  saveLineage({ branchDate, configHash, parentSessionId, sessionId }) {
+    this.db.prepare(`INSERT INTO session_lineage
+      (session_id, parent_session_id, branch_date, config_hash) VALUES (?, ?, ?, ?)`
+    ).run(sessionId, parentSessionId, branchDate, configHash);
+  }
+
   saveOrder(sessionId, order) {
     this.db.prepare(`INSERT INTO orders
       (id, session_id, candidate_id, trading_date, side, quantity, reason, status, payload_json)

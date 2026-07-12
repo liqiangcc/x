@@ -30,6 +30,19 @@ async function sessionRoutes(app, { runtime }) {
     runtime.completeDecision(request.params.sessionId, request.body));
   app.post("/sessions/:sessionId/advance", { schema: { body: VERSION_BODY } }, async (request) =>
     runtime.advance(request.params.sessionId, request.body));
+  app.post("/sessions/:sessionId/clone", {
+    schema: {
+      body: {
+        additionalProperties: false,
+        properties: {
+          expectedVersion: { minimum: 1, type: "integer" },
+          selection: { type: "object" },
+        },
+        required: ["expectedVersion", "selection"],
+        type: "object",
+      },
+    },
+  }, async (request, reply) => reply.code(201).send(runtime.cloneSession(request.params.sessionId, request.body)));
 }
 
 module.exports = {
