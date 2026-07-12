@@ -72,12 +72,12 @@
 - Expected files: `package.json`, `package-lock.json`, `web/simulator/package.json`, `web/simulator/vite.config.js`
 - Validation: `npm install && npm run check && npm test && npm run test:web && npm run build:web` -> passed (204 server tests, 1 web test, production build succeeded)
 - Changed files: `.gitignore`, `package.json`, `package-lock.json`, `web/simulator/`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `38019e21`
 - Notes: 已建立 npm workspace，安装 Fastify、better-sqlite3、Ajv、React、Vite、ECharts、Vitest、Testing Library、Playwright 和 concurrently；增加根运行脚本、可构建的 React 空应用及基础组件测试，并限制根 `npm test` 只发现 `tests/*.test.js`。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S03` 创建模块骨架和共享契约
 
-- Status: `pending`
+- Status: `done`
 - Goal: 建立核心、数据、选股、机制、应用、端口和适配器边界。
 - Steps:
   - 创建 `src/simulator/` 分层目录和最小导出文件。
@@ -85,9 +85,10 @@
   - 定义配置 schema 和组件注册接口。
   - 禁止核心模块依赖 Fastify、SQLite 和文件系统。
 - Expected files: `src/simulator/core/`, `src/simulator/config/`, `src/simulator/ports/`, `tests/simulator-contracts.test.js`
-- Validation: `node --test tests/simulator-contracts.test.js && npm run check`
+- Validation: `node --test tests/simulator-contracts.test.js && npm run check` -> passed (6 contract tests; 120 JavaScript files checked)
+- Changed files: `src/simulator/`, `tests/simulator-contracts.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已定义稳定会话、订单、事件、数据模式和价格视图枚举，证券 ID 契约，Ajv 2020 配置 schema 与默认值，组件注册表及市场数据/会话仓储端口；测试确认核心层没有基础设施依赖。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S04` 建立确定性测试夹具
 
