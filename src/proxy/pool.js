@@ -97,6 +97,16 @@ async function fetchProxyCandidates({
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) {
+    if (response.status === 500) {
+      const countUrl = new URL("/count", `${String(poolUrl).replace(/\/+$/, "")}/`);
+      const countResponse = await fetchImpl(countUrl, {
+        headers: apiKey ? { "API-KEY": apiKey } : {},
+        signal: AbortSignal.timeout(5000),
+      });
+      if (countResponse.ok && Number(await countResponse.text()) === 0) {
+        return [];
+      }
+    }
     throw new Error(`ProxyPool API returned HTTP ${response.status}`);
   }
   return parseProxyList(await response.text());
@@ -119,6 +129,16 @@ async function fetchAllProxyCandidates({
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) {
+    if (response.status === 500) {
+      const countUrl = new URL("/count", `${String(poolUrl).replace(/\/+$/, "")}/`);
+      const countResponse = await fetchImpl(countUrl, {
+        headers: apiKey ? { "API-KEY": apiKey } : {},
+        signal: AbortSignal.timeout(5000),
+      });
+      if (countResponse.ok && Number(await countResponse.text()) === 0) {
+        return [];
+      }
+    }
     throw new Error(`ProxyPool API returned HTTP ${response.status}`);
   }
   return parseProxyList(await response.text());

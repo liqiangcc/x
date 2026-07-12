@@ -55,6 +55,22 @@ test("fetchAllProxyCandidates treats an empty CN pool as a healthy response", as
   assert.match(requestedUrl, /\/all\?area=CN/);
 });
 
+test("fetchAllProxyCandidates handles the upstream empty-area 500 response", async () => {
+  const requested = [];
+  const candidates = await fetchAllProxyCandidates({
+    apiKey: "secret",
+    poolUrl: "http://pool.test:5555",
+    fetchImpl: async (url) => {
+      requested.push(String(url));
+      return String(url).includes("/count")
+        ? new Response("0", { status: 200 })
+        : new Response("error", { status: 500 });
+    },
+  });
+  assert.deepEqual(candidates, []);
+  assert.equal(requested.some((url) => url.endsWith("/count")), true);
+});
+
 test("orderCandidates excludes cooling proxies and prefers proven low latency", () => {
   const cooling = "1.1.1.1:80";
   const fast = "2.2.2.2:80";
