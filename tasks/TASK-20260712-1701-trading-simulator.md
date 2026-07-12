@@ -126,12 +126,12 @@
 - Expected files: `src/simulator/adapters/ledger/existing_universe.js`, `tests/simulator-data-existing-universe.test.js`
 - Validation: `node --test tests/simulator-data-existing-universe.test.js tests/fetch-market-stocks.test.js` -> passed (11 tests)
 - Changed files: `src/simulator/adapters/ledger/existing_universe.js`, `tests/simulator-data-existing-universe.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `fd8c913f`
 - Notes: 已实现 market snapshot、pool codes、daily/yearly 文件交集三层回退，统一解析 `code + market`，输出覆盖统计及 `historical_universe_unavailable`、`pool_limited_universe`、`kline_derived_universe`、`survivorship_bias_possible` 质量标记。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S02` 实现现有 K 线适配
 
-- Status: `pending`
+- Status: `done`
 - Goal: 使用现有 daily/yearly 文件为候选、图表和近似成交提供截断后的行情。
 - Steps:
   - 复用现有分片和 legacy K 线路径解析。
@@ -139,9 +139,10 @@
   - 将现有前复权价格标记为 `legacy_forward_adjusted`。
   - 非有限或非正数价格返回 `invalid_execution_price`，不得成交。
 - Expected files: `src/simulator/adapters/ledger/existing_kline_repository.js`, `tests/simulator-data-existing-kline.test.js`
-- Validation: `node --test tests/simulator-data-existing-kline.test.js tests/signals-daily-report.test.js`
+- Validation: `node --test tests/simulator-data-existing-kline.test.js tests/signals-daily-report.test.js` -> passed (17 tests)
+- Changed files: `src/simulator/adapters/ledger/existing_kline_repository.js`, `tests/simulator-data-existing-kline.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已兼容分片与 legacy K 线路径，复用现有解析器，强制按 `endDate` 截断，支持窗口 limit，保存 SHA-256 内容摘要，并以 `legacy_forward_adjusted` 标识价格；缺失、损坏和非正执行价格均返回稳定质量问题。
 
 ##### `TASK-20260712-1701-trading-simulator-T02-S03` 实现近似交易日历
 
