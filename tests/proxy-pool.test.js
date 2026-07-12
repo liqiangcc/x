@@ -14,6 +14,7 @@ const {
   parseProxyList,
   proxyId,
   requestKlineThroughProxy,
+  validateAllProxies,
 } = require("../src/proxy/pool");
 const { resolveKline } = require("../fetch/fetch_kline");
 
@@ -148,6 +149,8 @@ test("requestKlineThroughProxy keeps TLS verification enabled", async () => {
   });
 
   assert.equal(agentConfig.requestTls.rejectUnauthorized, true);
+  assert.equal(agentConfig.proxyTls.timeout, 6000);
+  assert.equal(agentConfig.requestTls.timeout, 6000);
   assert.equal(result.payload.data.klines.length, 1);
   assert.equal(destroyed, true);
 });
@@ -165,4 +168,26 @@ test("resolveKline supports the explicit proxy-pool engine", async () => {
   );
   assert.equal(result.source_engine, "proxy-pool");
   assert.equal(result.data.klines.length, 1);
+});
+
+test("validateAllProxies checks every candidate once and sorts available proxies by latency", async () => {
+  const calls = [];
+  const recorded = [];
+  const report = await validateAllProxies({
+    concurrency: 2,
+    fetchAllCandidatesImpl: async () => ["1.1.1.1:80", "2.2.2.2:80", "3.3.3.3:80"],
+    requestKlineImpl: async (proxy) => {
+      calls.push(proxy);
+      if (proxy === "2.2.2.2:80") throw new Error("request timeout");
+      return { durationMs: proxy === "1.1.1.1:80" ? 30 : 10, payload: {} };
+    },
+    recordResultImpl: async (proxy, result) => recorded.push({ proxy, result }),
+  });
+  assert.deepEqual(calls.sort(), ["1.1.1.1:80", "2.2.2.2:80", "3.3.3.3:80"]);
+  assert.equal(recorded.length, 3);
+  assert.equal(report.checked_count, 3);
+  assert.equal(report.available_count, 2);
+  assert.equal(report.failed_count, 1);
+  assert.equal(report.error_counts.timeout, 1);
+  assert.deepEqual(report.available.map((item) => item.proxy), ["3.3.3.3:80", "1.1.1.1:80"]);
 });

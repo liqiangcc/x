@@ -205,10 +205,11 @@ bin/x proxy pool up
 bin/x proxy pool status
 bin/x proxy pool warmup --duration 30m --samples 20
 bin/x proxy pool benchmark --samples 100 --concurrency 4 --json
+bin/x proxy pool verify --concurrency 8 --timeout-ms 6000
 bin/x kline fetch 600519 --period daily --engine proxy-pool
 ```
 
-代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。健康状态保存在忽略目录 `var/proxy-pool/`，运行记录只包含代理哈希 ID，不包含完整 IP。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
+代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。`verify` 会逐个验证当前所有候选，并在 `runs/proxy-verify/` 下生成完整报告和按延迟排序的 `available.txt`；可用 `--limit N` 做小规模检查，或用 `--output file` 指定 JSON 报告。健康状态保存在忽略目录 `var/proxy-pool/`。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
 
 ## 数据约定
 

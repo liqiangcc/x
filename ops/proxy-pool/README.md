@@ -11,8 +11,12 @@ bin/x proxy pool up
 bin/x proxy pool status
 bin/x proxy pool warmup --duration 30m
 bin/x proxy pool benchmark --samples 100 --json
+bin/x proxy pool verify --concurrency 8 --timeout-ms 6000
 ```
 
 The upstream tester is only a coarse filter. `x` revalidates every selected
 proxy against an HTTPS Eastmoney kline response with normal TLS certificate
 verification before using it.
+
+`verify` checks every current candidate exactly once and writes a JSON report
+plus an `available.txt` file sorted by observed latency under `runs/proxy-verify/`.

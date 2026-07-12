@@ -93,6 +93,7 @@ function printUsage() {
   x proxy pool up|down|status
   x proxy pool warmup [--duration 30m] [--samples 20] [--concurrency 4]
   x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
+  x proxy pool verify [--concurrency 8] [--timeout-ms 6000] [--limit N] [--output file]
   x run list
   x run show <run_id>
   x run failures <run_id>
@@ -2021,6 +2022,20 @@ async function writeProxyBenchmarkReport(report, kind) {
   return rel(outputFile);
 }
 
+async function writeProxyVerificationReport(report, requestedOutput) {
+  const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const outputDir = requestedOutput
+    ? path.dirname(rootPath(requestedOutput))
+    : path.join(DEFAULT_RUNS_DIR, "proxy-verify", runId);
+  const outputFile = requestedOutput ? rootPath(requestedOutput) : path.join(outputDir, "report.json");
+  const availableFile = path.join(outputDir, "available.txt");
+  await fs.mkdir(outputDir, { recursive: true });
+  await fs.writeFile(outputFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await fs.writeFile(availableFile, report.available.map((item) => item.proxy).join("\n") +
+    (report.available.length ? "\n" : ""), "utf8");
+  return { report: rel(outputFile), available: rel(availableFile) };
+}
+
 async function commandProxyPool(argv) {
   const action = argv[0];
   const options = parseOptions(argv.slice(1));
@@ -2045,7 +2060,19 @@ async function commandProxyPool(argv) {
     return;
   }
 
-  const { runProxyBenchmark } = require("./../src/proxy/pool");
+  const { runProxyBenchmark, validateAllProxies } = require("./../src/proxy/pool");
+  if (action === "verify") {
+    const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 8);
+    const timeoutMs = parsePositiveOption(options.timeoutMs, "--timeout-ms", 6000);
+    const limit = options.limit === undefined ? undefined : parsePositiveOption(options.limit, "--limit");
+    const report = await validateAllProxies({ concurrency, timeoutMs, limit });
+    report.files = await writeProxyVerificationReport(report, options.output);
+    printJson(report);
+    if (report.available_count === 0) {
+      process.exitCode = 2;
+    }
+    return;
+  }
   const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
   const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
   if (action === "benchmark") {

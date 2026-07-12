@@ -183,12 +183,13 @@ async function requestKlineThroughProxy(proxy, input = {}, options = {}) {
 
   const proxyAgentFactory = options.proxyAgentFactory ?? ((config) => new ProxyAgent(config));
   const requestImpl = options.requestImpl ?? request;
+  const timeoutMs = options.timeoutMs ?? 6000;
   const dispatcher = proxyAgentFactory({
     uri: `http://${proxy}`,
-    requestTls: { rejectUnauthorized: true },
+    proxyTls: { timeout: timeoutMs },
+    requestTls: { rejectUnauthorized: true, timeout: timeoutMs },
   });
   const startedAt = Date.now();
-  const timeoutMs = options.timeoutMs ?? 6000;
   try {
     const response = await requestImpl(urlText, {
       dispatcher,
@@ -446,6 +447,62 @@ async function runProxyBenchmark({
   };
 }
 
+async function validateAllProxies({
+  codes = ["1.600519", "0.000001", "0.300750", "1.601318"],
+  concurrency = 8,
+  limit,
+  ...options
+} = {}) {
+  const fetchCandidates = options.fetchAllCandidatesImpl ?? fetchAllProxyCandidates;
+  const requestKline = options.requestKlineImpl ?? requestKlineThroughProxy;
+  const recordResult = options.recordResultImpl ?? recordProxyResult;
+  const stateFile = options.stateFile ?? process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE;
+  const candidates = await fetchCandidates(options);
+  const selected = Number.isInteger(limit) ? candidates.slice(0, limit) : candidates;
+  const startedAt = new Date().toISOString();
+  const results = await mapWithConcurrency(selected, concurrency, async (proxy, index) => {
+    const started = Date.now();
+    const secid = codes[index % codes.length];
+    try {
+      const result = await requestKline(proxy, { secid, klt: 101, lmt: 1 }, options);
+      const durationMs = Number.isFinite(result.durationMs) ? result.durationMs : Date.now() - started;
+      await recordResult(proxy, { ok: true, durationMs }, stateFile);
+      return { proxy, proxy_id: proxyId(proxy), ok: true, duration_ms: durationMs, secid };
+    } catch (error) {
+      const errorClass = classifyProxyError(error);
+      const durationMs = Date.now() - started;
+      await recordResult(proxy, { ok: false, durationMs, errorClass }, stateFile);
+      return {
+        proxy,
+        proxy_id: proxyId(proxy),
+        ok: false,
+        duration_ms: durationMs,
+        error_class: errorClass,
+        error: error.message,
+        secid,
+      };
+    }
+  });
+  const available = results.filter((item) => item.ok).sort((a, b) => a.duration_ms - b.duration_ms);
+  const errorCounts = results.filter((item) => !item.ok).reduce((counts, item) => {
+    counts[item.error_class] = (counts[item.error_class] ?? 0) + 1;
+    return counts;
+  }, {});
+  return {
+    upstream: UPSTREAM_PROXY_POOL,
+    started_at: startedAt,
+    finished_at: new Date().toISOString(),
+    candidate_count: candidates.length,
+    checked_count: results.length,
+    available_count: available.length,
+    failed_count: results.length - available.length,
+    success_rate: results.length === 0 ? 0 : available.length / results.length,
+    error_counts: errorCounts,
+    available,
+    results,
+  };
+}
+
 module.exports = {
   DEFAULT_POOL_URL,
   DEFAULT_STATE_FILE,
@@ -462,4 +519,5 @@ module.exports = {
   recordProxyResult,
   requestKlineThroughProxy,
   runProxyBenchmark,
+  validateAllProxies,
 };
