@@ -6,12 +6,28 @@
   "engines": {
     "node": ">=22"
   },
+  "workspaces": [
+    "web/simulator"
+  ],
   "scripts": {
     "check": "node scripts/check-js.js",
-    "test": "node --test"
+    "test": "node --test tests/*.test.js",
+    "dev:simulator": "concurrently -k \"npm run dev:simulator:server\" \"npm run dev --workspace web/simulator\"",
+    "dev:simulator:server": "node --watch src/simulator/adapters/http/server.js",
+    "start:simulator": "node src/simulator/adapters/http/server.js",
+    "build:web": "npm run build --workspace web/simulator",
+    "test:web": "npm run test --workspace web/simulator",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.600.0",
+    "ajv": "^8.20.0",
+    "better-sqlite3": "^12.11.1",
+    "fastify": "^5.10.0",
     "undici": "^7.28.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^10.0.3"
   }
 }

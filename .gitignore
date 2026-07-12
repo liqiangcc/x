@@ -3,6 +3,7 @@ db/stocks.db
 .agents/
 .skill-staging/
 node_modules/
+web/simulator/dist/
 __pycache__/
 *.pyc
 .env

@@ -57,12 +57,12 @@
 - Expected files: `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Validation: `git diff --check && rg -n "P0|better-sqlite3|Fastify|React|anonymous|waiting_for_decision" docs/TRADING_SIMULATOR_IMPLEMENTATION.md` -> passed
 - Changed files: `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `12db3db5`
 - Notes: 已固定 MVP 使用现有数据的 `legacy_approximate` 模式、npm workspace、Ajv、concurrently、会话与订单状态枚举、API 错误信封和桌面交易面板断点；P3 精确历史数据继续作为非阻塞 TODO。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S02` 增加依赖和运行脚本
 
-- Status: `pending`
+- Status: `done`
 - Goal: 安装服务端及前端依赖，并提供一致的开发、构建和测试入口。
 - Steps:
   - 根项目增加 Fastify、better-sqlite3 和配置 schema 校验依赖。
@@ -70,9 +70,10 @@
   - 增加 `dev:simulator`、`start:simulator`、`build:web`、`test:web`、`test:e2e` 脚本。
   - 保持现有 `npm run check` 和 `npm test` 行为兼容。
 - Expected files: `package.json`, `package-lock.json`, `web/simulator/package.json`, `web/simulator/vite.config.js`
-- Validation: `npm install && npm run check && npm run build:web`
+- Validation: `npm install && npm run check && npm test && npm run test:web && npm run build:web` -> passed (204 server tests, 1 web test, production build succeeded)
+- Changed files: `.gitignore`, `package.json`, `package-lock.json`, `web/simulator/`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 已建立 npm workspace，安装 Fastify、better-sqlite3、Ajv、React、Vite、ECharts、Vitest、Testing Library、Playwright 和 concurrently；增加根运行脚本、可构建的 React 空应用及基础组件测试，并限制根 `npm test` 只发现 `tests/*.test.js`。
 
 ##### `TASK-20260712-1701-trading-simulator-T01-S03` 创建模块骨架和共享契约
 
