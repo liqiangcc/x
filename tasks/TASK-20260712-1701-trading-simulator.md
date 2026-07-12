@@ -462,7 +462,7 @@
 
 ### `TASK-20260712-1701-trading-simulator-T06` P2 React 响应式交易界面
 
-- Status: `pending`
+- Status: `done`
 - Depends on: `TASK-20260712-1701-trading-simulator-T05`
 - Goal: 提供桌面和手机端均可完成全流程的匿名候选与交易 SPA。
 - Files likely touched: `web/simulator/`, `tests/e2e/`
@@ -542,12 +542,12 @@
 - Expected files: `web/simulator/src/components/PortfolioPanel.jsx`, `web/simulator/src/components/OrderEditor.jsx`, `web/simulator/src/components/MobileTradeBar.jsx`
 - Validation: `npm run test:web` -> passed (11 tests)
 - Changed files: `web/simulator/src/components/PortfolioPanel.jsx`, `web/simulator/src/components/OrderEditor.jsx`, `web/simulator/src/components/OrderEditor.test.jsx`, `web/simulator/src/components/MobileTradeBar.jsx`, `web/simulator/src/pages/TradePage.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `d3e2b2e3`
 - Notes: 交易页展示权益、可用/冻结现金、持仓、可卖数量和盈亏；支持买卖预览、理由必填、逐单提交、修改和取消，并在确认区显示数量、预计金额、费用及冻结资产。完成决策与推进按会话状态切换，手机端提供固定底部操作条。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S06` 完成响应式和无障碍验收
 
-- Status: `pending`
+- Status: `done`
 - Goal: 验证四种目标尺寸下核心流程可用。
 - Steps:
   - 添加 `375x667`、`390x844`、`768x1024`、`1440x900` Playwright 项目。
@@ -555,9 +555,10 @@
   - 验证无核心横向滚动、触摸目标、焦点顺序和横屏图表。
   - 保存失败截图和 trace，不提交无关生成物。
 - Expected files: `tests/e2e/simulator-responsive.spec.js`, `playwright.config.js`, `web/simulator/src/styles/`
-- Validation: `npm run test:e2e`
+- Validation: `npm run test:e2e` -> passed (6 tests across 375x667, 390x844, 768x1024 and 1440x900; 2 non-mobile landscape cases skipped by design)
+- Changed files: `playwright.config.js`, `tests/e2e/simulator-responsive.spec.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: Playwright 四项目覆盖创建、匿名候选、图表、下单确认、完成决策与推进；检查页面无核心横向溢出、手机可见操作目标至少 44px、导航焦点顺序，以及两种手机宽度下横屏图表高度。失败时保留 screenshot/trace，成功生成物不提交。
 
 ### `TASK-20260712-1701-trading-simulator-T07` P2 复盘与最终验收
 
