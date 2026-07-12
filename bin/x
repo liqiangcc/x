@@ -100,6 +100,7 @@ function printUsage() {
   x proxy pool diagnose [--samples 100] [--concurrency 16] [--timeout-ms 3000] [--json]
   x proxy pool probe [--duration 10m] [--interval 30s] [--samples 20] [--concurrency 2] [--hard-deadline-ms 5000]
   x benchmark proxy-sync --codes codes.json [--period daily|yearly] [--samples 100] [--expected-latest-date YYYYMMDD] [--json]
+  x benchmark kline-engines [--engines local,proxy-pool,aws,aws-router,huaweicloud] [--code 600519] [--period daily|yearly] [--lmt 1] [--attempts 3] [--timeout-ms 30000] [--json]
   x proxy pool verify [--concurrency 8] [--timeout-ms 6000] [--limit N] [--output file]
   x run list
   x run show <run_id>
@@ -2283,6 +2284,29 @@ async function commandProxyPool(argv) {
 
 async function commandBenchmark(argv) {
   const kind = argv[0];
+  if (kind === "kline-engines") {
+    const options = parseOptions(argv.slice(1));
+    if (options.config) options.config = rootPath(options.config);
+    const { runEngineBenchmark } = require("./../src/kline/engine_benchmark");
+    const report = await runEngineBenchmark(options);
+    const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    const runDir = path.join(DEFAULT_RUNS_DIR, "benchmark", "kline-engines", runId);
+    const reportFile = path.join(runDir, "report.json");
+    await fs.mkdir(runDir, { recursive: true });
+    await fs.writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    report.report = rel(reportFile);
+    if (options.json) {
+      printJson(report);
+    } else {
+      console.log(`Kline engine benchmark: ${report.input} ${report.period} lmt=${report.lmt}`);
+      console.log("engine\tsuccess\tavg_ms\tp50_ms\tp95_ms\tp99_ms\terrors");
+      for (const [engine, summary] of Object.entries(report.summary)) {
+        console.log([engine, `${summary.success}/${summary.attempts}`, summary.avg_ms ?? "n/a", summary.p50_ms ?? "n/a", summary.p95_ms ?? "n/a", summary.p99_ms ?? "n/a", JSON.stringify(summary.error_counts)].join("\t"));
+      }
+      console.log(`Report: ${report.report}`);
+    }
+    return;
+  }
   if (kind !== "proxy-sync") throw new Error(`Unknown benchmark: ${kind ?? ""}`);
   const options = parseOptions(argv.slice(1), { period: "daily", samples: "100" });
   if (!options.codes) throw new Error("benchmark proxy-sync requires --codes <codes.json>.");
