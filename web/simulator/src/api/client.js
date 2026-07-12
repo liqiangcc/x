@@ -24,6 +24,8 @@ export function createApiClient({ fetchImpl = fetch, prefix = "/api" } = {}) {
     advance: (sessionId, expectedVersion) => request(`/sessions/${sessionId}/advance`, { body: { expectedVersion }, method: "POST" }),
     completeDecision: (sessionId, expectedVersion) => request(`/sessions/${sessionId}/complete-decision`, { body: { expectedVersion }, method: "POST" }),
     createOrder: (sessionId, body) => request(`/sessions/${sessionId}/orders`, { body, method: "POST" }),
+    updateOrder: (sessionId, orderId, body) => request(`/sessions/${sessionId}/orders/${orderId}`, { body, method: "PATCH" }),
+    cancelOrder: (sessionId, orderId, expectedVersion) => request(`/sessions/${sessionId}/orders/${orderId}`, { body: { expectedVersion }, method: "DELETE" }),
     createSession: (body) => request("/sessions", { body, method: "POST" }),
     getCandidates: (sessionId, query = "") => request(`/sessions/${sessionId}/candidates${query}`),
     getChart: (sessionId, candidateId) => request(`/sessions/${sessionId}/chart/${candidateId}`),

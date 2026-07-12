@@ -527,12 +527,12 @@
 - Expected files: `web/simulator/src/charts/DailyChart.jsx`, `web/simulator/src/charts/YearlyChart.jsx`, `web/simulator/src/pages/TradePage.jsx`
 - Validation: `npm run test:web && npm run build:web` -> passed (9 tests; production build succeeded, ECharts chunk-size warning is non-blocking)
 - Changed files: `web/simulator/src/charts/DailyChart.jsx`, `web/simulator/src/charts/YearlyChart.jsx`, `web/simulator/src/charts/useEChart.js`, `web/simulator/src/charts/charts.test.jsx`, `web/simulator/src/pages/TradePage.jsx`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `a61f3268`
 - Notes: ECharts 日线视图包含 K 线、BOLL 三轨、成交量、去年最高价和首次突破标记，年线为独立 K 线副视图；桌面同时显示，手机标签切换，并启用触摸缩放、拖动、十字光标和横屏高度适配。所有序列来自截至模拟日的匿名 chart API。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S05` 实现账户和交易操作
 
-- Status: `pending`
+- Status: `done`
 - Goal: 桌面和手机都能编辑多笔订单、完成决策和推进会话。
 - Steps:
   - 展示现金、冻结资金、持仓、可卖数量和盈亏。
@@ -540,9 +540,10 @@
   - 下单确认展示数量、预计金额、费用和冻结资产。
   - 手机使用底部固定交易操作区。
 - Expected files: `web/simulator/src/components/PortfolioPanel.jsx`, `web/simulator/src/components/OrderEditor.jsx`, `web/simulator/src/components/MobileTradeBar.jsx`
-- Validation: `npm run test:web`
+- Validation: `npm run test:web` -> passed (11 tests)
+- Changed files: `web/simulator/src/components/PortfolioPanel.jsx`, `web/simulator/src/components/OrderEditor.jsx`, `web/simulator/src/components/OrderEditor.test.jsx`, `web/simulator/src/components/MobileTradeBar.jsx`, `web/simulator/src/pages/TradePage.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 交易页展示权益、可用/冻结现金、持仓、可卖数量和盈亏；支持买卖预览、理由必填、逐单提交、修改和取消，并在确认区显示数量、预计金额、费用及冻结资产。完成决策与推进按会话状态切换，手机端提供固定底部操作条。
 
 ##### `TASK-20260712-1701-trading-simulator-T06-S06` 完成响应式和无障碍验收
 
