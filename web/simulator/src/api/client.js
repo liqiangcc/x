@@ -31,6 +31,8 @@ export function createApiClient({ fetchImpl = fetch, prefix = "/api" } = {}) {
     getChart: (sessionId, candidateId) => request(`/sessions/${sessionId}/chart/${candidateId}`),
     getPortfolio: (sessionId) => request(`/sessions/${sessionId}/portfolio`),
     getReport: (sessionId) => request(`/sessions/${sessionId}/report`),
+    finish: (sessionId, expectedVersion) => request(`/sessions/${sessionId}/finish`, { body: { expectedVersion }, method: "POST" }),
+    exportSession: (sessionId) => request(`/sessions/${sessionId}/export`, { method: "POST" }),
     cloneSession: (sessionId, body) => request(`/sessions/${sessionId}/clone`, { body, method: "POST" }),
     reveal: (sessionId, expectedVersion) => request(`/sessions/${sessionId}/reveal`, { body: { expectedVersion }, method: "POST" }),
   };

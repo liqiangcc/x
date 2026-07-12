@@ -120,33 +120,42 @@ function identityRows(entry) {
 
 function buildSessionReport(entry) {
   const account = accountDto(entry.session.finalAccountSnapshot ?? entry.account.snapshot(), entry.aliases);
+  const candidates = entry.session.candidateSnapshot.candidates;
+  const orders = entry.orderService ? [...entry.orderService.orders.values()].map((order) => ({
+    candidateId: order.candidateId,
+    candidateSnapshot: candidates.find((candidate) => candidate.candidateId === order.candidateId) ?? null,
+    estimatedFees: order.estimatedFees,
+    estimatedPrice: order.estimatedPrice,
+    id: order.id,
+    quantity: order.quantity,
+    reason: order.reason,
+    rejectionReason: order.rejectionReason,
+    side: order.side,
+    status: order.status,
+    tradingDate: order.tradingDate,
+  })) : [];
   return {
     account,
     benchmark: benchmarkReport(entry.benchmarkSeries),
-    candidates: entry.session.candidateSnapshot.candidates,
+    candidates,
     dataMode: "legacy_approximate",
     dataVersion: entry.dataVersion,
     events: entry.session.events.map(eventDto),
+    equityCurve: (entry.accountHistory ?? []).map((snapshot) => ({
+      date: snapshot.date,
+      equity: snapshot.equity,
+      realizedPnl: snapshot.realizedPnl,
+      unrealizedPnl: snapshot.unrealizedPnl,
+    })),
     fills: (entry.engine?.fills ?? []).map(fillDto),
     identities: identityRows(entry),
     lineage: entry.lineage ?? null,
-    orders: entry.orderService ? [...entry.orderService.orders.values()].map((order) => ({
-      candidateId: order.candidateId,
-      estimatedFees: order.estimatedFees,
-      estimatedPrice: order.estimatedPrice,
-      id: order.id,
-      quantity: order.quantity,
-      reason: order.reason,
-      rejectionReason: order.rejectionReason,
-      side: order.side,
-      status: order.status,
-      tradingDate: order.tradingDate,
-    })) : [],
+    orders,
     performance: calculatePerformance({
       accountSnapshots: entry.accountHistory ?? [{ date: entry.session.clock.currentDate, ...account }],
       fills: entry.engine?.fills ?? [],
       initialCash: entry.account.initialCash,
-      orders: entry.orderService ? [...entry.orderService.orders.values()] : [],
+      orders,
     }),
     revealedAt: entry.session.revealedAt ?? null,
     session: sessionDto(entry),

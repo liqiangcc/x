@@ -582,12 +582,12 @@
 - Expected files: `src/simulator/application/reports.js`, `tests/simulator-report.test.js`
 - Validation: `node --test tests/simulator-report.test.js tests/simulator-api-reveal.test.js tests/simulator-api-anonymity.test.js` -> passed (9 tests)
 - Changed files: `src/simulator/application/reports.js`, `src/simulator/application/runtime_service.js`, `tests/simulator-report.test.js`, `tasks/TASK-20260712-1701-trading-simulator.md`
-- Commit: `pending`
+- Commit: `8d06e8c5`
 - Notes: 报告稳定计算总收益、年化、最大回撤、波动率、Sharpe、Sortino、已实现/未实现盈亏、费用、滑点、胜率、盈亏比和换手率；短会话、无成交和未平仓均有确定输出。可注入沪深300序列时输出基准收益，当前仓库未发现基准数据则明确 benchmark_unavailable TODO。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S02` 实现交易练习复盘页
 
-- Status: `pending`
+- Status: `done`
 - Goal: 将收益与当时候选、证据、理由和会话分支关联展示。
 - Steps:
   - 展示权益、回撤、基准和费用图表。
@@ -595,9 +595,10 @@
   - 展示实名揭晓、盲测状态和父子会话关系。
   - 对未交易候选和未平仓持仓提供明确说明。
 - Expected files: `web/simulator/src/pages/ReviewPage.jsx`, `web/simulator/src/components/PerformanceCharts.jsx`, `web/simulator/src/components/TradeReview.jsx`
-- Validation: `npm run test:web && npm run build:web`
+- Validation: `node --test tests/simulator-report.test.js tests/simulator-api-anonymity.test.js && npm run test:web && npm run build:web` -> passed (6 backend tests, 13 frontend tests, production build succeeded)
+- Changed files: `src/simulator/application/reports.js`, `web/simulator/src/pages/ReviewPage.jsx`, `web/simulator/src/components/PerformanceCharts.jsx`, `web/simulator/src/components/PerformanceCharts.test.jsx`, `web/simulator/src/components/TradeReview.jsx`, `web/simulator/src/api/client.js`, `web/simulator/src/styles/base.css`, `tasks/TASK-20260712-1701-trading-simulator.md`
 - Commit: `pending`
-- Notes:
+- Notes: 复盘页展示收益/回撤/费用指标、权益和回撤曲线、基准状态、每笔订单的匿名候选证据/理由/成交差异，以及未交易候选、未平仓持仓、揭晓状态和父子关系；支持结束估值、规则允许时揭晓及 JSON 导出。
 
 ##### `TASK-20260712-1701-trading-simulator-T07-S03` 完成端到端业务验收
 
