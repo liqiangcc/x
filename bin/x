@@ -75,7 +75,7 @@ function printUsage() {
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
   x kline fetch <code_or_secid> [--period daily|yearly] [--policy name|--engine engine] [--proxy-pool-url url] [--proxy-max-attempts N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--limit N] [--batch-size N] [--offset N] [--proxy-pool-url url] [--proxy-max-attempts N] [--force] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--refresh-mode incremental|full] [--limit N] [--batch-size N] [--proxy-preflight] [--proxy-min-available N] [--proxy-min-success-rate 0..1] [--concurrency N|auto] [--checkpoint-every N] [--retry-attempts N] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
@@ -125,7 +125,7 @@ function parseOptions(argv, defaults = {}) {
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (["latest", "commit", "force", "forcePool", "forceUniverse", "json", "allowPartial"].includes(key)) {
+    if (["latest", "commit", "force", "forcePool", "forceUniverse", "json", "allowPartial", "proxyPreflight", "noProxyPreflight"].includes(key)) {
       options[key] = true;
       continue;
     }
@@ -763,6 +763,14 @@ async function commandKlineFetch(argv) {
 
 function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {}) {
   if (options.policy) args.push("--policy", options.policy);
+  if (options.refreshMode) args.push("--refresh-mode", options.refreshMode);
+  if (options.checkpointEvery) args.push("--checkpoint-every", String(options.checkpointEvery));
+  if (options.proxyPreflight) args.push("--proxy-preflight");
+  if (options.noProxyPreflight) args.push("--no-proxy-preflight");
+  if (options.proxyMinAvailable) args.push("--proxy-min-available", String(options.proxyMinAvailable));
+  if (options.proxyMinSuccessRate) args.push("--proxy-min-success-rate", String(options.proxyMinSuccessRate));
+  if (options.proxyPreflightConcurrency) args.push("--proxy-preflight-concurrency", String(options.proxyPreflightConcurrency));
+  if (options.proxyPreflightTimeoutMs) args.push("--proxy-preflight-timeout-ms", String(options.proxyPreflightTimeoutMs));
   if (options.limit) {
     args.push("--limit", String(options.limit));
   }

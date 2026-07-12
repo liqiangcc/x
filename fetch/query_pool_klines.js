@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
+const crypto = require("node:crypto");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
 const { getKlines, inspectKlinePayload } = require("./check_kline_empty");
-const { isStageLogEnabled, stageLog, startStageHeartbeat } = require("../src/core/stage_log");
+const { stageLog, startStageHeartbeat } = require("../src/core/stage_log");
+const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("../src/proxy/pool");
+const { ProxyBatchRuntime } = require("../src/proxy/runtime");
 
-const FETCH_KLINE_SCRIPT = path.resolve(__dirname, "./fetch_kline.js");
 const VALID_ENGINES = new Set(["auto", "local", "aws", "aws-router", "huaweicloud", "proxy-pool"]);
 const PERIODS = new Set(["daily", "yearly"]);
 
 function printUsage() {
   console.error(
-    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--policy <name> | --engine <engine>] [--proxy-pool-url <url>] [--proxy-max-attempts <N>] [--aws-region <r1,r2,...>] [--router-region <auto|all|r1,r2,...>] [--huaweicloud-region <all|r1,r2,...>] [--huaweicloud-region-start-index <N>] [--huaweicloud-targets <file>] [--lambda-name <name>] [--config <file>] [--output-dir <dir>] [--limit <N>] [--batch-size <N>] [--offset <N>] [--force] [--concurrency <N>] [--retry-attempts <N>] [--retry-delay-ms <N>] [--retry-concurrency <N>] [--min-success-rate <0..1>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
+    "Usage: node fetch/query_pool_klines.js <input_dir|codes.json> [--period <daily|yearly>] [--policy <name> | --engine <engine>] [--refresh-mode <incremental|full>] [--proxy-preflight] [--proxy-min-available <N>] [--proxy-min-success-rate <0..1>] [--concurrency <N|auto>] [--checkpoint-every <N>] [--expected-latest-date <YYYYMMDD|YYYY-MM-DD>] [--freshness-codes <codes.json>]"
   );
 }
 
@@ -58,6 +59,7 @@ function parseArguments(argv) {
     awsRegions: null,
     batchSize: null,
     concurrency: null,
+    checkpointEvery: 50,
     configFile: null,
     engine: "auto",
     force: false,
@@ -74,8 +76,14 @@ function parseArguments(argv) {
     offset: 0,
     outputDir: path.resolve("data/kline"),
     period: "daily",
+    refreshMode: "incremental",
     policy: null,
     proxyMaxAttempts: 3,
+    proxyMinAvailable: 5,
+    proxyMinSuccessRate: 0.6,
+    proxyPreflight: null,
+    proxyPreflightConcurrency: 16,
+    proxyPreflightTimeoutMs: 3000,
     proxyPoolUrl: null,
     retryAttempts: 0,
     retryConcurrency: null,
@@ -92,6 +100,20 @@ function parseArguments(argv) {
         throw new Error(`Invalid value for --period: ${nextArg ?? ""}`);
       }
       options.period = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--refresh-mode") {
+      const nextArg = argv[index + 1];
+      if (!nextArg || !["incremental", "full"].includes(nextArg)) throw new Error(`Invalid value for --refresh-mode: ${nextArg ?? ""}`);
+      options.refreshMode = nextArg;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--checkpoint-every") {
+      options.checkpointEvery = parsePositiveInteger(argv[index + 1], "--checkpoint-every");
       index += 1;
       continue;
     }
@@ -127,6 +149,40 @@ function parseArguments(argv) {
     if (arg === "--proxy-max-attempts") {
       const nextArg = argv[index + 1];
       options.proxyMaxAttempts = parsePositiveInteger(nextArg, "--proxy-max-attempts");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-preflight") {
+      options.proxyPreflight = true;
+      continue;
+    }
+
+    if (arg === "--no-proxy-preflight") {
+      options.proxyPreflight = false;
+      continue;
+    }
+
+    if (arg === "--proxy-min-available") {
+      options.proxyMinAvailable = parsePositiveInteger(argv[index + 1], "--proxy-min-available");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-min-success-rate") {
+      options.proxyMinSuccessRate = parseSuccessRate(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-preflight-concurrency") {
+      options.proxyPreflightConcurrency = parsePositiveInteger(argv[index + 1], "--proxy-preflight-concurrency");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--proxy-preflight-timeout-ms") {
+      options.proxyPreflightTimeoutMs = parsePositiveInteger(argv[index + 1], "--proxy-preflight-timeout-ms");
       index += 1;
       continue;
     }
@@ -231,7 +287,7 @@ function parseArguments(argv) {
 
     if (arg === "--concurrency") {
       const nextArg = argv[index + 1];
-      options.concurrency = parsePositiveInteger(nextArg, "--concurrency");
+      options.concurrency = nextArg === "auto" ? null : parsePositiveInteger(nextArg, "--concurrency");
       index += 1;
       continue;
     }
@@ -299,7 +355,7 @@ function parseArguments(argv) {
     return null;
   }
 
-  if (options.concurrency === null) {
+  if (options.concurrency === null && options.policy !== "proxy-only") {
     options.concurrency = defaultConcurrency(options.engine);
   }
   if (options.retryConcurrency === null) {
@@ -543,8 +599,40 @@ function normalizeKlinePayload(payload, code, secid, period) {
   };
 }
 
+async function readMergeBase(outputPath, legacyOutputPath) {
+  for (const file of [outputPath, legacyOutputPath]) {
+    try {
+      const payload = JSON.parse(await fs.readFile(file, "utf8"));
+      if (!inspectKlinePayload(payload)) return payload;
+    } catch {}
+  }
+  return null;
+}
+
+function calculateIncrementalLimit(payload, period, expectedLatestDate, refreshMode) {
+  if (refreshMode === "full" || !payload || !expectedLatestDate) return 10000;
+  const latestDate = latestKlineDate(payload);
+  if (!latestDate) return 10000;
+  if (period === "yearly") {
+    return Math.max(2, Number(expectedLatestDate.slice(0, 4)) - Number(latestDate.slice(0, 4)) + 2);
+  }
+  const calendarDays = Math.max(0, Math.ceil((Date.parse(expectedLatestDate) - Date.parse(latestDate)) / 86_400_000));
+  return Math.min(10000, Math.max(20, Math.ceil(calendarDays * 1.5) + 10));
+}
+
+function mergeKlinePayload(basePayload, fetchedPayload, code, secid, period) {
+  const fetched = normalizeKlinePayload(fetchedPayload, code, secid, period);
+  if (!basePayload) return fetched;
+  const base = normalizeKlinePayload(basePayload, code, secid, period);
+  const rows = new Map();
+  for (const row of [...base.klines, ...fetched.klines]) {
+    if (typeof row === "string") rows.set(row.split(",")[0], row);
+  }
+  return { ...fetched, klines: [...rows.values()].sort((left, right) => left.split(",")[0].localeCompare(right.split(",")[0])) };
+}
+
 async function fetchSingleKline(secid, options) {
-  const args = [FETCH_KLINE_SCRIPT, secid, "--period", options.period];
+  const args = [secid, "--period", options.period];
   if (options.policy) args.push("--policy", options.policy);
   else args.push("--engine", options.engine);
 
@@ -588,48 +676,12 @@ async function fetchSingleKline(secid, options) {
     args.push("--huaweicloud-region-start-index", String(options.huaweiCloudRegionStartIndex));
   }
 
-  const { stdout } = await runFetchKlineProcess(args, extractStockCode(secid));
-  return JSON.parse(stdout);
-}
-
-function prefixChildStderr(code, text) {
-  return String(text)
-    .split(/\r?\n/)
-    .map((line) => (line ? `[child ${code}] ${line}` : line))
-    .join("\n");
-}
-
-function runFetchKlineProcess(args, code) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      const text = prefixChildStderr(code, chunk.toString());
-      stderr += text;
-      if (isStageLogEnabled()) {
-        process.stderr.write(text);
-      }
-    });
-    child.on("error", reject);
-    child.on("close", (exitCode) => {
-      if (exitCode === 0) {
-        resolve({ stdout, stderr });
-        return;
-      }
-      const error = new Error(stderr || `fetch_kline exited with code ${exitCode ?? 1}`);
-      error.code = exitCode ?? 1;
-      error.stdout = stdout;
-      error.stderr = stderr;
-      reject(error);
-    });
-  });
+  const { applyConfigDefaults, parseArguments, resolveKline } = require("./fetch_kline");
+  const parsed = parseArguments(args);
+  const resolved = await applyConfigDefaults(parsed);
+  resolved.klineLimit = options.klineLimit ?? resolved.klineLimit;
+  resolved.proxyRuntime = options.proxyRuntime;
+  return resolveKline(resolved);
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -645,6 +697,23 @@ async function mapWithConcurrency(items, concurrency, mapper) {
   });
 
   await Promise.all(workers);
+  return results;
+}
+
+async function mapWithAdaptiveConcurrency(items, initialConcurrency, maxConcurrency, mapper, history) {
+  const results = [];
+  let concurrency = initialConcurrency;
+  for (let offset = 0; offset < items.length;) {
+    const batch = items.slice(offset, offset + concurrency);
+    const batchResults = await Promise.all(batch.map((item, index) => mapper(item, offset + index)));
+    results.push(...batchResults);
+    const successes = batchResults.filter((result) => result.countKey !== "failed").length;
+    const successRate = batchResults.length === 0 ? 1 : successes / batchResults.length;
+    history.push({ offset, concurrency, success_rate: successRate });
+    if (successRate >= 0.8) concurrency = Math.min(maxConcurrency, concurrency + 1);
+    else if (successRate < 0.5) concurrency = Math.max(1, Math.floor(concurrency / 2));
+    offset += batch.length;
+  }
   return results;
 }
 
@@ -690,7 +759,7 @@ function classifyFailure(error) {
     return "rate_limited";
   }
   if (
-    /Lambda returned statusCode 5\d\d|aws-router returned statusCode 5\d\d|FunctionGraph returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
+    /Lambda returned statusCode 5\d\d|aws-router returned statusCode 5\d\d|FunctionGraph returned statusCode 5\d\d|HTTP 5\d\d|UND_ERR_SOCKET|SocketError|socket hang up|fetch failed|ETIMEDOUT|ECONNRESET|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)
   ) {
     return "transient_network";
   }
@@ -732,6 +801,7 @@ function createSummary(options, selection) {
     batch_size: options.batchSize,
     candidate_codes: selection.candidateCodes,
     concurrency: options.concurrency,
+    checkpoint_every: options.checkpointEvery,
     engine: options.engine,
     policy: options.policy,
     expected_latest_date: options.expectedLatestDate,
@@ -747,6 +817,7 @@ function createSummary(options, selection) {
     min_success_rate: options.minSuccessRate,
     offset: options.offset,
     period: options.period,
+    refresh_mode: options.refreshMode,
     retry_attempts: options.retryAttempts,
     retry_concurrency: options.retryConcurrency,
     retry_delay_ms: options.retryDelayMs,
@@ -771,6 +842,9 @@ function createSummary(options, selection) {
     success_rate: selection.selectedCodes.length === 0 ? 1 : 0,
     attempts_by_code: {},
     engine_counts: {},
+    incremental_fetches: 0,
+    full_fetches: 0,
+    fetched_points: 0,
     duration_ms_by_code: {},
     avg_duration_ms: null,
     p50_duration_ms: null,
@@ -878,7 +952,6 @@ async function existingShardedResult(outputPath, code, secid, options) {
 
   const freshness = inspectFreshness(inspected.payload, code, options);
   if (freshness) {
-    await removeInvalidKlineFile(outputPath);
     return null;
   }
 
@@ -909,7 +982,6 @@ async function migratedLegacyResult(legacyOutputPath, outputPath, code, secid, o
   const normalized = normalizeKlinePayload(inspected.payload, code, secid, options.period);
   const freshness = inspectFreshness(normalized, code, options);
   if (freshness) {
-    await removeInvalidKlineFile(legacyOutputPath);
     return null;
   }
 
@@ -1015,10 +1087,12 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
   let normalized;
   let validationFailure;
   let fallbackFrom = null;
+  const mergeBase = options.refreshMode === "incremental" ? await readMergeBase(outputPath, legacyOutputPath) : null;
+  const klineLimit = calculateIncrementalLimit(mergeBase, options.period, options.expectedLatestDate, options.refreshMode);
 
   try {
-    data = await fetchKline(secid, fetchOptionsForIndex(options, itemIndex));
-    normalized = normalizeKlinePayload(data, code, secid, options.period);
+    data = await fetchKline(secid, { ...fetchOptionsForIndex(options, itemIndex), klineLimit });
+    normalized = mergeKlinePayload(mergeBase, data, code, secid, options.period);
     validationFailure = validateNormalizedKline(normalized, code, secid, options);
   } catch (error) {
     const errorClass = classifyFailure(error);
@@ -1090,7 +1164,10 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
 
   try {
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+    const tempOutputPath = `${outputPath}.${process.pid}.tmp`;
+    await fs.writeFile(tempOutputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+    await fs.rename(tempOutputPath, outputPath);
+    if (legacyOutputPath !== outputPath) await fs.rm(legacyOutputPath, { force: true });
     return {
       code,
       countKey: "success",
@@ -1114,6 +1191,8 @@ async function processCode(inputCode, options, fetchKline, itemIndex = 0) {
         file: outputPath,
         secid,
         points: normalized.klines.length,
+        fetched_points: normalizeKlinePayload(data, code, secid, options.period).klines.length,
+        requested_kline_limit: klineLimit,
       },
     };
   } catch (error) {
@@ -1137,6 +1216,9 @@ function summarizeFinalResults(summary, results) {
   summary.skipped_existing = 0;
   summary.failed = 0;
   summary.engine_counts = {};
+  summary.incremental_fetches = 0;
+  summary.full_fetches = 0;
+  summary.fetched_points = 0;
   summary.region_counts = {};
   summary.duration_ms_by_code = {};
   summary.avg_duration_ms = null;
@@ -1153,6 +1235,9 @@ function summarizeFinalResults(summary, results) {
     summary.files[result.code] = result.file;
     summary[result.countKey] += 1;
     if (result.countKey === "success") {
+      summary.fetched_points += Number(result.file.fetched_points ?? 0);
+      if (Number(result.file.requested_kline_limit) < 10000) summary.incremental_fetches += 1;
+      else summary.full_fetches += 1;
       incrementCount(summary.engine_counts, result.file.engine);
       incrementCount(summary.region_counts, result.file.region);
       if (Number.isFinite(result.file.total_duration_ms)) {
@@ -1243,7 +1328,7 @@ async function runEntriesWithStage(entries, {
   }));
 
   try {
-    const results = await mapWithConcurrency(entries, concurrency, async (entry, mapperIndex) => {
+    const mapper = async (entry, mapperIndex) => {
       const inputCode = entry.inputCode;
       const code = extractStockCode(inputCode);
       const itemIndex = itemIndexForEntry(entry, mapperIndex);
@@ -1264,6 +1349,12 @@ async function runEntriesWithStage(entries, {
       try {
         const result = await processCode(inputCode, options, fetchKline, itemIndex);
         completed += 1;
+        if (options.checkpointPath && completed % options.checkpointEvery === 0) {
+          const checkpoint = { attempt, completed, total, updated_at: new Date().toISOString() };
+          const temp = `${options.checkpointPath}.${process.pid}.tmp`;
+          await fs.writeFile(temp, `${JSON.stringify(checkpoint, null, 2)}\n`, "utf8");
+          await fs.rename(temp, options.checkpointPath);
+        }
         stageLog("end", "kline_code", {
           attempt,
           code: result.code ?? code,
@@ -1295,7 +1386,10 @@ async function runEntriesWithStage(entries, {
       } finally {
         inFlight.delete(code);
       }
-    });
+    };
+    const results = options.adaptiveConcurrency
+      ? await mapWithAdaptiveConcurrency(entries, concurrency, options.maxAdaptiveConcurrency, mapper, options.concurrencyHistory)
+      : await mapWithConcurrency(entries, concurrency, mapper);
     stageLog("end", batchStage, {
       attempt,
       completed,
@@ -1311,6 +1405,8 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   const effectiveOptions = {
     awsRegions: options.awsRegions ?? null,
     batchSize: options.batchSize ?? null,
+    checkpointEvery: options.checkpointEvery ?? 50,
+    concurrencyHistory: [],
     concurrency: options.concurrency ?? defaultConcurrency(options.engine ?? "auto"),
     configFile: options.configFile ?? null,
     engine: options.engine ?? "auto",
@@ -1328,14 +1424,45 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     offset: options.offset ?? 0,
     outputDir: options.outputDir ?? path.resolve("data/kline"),
     period: options.period ?? "daily",
+    refreshMode: options.refreshMode ?? "incremental",
     policy: options.policy ?? null,
     proxyMaxAttempts: options.proxyMaxAttempts ?? 3,
+    proxyMinAvailable: options.proxyMinAvailable ?? 5,
+    proxyMinSuccessRate: options.proxyMinSuccessRate ?? 0.6,
+    proxyPreflight: options.proxyPreflight ?? options.policy === "proxy-only",
+    proxyPreflightConcurrency: options.proxyPreflightConcurrency ?? 16,
+    proxyPreflightTimeoutMs: options.proxyPreflightTimeoutMs ?? 3000,
     proxyPoolUrl: options.proxyPoolUrl ?? null,
     retryAttempts: options.retryAttempts ?? 0,
     retryConcurrency: options.retryConcurrency ?? 1,
     retryDelayMs: options.retryDelayMs ?? 1000,
     routerRegion: options.routerRegion ?? "auto",
   };
+  let proxyRuntime = null;
+  if (effectiveOptions.proxyPreflight && fetchKline === fetchSingleKline) {
+    proxyRuntime = new ProxyBatchRuntime({
+      classifyError: classifyProxyError,
+      cooldownForError: cooldownMs,
+      stateFile: process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE,
+    });
+    try {
+      effectiveOptions.proxy_preflight = await proxyRuntime.prepare({
+        concurrency: effectiveOptions.proxyPreflightConcurrency,
+        minAvailable: effectiveOptions.proxyMinAvailable,
+        minSuccessRate: effectiveOptions.proxyMinSuccessRate,
+        timeoutMs: effectiveOptions.proxyPreflightTimeoutMs,
+      });
+    } catch (error) {
+      await proxyRuntime.close();
+      throw error;
+    }
+    effectiveOptions.proxyRuntime = proxyRuntime;
+    if (options.concurrency === null || options.concurrency === undefined) {
+      effectiveOptions.concurrency = Math.max(1, Math.min(16, proxyRuntime.available.length));
+      effectiveOptions.adaptiveConcurrency = true;
+      effectiveOptions.maxAdaptiveConcurrency = Math.min(16, proxyRuntime.available.length);
+    }
+  }
   effectiveOptions.freshnessCodes = await loadFreshnessCodes({
     ...options,
     expectedLatestDate: effectiveOptions.expectedLatestDate,
@@ -1367,8 +1494,22 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
   const selectedCodes = selection.selectedCodes;
   const periodDir = path.join(effectiveOptions.outputDir, effectiveOptions.period);
   await fs.mkdir(periodDir, { recursive: true });
+  const checkpointId = crypto.createHash("sha256")
+    .update(`${effectiveOptions.inputPath}:${effectiveOptions.outputDir}:${effectiveOptions.period}`)
+    .digest("hex").slice(0, 12);
+  effectiveOptions.checkpointPath = path.resolve(__dirname, `../var/kline-sync/${checkpointId}.json`);
+  await fs.mkdir(path.dirname(effectiveOptions.checkpointPath), { recursive: true });
 
   const summary = createSummary(effectiveOptions, selection);
+  summary.proxy_preflight = effectiveOptions.proxy_preflight ?? null;
+  summary.concurrency_history = effectiveOptions.concurrencyHistory;
+  const projectedLatency = summary.proxy_preflight?.p50_duration_ms;
+  summary.projected_duration_seconds = Number.isFinite(projectedLatency)
+    ? Math.ceil(selection.selectedCodes.length * projectedLatency / Math.max(1, effectiveOptions.concurrency) / 1000)
+    : null;
+  summary.projected_over_30_minutes = Number.isFinite(summary.projected_duration_seconds)
+    ? summary.projected_duration_seconds > 1800
+    : null;
   const selectedEntries = selectedCodes.map((inputCode, itemIndex) => ({ inputCode, itemIndex }));
   const initialResults = await runEntriesWithStage(selectedEntries, {
     attempt: 0,
@@ -1436,6 +1577,7 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     total_codes: summary.total_codes,
   });
   await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+  if (proxyRuntime) await proxyRuntime.close();
   stageLog("end", "kline_summary_write", {
     path: summaryPath,
     status: summary.status,
@@ -1469,7 +1611,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  calculateIncrementalLimit,
   defaultConcurrency,
+  mergeKlinePayload,
   parseArguments,
   queryPoolKlines,
 };

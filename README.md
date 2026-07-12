@@ -217,10 +217,14 @@ bin/x kline freshness data/kline --period daily \
   --expected-latest-date 20260710 \
   --repair-output /tmp/stale-daily.json --json
 bin/x kline sync /tmp/stale-daily.json --period daily --policy proxy-only \
-  --expected-latest-date 20260710 --freshness-codes /tmp/stale-daily.json
+  --refresh-mode incremental --expected-latest-date 20260710 \
+  --freshness-codes /tmp/stale-daily.json --proxy-preflight \
+  --concurrency auto --checkpoint-every 50
 ```
 
 未指定 `--expected-latest-date` 时，检查器使用有效文件最新日期分布的众数（并列取较新日期）。修复清单包含过期、缺失和无效文件；检查命令本身不会抓取或修改数据。
+
+`kline sync` 默认使用增量刷新：已有合法文件只请求覆盖缺口的安全窗口并按日期合并，缺失或无效文件才请求完整历史。`--refresh-mode full` 强制完整刷新，建议由外部周任务用于校准前复权历史。`proxy-only` 默认先并发验证代理，至少 5 个节点且成功率达到 60% 才开始；单进程批量 session 会复用候选、连接和内存健康状态。
 
 代理池固定使用 `Python3WebSpider/ProxyPool` 的已验证提交，通过 `area=CN` 做国内候选粗筛；`x` 会再次使用严格 TLS 请求 Eastmoney Kline，验证 JSON 和非空 K 线后才接受代理。`verify` 会逐个验证当前所有候选，并在 `runs/proxy-verify/` 下生成完整报告和按延迟排序的 `available.txt`；可用 `--limit N` 做小规模检查，或用 `--output file` 指定 JSON 报告。健康状态保存在忽略目录 `var/proxy-pool/`。免费代理失败时批量 Kline 会沿用现有本地 fallback；`auto` 和 GitHub Actions 默认仍使用原有云端链路。
 

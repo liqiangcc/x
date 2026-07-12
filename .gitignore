@@ -8,6 +8,7 @@ __pycache__/
 .env
 config/local.json
 var/proxy-pool/
+var/kline-sync/
 *.log
 *.tmp
 *.db

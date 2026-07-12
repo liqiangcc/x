@@ -17,7 +17,11 @@ class ProxyManager {
     const state = await this.healthStore.read();
     const ordered = rankCandidates(candidates, state, { ...options, strategy, target: probe.target });
     const failures = [];
-    for (const proxy of ordered.slice(0, Math.min(attempts, ordered.length))) {
+    let attempted = 0;
+    for (const proxy of ordered) {
+      if (attempted >= attempts) break;
+      if (options.acquire && !options.acquire(proxy)) continue;
+      attempted += 1;
       const startedAt = Date.now();
       try {
         const response = await this.transport(proxy, { ...probe.request, timeoutMs: options.timeoutMs });
@@ -28,6 +32,8 @@ class ProxyManager {
         const errorClass = this.classifyError(error);
         await this.healthStore.record(proxy, probe.target, { ok: false, durationMs: Date.now() - startedAt, errorClass });
         failures.push({ proxy_id: proxy.id, error_class: errorClass, error: error.message });
+      } finally {
+        if (options.release) options.release(proxy);
       }
     }
     const error = new Error(`All proxy attempts failed: ${failures.map((item) => `${item.proxy_id}:${item.error_class}`).join(", ")}`);

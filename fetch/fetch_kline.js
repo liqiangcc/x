@@ -92,6 +92,7 @@ function parseArguments(argv) {
     input: null,
     lambdaName: "kline",
     lambdaNameOverridden: false,
+    klineLimit: DEFAULT_KLINE_LMT,
     outputFile: null,
     period: "daily",
     policies: null,
@@ -152,6 +153,15 @@ function parseArguments(argv) {
         throw new Error("--proxy-max-attempts must be at least 1.");
       }
       options.proxyMaxAttempts = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--kline-limit") {
+      const nextArg = argv[index + 1];
+      const value = parseNonNegativeInteger(nextArg, "--kline-limit");
+      if (value < 1) throw new Error("--kline-limit must be at least 1.");
+      options.klineLimit = value;
       index += 1;
       continue;
     }
@@ -331,14 +341,14 @@ function resolveHuaweiCloudRegions(value, targets) {
   return uniqueRegions(regions);
 }
 
-async function fetchLocalKline(secid, klt) {
+async function fetchLocalKline(secid, klt, options = {}) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       return await getKline({
         secid,
         klt,
-        lmt: DEFAULT_KLINE_LMT,
+        lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
         end: "20991231",
       });
     } catch (error) {
@@ -357,7 +367,7 @@ async function fetchProxyPoolKline(secid, klt, options, env = process.env) {
   return getKlineViaProxyPool({
     secid,
     klt: Number(klt),
-    lmt: DEFAULT_KLINE_LMT,
+    lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
     end: "20991231",
   }, {
     apiKey: env.X_PROXY_POOL_API_KEY ?? env.PROXY_POOL_API_KEY ?? "",
@@ -365,10 +375,11 @@ async function fetchProxyPoolKline(secid, klt, options, env = process.env) {
     poolUrl: options.proxyPoolUrl ?? env.X_PROXY_POOL_URL,
     strategy: options.proxyStrategy ?? "balanced",
     timeoutMs: options.proxyTimeoutMs,
+    proxyRuntime: options.proxyRuntime,
   });
 }
 
-async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
+async function invokeAwsRegion(secid, klt, awsRegion, lambdaName, lmt = DEFAULT_KLINE_LMT) {
   let LambdaClient;
   let InvokeCommand;
   try {
@@ -381,7 +392,7 @@ async function invokeAwsRegion(secid, klt, awsRegion, lambdaName) {
   const payload = JSON.stringify({
     secid,
     klt: Number(klt),
-    lmt: DEFAULT_KLINE_LMT,
+    lmt,
     dry_run: true,
     format: "json",
     debug: false,
@@ -471,11 +482,11 @@ function assertRemoteKlinesAvailable(payload, sourceEngine, sourceRegion) {
   return payload;
 }
 
-async function fetchAwsKline(secid, klt, awsRegions, lambdaName) {
+async function fetchAwsKline(secid, klt, awsRegions, lambdaName, lmt = DEFAULT_KLINE_LMT) {
   let lastError;
   for (const region of awsRegions) {
     try {
-      const rawData = await invokeAwsRegion(secid, klt, region, lambdaName);
+      const rawData = await invokeAwsRegion(secid, klt, region, lambdaName, lmt);
       return assertRemoteKlinesAvailable(
         normalizeKlineData(rawData, secid, "aws", region),
         "aws",
@@ -514,7 +525,7 @@ async function fetchHuaweiCloudKline(secid, klt, options, env = process.env, fet
         payload: {
           end: "20991231",
           klt: Number(klt),
-          lmt: DEFAULT_KLINE_LMT,
+          lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
           secid,
         },
         secretKey,
@@ -566,7 +577,7 @@ async function fetchAwsRouterKline(secid, klt, options, env = process.env, fetch
       region: options.routerRegion ?? "auto",
       secid,
       klt: Number(klt),
-      lmt: DEFAULT_KLINE_LMT,
+      lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
       end: "20991231",
     }),
   });
@@ -607,14 +618,14 @@ async function resolveKline(options, deps = {}) {
   });
 
   const executors = createEngineRegistry({
-    local: async () => normalizeKlineData(await withStage("fetch_kline_local", { period: options.period, secid }, () => fetchLocal(secid, klt)), secid, "local"),
+    local: async () => normalizeKlineData(await withStage("fetch_kline_local", { period: options.period, secid }, () => fetchLocal(secid, klt, options)), secid, "local"),
     "proxy-pool": async (entry) => withStage("fetch_kline_proxy_pool", { period: options.period, secid }, () => fetchProxyPool(secid, klt, {
       ...options,
       proxyMaxAttempts: entry.maxAttempts ?? options.proxyMaxAttempts,
       proxyStrategy: entry.selector ?? "balanced",
       proxyTimeoutMs: entry.timeoutMs,
     })),
-    aws: async () => withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () => fetchAws(secid, klt, options.awsRegions, options.lambdaName)),
+    aws: async () => withStage("fetch_kline_aws", { period: options.period, region_count: options.awsRegions.length, secid }, () => fetchAws(secid, klt, options.awsRegions, options.lambdaName, options.klineLimit)),
     "aws-router": async () => withStage("fetch_kline_aws_router", { period: options.period, router_region: options.routerRegion ?? "auto", secid }, () => fetchRouter(secid, klt, options)),
     huaweicloud: async () => withStage("fetch_kline_huaweicloud", { period: options.period, secid }, () => fetchHuaweiCloud(secid, klt, options)),
   });

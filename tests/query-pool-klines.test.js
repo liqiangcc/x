@@ -5,7 +5,53 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
-const { parseArguments, queryPoolKlines } = require("../fetch/query_pool_klines");
+const { calculateIncrementalLimit, mergeKlinePayload, parseArguments, queryPoolKlines } = require("../fetch/query_pool_klines");
+
+test("incremental limits use a bounded overlap window", () => {
+  const payload = { klines: ["2026-07-01,1,1,1,1,1,1,0,0,0,0"] };
+  assert.equal(calculateIncrementalLimit(payload, "daily", "2026-07-10", "incremental"), 24);
+  assert.equal(calculateIncrementalLimit(payload, "yearly", "2026-07-10", "incremental"), 2);
+  assert.equal(calculateIncrementalLimit(payload, "daily", "2026-07-10", "full"), 10000);
+});
+
+test("incremental merge replaces overlap and preserves older rows", () => {
+  const row1 = "2026-07-01,1,1,1,1,1,1,0,0,0,0";
+  const row2 = "2026-07-02,2,2,2,2,2,2,0,0,0,0";
+  const replaced = "2026-07-02,3,3,3,3,3,3,0,0,0,0";
+  const merged = mergeKlinePayload({ code: "600519", klines: [row1, row2] }, { data: { code: "600519", market: 1, klines: [replaced] } }, "600519", "1.600519", "daily");
+  assert.deepEqual(merged.klines, [row1, replaced]);
+});
+
+test("queryPoolKlines incrementally fetches and atomically merges stale history", async (t) => {
+  const dir = await makeTempDir(t);
+  const input = path.join(dir, "codes.json");
+  const outputDir = path.join(dir, "kline");
+  await writeCodes(input, ["600519"]);
+  const output = path.join(outputDir, "daily", "600", "600519.json");
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  const oldRow = "2026-07-01,1,1,1,1,1,1,0,0,0,0";
+  await fs.writeFile(output, JSON.stringify({ code: "600519", market: 1, period: "daily", klines: [oldRow] }));
+  let requestedLimit;
+  const result = await queryPoolKlines({
+    concurrency: 1,
+    engine: "proxy-pool",
+    expectedLatestDate: "2026-07-10",
+    freshnessCodes: ["600519"],
+    inputPath: input,
+    outputDir,
+    period: "daily",
+    refreshMode: "incremental",
+  }, async (_secid, options) => {
+    requestedLimit = options.klineLimit;
+    return { source_engine: "proxy-pool", data: { code: "600519", market: 1, klines: ["2026-07-10,2,2,2,2,2,2,0,0,0,0"] } };
+  });
+  const payload = JSON.parse(await fs.readFile(output, "utf8"));
+  assert.equal(result.exitCode, 0);
+  assert.equal(requestedLimit, 24);
+  assert.deepEqual(payload.klines, [oldRow, "2026-07-10,2,2,2,2,2,2,0,0,0,0"]);
+  assert.equal(result.summary.incremental_fetches, 1);
+  assert.equal(result.summary.fetched_points, 1);
+});
 
 function delay(ms) {
   return new Promise((resolve) => {

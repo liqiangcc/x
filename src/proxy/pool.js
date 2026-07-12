@@ -104,22 +104,27 @@ function orderCandidates(candidates, state, nowMs = Date.now(), random = Math.ra
 async function getKlineViaProxyPool(input, options = {}) {
   const stateFile = options.stateFile ?? process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE;
   if (!options.fetchCandidatesImpl && !options.requestKlineImpl && !options.recordResultImpl) {
+    const runtime = options.proxyRuntime;
     const manager = new ProxyManager({
       classifyError: classifyProxyError,
-      healthStore: new JsonHealthStore({ stateFile, cooldownForError: cooldownMs }),
-      provider: new ProxyPoolProvider({
+      healthStore: runtime?.healthStore ?? new JsonHealthStore({ stateFile, cooldownForError: cooldownMs }),
+      provider: runtime ? { listCandidates: async () => runtime.listCandidates() } : new ProxyPoolProvider({
         apiKey: options.apiKey,
         count: options.count,
         fetchImpl: options.fetchImpl,
         poolUrl: options.poolUrl,
       }),
-      transport: (proxy, requestOptions) => requestThroughProxy(proxy, requestOptions, options),
+      transport: runtime
+        ? (proxy, requestOptions) => runtime.transport.request(proxy, requestOptions)
+        : (proxy, requestOptions) => requestThroughProxy(proxy, requestOptions, options),
     });
     const result = await manager.execute({
+      acquire: runtime ? (proxy) => runtime.acquire(proxy) : null,
       attempts: options.maxAttempts ?? 3,
       explorationRate: options.explorationRate,
       probe: createEastmoneyKlineProbe(input),
       random: options.random,
+      release: runtime ? (proxy) => runtime.release(proxy) : null,
       strategy: options.strategy ?? "balanced",
       timeoutMs: options.timeoutMs,
     });
@@ -334,6 +339,7 @@ module.exports = {
   UPSTREAM_PROXY_POOL,
   buildKlineUrl,
   classifyProxyError,
+  cooldownMs,
   fetchAllProxyCandidates,
   fetchProxyCandidates,
   getKlineViaProxyPool,
