@@ -1,82 +1,22 @@
 "use strict";
 
-const crypto = require("node:crypto");
-const fs = require("node:fs/promises");
 const path = require("node:path");
-const { ProxyAgent, request } = require("undici");
-const { parseJsonOrJsonp } = require("../core/jsonp");
+const { JsonHealthStore, readHealthState: readHealthStateV2 } = require("./health/store");
+const { normalizeProxy, proxyId } = require("./model");
+const { ProxyManager } = require("./manager");
+const { ProxyPoolProvider, parseProxyList, readLocalPoolEnv } = require("./providers/proxypool");
+const { buildKlineUrl, createEastmoneyKlineProbe, TARGET } = require("./probes/eastmoney_kline");
+const { rankCandidates } = require("./selectors");
+const { requestThroughProxy } = require("./transport/http_proxy");
 
 const ROOT = path.resolve(__dirname, "../..");
 const DEFAULT_POOL_URL = "http://127.0.0.1:5555";
 const DEFAULT_STATE_FILE = path.join(ROOT, "var/proxy-pool/ttjj-health.json");
-const DEFAULT_ENV_FILE = path.join(ROOT, "ops/proxy-pool/.env");
-const EASTMONEY_HOSTS = new Set(["push2his.eastmoney.com"]);
 const UPSTREAM_PROXY_POOL = {
   repository: "https://github.com/Python3WebSpider/ProxyPool",
   commit: "cabcd96cc9f30d7bdbc872bb8a8c52760023c142",
   license: "MIT",
 };
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
-
-function proxyId(proxy) {
-  return crypto.createHash("sha256").update(proxy).digest("hex").slice(0, 12);
-}
-
-function parseProxyList(text) {
-  return [...new Set(String(text ?? "")
-    .split(/\s+/)
-    .map((item) => item.trim())
-    .filter((item) => /^(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}$/.test(item))
-    .filter((item) => {
-      const [host, portText] = item.split(":");
-      const octetsValid = host.split(".").every((octet) => Number(octet) >= 0 && Number(octet) <= 255);
-      const port = Number(portText);
-      return octetsValid && Number.isInteger(port) && port >= 1 && port <= 65535;
-    }))];
-}
-
-function buildKlineUrl({ secid = "1.600519", klt = 101, lmt = 1, end = "20991231" } = {}) {
-  const url = new URL("https://push2his.eastmoney.com/api/qt/stock/kline/get");
-  url.searchParams.set("secid", String(secid));
-  url.searchParams.set("ut", "fa5fd1943c7b386f172d6893dbfba10b");
-  url.searchParams.set("fields1", "f1,f2,f3,f4,f5,f6");
-  url.searchParams.set("fields2", "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61");
-  url.searchParams.set("klt", String(klt));
-  url.searchParams.set("fqt", "1");
-  url.searchParams.set("end", String(end));
-  url.searchParams.set("lmt", String(lmt));
-  url.searchParams.set("_", String(Date.now()));
-  return url.toString();
-}
-
-function defaultHeaders() {
-  return {
-    Accept: "*/*",
-    "Accept-Language": "zh-CN,zh;q=0.9",
-    Referer: "https://quote.eastmoney.com/",
-    "User-Agent": USER_AGENT,
-  };
-}
-
-async function readLocalPoolEnv(envFile = DEFAULT_ENV_FILE) {
-  try {
-    const content = await fs.readFile(envFile, "utf8");
-    return Object.fromEntries(content
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#") && line.includes("="))
-      .map((line) => {
-        const index = line.indexOf("=");
-        return [line.slice(0, index).trim(), line.slice(index + 1).trim()];
-      }));
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      return {};
-    }
-    throw error;
-  }
-}
 
 async function fetchProxyCandidates({
   apiKey = process.env.X_PROXY_POOL_API_KEY ?? process.env.PROXY_POOL_API_KEY ?? "",
@@ -84,32 +24,8 @@ async function fetchProxyCandidates({
   fetchImpl = fetch,
   poolUrl = process.env.X_PROXY_POOL_URL ?? DEFAULT_POOL_URL,
 } = {}) {
-  const localEnv = apiKey ? {} : await readLocalPoolEnv();
-  apiKey = apiKey || localEnv.PROXY_POOL_API_KEY || "";
-  if (poolUrl === DEFAULT_POOL_URL && localEnv.PROXY_POOL_PORT) {
-    poolUrl = `http://127.0.0.1:${localEnv.PROXY_POOL_PORT}`;
-  }
-  const url = new URL("/random", `${String(poolUrl).replace(/\/+$/, "")}/`);
-  url.searchParams.set("area", "CN");
-  url.searchParams.set("count", String(count));
-  const response = await fetchImpl(url, {
-    headers: apiKey ? { "API-KEY": apiKey } : {},
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!response.ok) {
-    if (response.status === 500) {
-      const countUrl = new URL("/count", `${String(poolUrl).replace(/\/+$/, "")}/`);
-      const countResponse = await fetchImpl(countUrl, {
-        headers: apiKey ? { "API-KEY": apiKey } : {},
-        signal: AbortSignal.timeout(5000),
-      });
-      if (countResponse.ok && Number(await countResponse.text()) === 0) {
-        return [];
-      }
-    }
-    throw new Error(`ProxyPool API returned HTTP ${response.status}`);
-  }
-  return parseProxyList(await response.text());
+  const provider = new ProxyPoolProvider({ apiKey, count, fetchImpl, poolUrl });
+  return (await provider.listCandidates()).map((proxy) => proxy.endpoint);
 }
 
 async function fetchAllProxyCandidates({
@@ -117,31 +33,8 @@ async function fetchAllProxyCandidates({
   fetchImpl = fetch,
   poolUrl = process.env.X_PROXY_POOL_URL ?? DEFAULT_POOL_URL,
 } = {}) {
-  const localEnv = apiKey ? {} : await readLocalPoolEnv();
-  apiKey = apiKey || localEnv.PROXY_POOL_API_KEY || "";
-  if (poolUrl === DEFAULT_POOL_URL && localEnv.PROXY_POOL_PORT) {
-    poolUrl = `http://127.0.0.1:${localEnv.PROXY_POOL_PORT}`;
-  }
-  const url = new URL("/all", `${String(poolUrl).replace(/\/+$/, "")}/`);
-  url.searchParams.set("area", "CN");
-  const response = await fetchImpl(url, {
-    headers: apiKey ? { "API-KEY": apiKey } : {},
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!response.ok) {
-    if (response.status === 500) {
-      const countUrl = new URL("/count", `${String(poolUrl).replace(/\/+$/, "")}/`);
-      const countResponse = await fetchImpl(countUrl, {
-        headers: apiKey ? { "API-KEY": apiKey } : {},
-        signal: AbortSignal.timeout(5000),
-      });
-      if (countResponse.ok && Number(await countResponse.text()) === 0) {
-        return [];
-      }
-    }
-    throw new Error(`ProxyPool API returned HTTP ${response.status}`);
-  }
-  return parseProxyList(await response.text());
+  const provider = new ProxyPoolProvider({ all: true, apiKey, fetchImpl, poolUrl });
+  return (await provider.listCandidates()).map((proxy) => proxy.endpoint);
 }
 
 function classifyProxyError(error) {
@@ -175,156 +68,76 @@ function cooldownMs(errorClass) {
 }
 
 async function requestKlineThroughProxy(proxy, input = {}, options = {}) {
-  const urlText = buildKlineUrl(input);
-  const url = new URL(urlText);
-  if (!EASTMONEY_HOSTS.has(url.hostname)) {
-    throw new Error(`Proxy target host is not allowed: ${url.hostname}`);
-  }
-
-  const proxyAgentFactory = options.proxyAgentFactory ?? ((config) => new ProxyAgent(config));
-  const requestImpl = options.requestImpl ?? request;
-  const timeoutMs = options.timeoutMs ?? 6000;
-  const dispatcher = proxyAgentFactory({
-    uri: `http://${proxy}`,
-    proxyTls: { timeout: timeoutMs },
-    requestTls: { rejectUnauthorized: true, timeout: timeoutMs },
-  });
-  const startedAt = Date.now();
-  try {
-    const response = await requestImpl(urlText, {
-      dispatcher,
-      headers: defaultHeaders(),
-      headersTimeout: timeoutMs,
-      bodyTimeout: timeoutMs,
-      maxRedirections: 0,
-      method: "GET",
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const rawText = await response.body.text();
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw new Error(`Eastmoney proxy HTTP ${response.statusCode}: ${rawText.slice(0, 160)}`);
-    }
-    let payload;
-    try {
-      payload = parseJsonOrJsonp(rawText);
-    } catch (error) {
-      throw new Error(`Eastmoney proxy returned invalid JSON: ${error.message}`);
-    }
-    if (!Array.isArray(payload?.data?.klines) || payload.data.klines.length === 0) {
-      throw new Error("Eastmoney proxy response missing data.klines or returned empty data.");
-    }
-    return {
-      payload,
-      durationMs: Date.now() - startedAt,
-    };
-  } finally {
-    await dispatcher.destroy();
-  }
+  const probe = createEastmoneyKlineProbe(input);
+  const response = await requestThroughProxy(normalizeProxy(proxy), { ...probe.request, timeoutMs: options.timeoutMs }, options);
+  return { payload: probe.validate(response), durationMs: response.durationMs };
 }
 
 async function readHealthState(stateFile = DEFAULT_STATE_FILE) {
-  try {
-    return JSON.parse(await fs.readFile(stateFile, "utf8"));
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      return { version: 1, proxies: {} };
-    }
-    throw error;
-  }
-}
-
-async function withStateLock(stateFile, callback) {
-  await fs.mkdir(path.dirname(stateFile), { recursive: true });
-  const lockFile = `${stateFile}.lock`;
-  let handle;
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    try {
-      handle = await fs.open(lockFile, "wx");
-      break;
-    } catch (error) {
-      if (error.code !== "EEXIST") {
-        throw error;
-      }
-      try {
-        const stats = await fs.stat(lockFile);
-        if (Date.now() - stats.mtimeMs > 30_000) {
-          await fs.rm(lockFile, { force: true });
-          continue;
-        }
-      } catch {}
-      await new Promise((resolve) => setTimeout(resolve, 25));
-    }
-  }
-  if (!handle) {
-    throw new Error("Timed out acquiring proxy health state lock.");
-  }
-  try {
-    return await callback();
-  } finally {
-    await handle.close();
-    await fs.rm(lockFile, { force: true });
-  }
+  return readHealthStateV2(stateFile);
 }
 
 async function recordProxyResult(proxy, result, stateFile = DEFAULT_STATE_FILE) {
-  return withStateLock(stateFile, async () => {
-    const state = await readHealthState(stateFile);
-    const id = proxyId(proxy);
-    const previous = state.proxies[id] ?? {};
-    const now = new Date().toISOString();
-    const success = Boolean(result.ok);
-    state.proxies[id] = {
-      proxy,
-      success_count: Number(previous.success_count ?? 0) + (success ? 1 : 0),
-      failure_count: Number(previous.failure_count ?? 0) + (success ? 0 : 1),
-      consecutive_failures: success ? 0 : Number(previous.consecutive_failures ?? 0) + 1,
-      last_error_class: success ? null : result.errorClass,
-      last_latency_ms: Number.isFinite(result.durationMs) ? result.durationMs : previous.last_latency_ms ?? null,
-      last_checked_at: now,
-      first_success_at: success ? previous.first_success_at ?? now : previous.first_success_at ?? null,
-      last_success_at: success ? now : previous.last_success_at ?? null,
-      cooldown_until: success
-        ? null
-        : new Date(Date.now() + cooldownMs(result.errorClass)).toISOString(),
-    };
-    const retentionCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    for (const [storedId, stored] of Object.entries(state.proxies)) {
-      if (storedId !== id && Date.parse(stored.last_checked_at ?? 0) < retentionCutoff) {
-        delete state.proxies[storedId];
-      }
-    }
-    const tempFile = `${stateFile}.${process.pid}.tmp`;
-    await fs.writeFile(tempFile, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-    await fs.rename(tempFile, stateFile);
-    return state.proxies[id];
-  });
+  return new JsonHealthStore({ stateFile, cooldownForError: cooldownMs }).record(proxy, TARGET, result);
 }
 
-function orderCandidates(candidates, state, nowMs = Date.now(), random = Math.random) {
-  const ranked = candidates
-    .filter((proxy) => {
-      const entry = state.proxies?.[proxyId(proxy)];
-      return !entry?.cooldown_until || Date.parse(entry.cooldown_until) <= nowMs;
-    })
-    .map((proxy) => ({ proxy, state: state.proxies?.[proxyId(proxy)] ?? {} }))
-    .sort((left, right) => {
-      const successDifference = Number(right.state.success_count ?? 0) - Number(left.state.success_count ?? 0);
-      if (successDifference !== 0) {
-        return successDifference;
-      }
-      return Number(left.state.last_latency_ms ?? Number.MAX_SAFE_INTEGER) -
-        Number(right.state.last_latency_ms ?? Number.MAX_SAFE_INTEGER);
-    });
-  const preferred = ranked.slice(0, 20);
-  for (let index = preferred.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [preferred[index], preferred[swapIndex]] = [preferred[swapIndex], preferred[index]];
-  }
-  return [...preferred, ...ranked.slice(20)].map((item) => item.proxy);
+function orderCandidates(candidates, state, nowMs = Date.now(), random = Math.random, options = {}) {
+  const normalized = candidates.map((proxy) => normalizeProxy(proxy, { source: "proxypool" }));
+  const migrated = state.version === 2 ? state : {
+    version: 2,
+    proxies: Object.fromEntries(Object.entries(state.proxies ?? {}).map(([id, entry]) => [id, {
+      proxy: normalizeProxy(entry.proxy ?? ""),
+      targets: { [TARGET]: { cooldown_until: entry.cooldown_until, ewma_latency_ms: entry.last_latency_ms, success_rate: Number(entry.success_count ?? 0) > 0 ? 1 : 0 } },
+    }])),
+  };
+  return rankCandidates(normalized, migrated, {
+    explorationRate: options.explorationRate ?? 0.1,
+    nowMs,
+    random,
+    strategy: options.strategy ?? "balanced",
+    target: TARGET,
+    timeoutMs: options.timeoutMs,
+  })
+    .map((proxy) => proxy.endpoint);
 }
 
 async function getKlineViaProxyPool(input, options = {}) {
   const stateFile = options.stateFile ?? process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE;
+  if (!options.fetchCandidatesImpl && !options.requestKlineImpl && !options.recordResultImpl) {
+    const manager = new ProxyManager({
+      classifyError: classifyProxyError,
+      healthStore: new JsonHealthStore({ stateFile, cooldownForError: cooldownMs }),
+      provider: new ProxyPoolProvider({
+        apiKey: options.apiKey,
+        count: options.count,
+        fetchImpl: options.fetchImpl,
+        poolUrl: options.poolUrl,
+      }),
+      transport: (proxy, requestOptions) => requestThroughProxy(proxy, requestOptions, options),
+    });
+    const result = await manager.execute({
+      attempts: options.maxAttempts ?? 3,
+      explorationRate: options.explorationRate,
+      probe: createEastmoneyKlineProbe(input),
+      random: options.random,
+      strategy: options.strategy ?? "balanced",
+      timeoutMs: options.timeoutMs,
+    });
+    return {
+      ...result.payload,
+      source_engine: "proxy-pool",
+      source_region: "CN",
+      total_duration_ms: result.durationMs,
+      proxy_attempts: result.attempts,
+      proxy_id: result.proxy.id,
+      proxy_error_counts: result.failures.reduce((counts, failure) => {
+        counts[failure.error_class] = (counts[failure.error_class] ?? 0) + 1;
+        return counts;
+      }, {}),
+      proxy_selector: options.strategy ?? "balanced",
+      proxy_target: TARGET,
+    };
+  }
   const fetchCandidates = options.fetchCandidatesImpl ?? fetchProxyCandidates;
   const requestKline = options.requestKlineImpl ?? requestKlineThroughProxy;
   const recordResult = options.recordResultImpl ?? recordProxyResult;
@@ -333,7 +146,11 @@ async function getKlineViaProxyPool(input, options = {}) {
     throw new Error("ProxyPool returned no valid CN proxy candidates.");
   }
   const state = await readHealthState(stateFile);
-  const ordered = orderCandidates(candidates, state, Date.now(), options.random ?? Math.random);
+  const ordered = orderCandidates(candidates, state, Date.now(), options.random ?? Math.random, {
+    explorationRate: options.explorationRate,
+    strategy: options.strategy,
+    timeoutMs: options.timeoutMs,
+  });
   const maxAttempts = Math.min(Number(options.maxAttempts ?? 3), ordered.length);
   const failures = [];
   for (const proxy of ordered.slice(0, maxAttempts)) {
@@ -419,11 +236,13 @@ async function runProxyBenchmark({
   const proxyIds = new Set(results.filter((item) => item.ok).map((item) => item.proxy_id));
   const state = await readHealthState(options.stateFile ?? process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE);
   const nowMs = Date.now();
-  const stableProxyCount = Object.values(state.proxies ?? {}).filter((entry) =>
-    entry.first_success_at &&
-    entry.last_success_at &&
-    Date.parse(entry.first_success_at) <= nowMs - 10 * 60 * 1000 &&
-    Date.parse(entry.last_success_at) >= nowMs - 5 * 60 * 1000
+  const stableProxyCount = Object.values(state.proxies ?? {}).filter((entry) => {
+    const health = entry.targets?.[TARGET] ?? {};
+    return health.first_success_at &&
+    health.last_success_at &&
+    Date.parse(health.first_success_at) <= nowMs - 10 * 60 * 1000 &&
+    Date.parse(health.last_success_at) >= nowMs - 5 * 60 * 1000;
+  }
   ).length;
   return {
     upstream: UPSTREAM_PROXY_POOL,
@@ -431,6 +250,9 @@ async function runProxyBenchmark({
     finished_at: new Date().toISOString(),
     samples,
     concurrency,
+    health_window_size: 20,
+    selector: options.strategy ?? "balanced",
+    target: TARGET,
     success: successes,
     failed: samples - successes,
     success_rate: samples === 0 ? 1 : successes / samples,
@@ -493,6 +315,9 @@ async function validateAllProxies({
     started_at: startedAt,
     finished_at: new Date().toISOString(),
     candidate_count: candidates.length,
+    health_window_size: 20,
+    selector: options.strategy ?? "balanced",
+    target: TARGET,
     checked_count: results.length,
     available_count: available.length,
     failed_count: results.length - available.length,
