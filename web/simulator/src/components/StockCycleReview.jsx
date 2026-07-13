@@ -12,8 +12,8 @@ export default function StockCycleReview({ cycles = [] }) {
     <div className="stock-cycle-grid">{cycles.map((cycle) => <article className="review-order" key={`${cycle.candidateId}-${cycle.cycleNumber}`}>
       <header><strong>{cycle.alias} · 第 {cycle.cycleNumber} 轮</strong><span>{cycle.status === "open" ? "持有中" : "已清仓"}</span></header>
       <dl>
-        <div><dt>周期收益</dt><dd className={(cycle.totalPnl ?? 0) < 0 ? "danger-text" : "positive-text"}>{money(cycle.totalPnl)}</dd></div>
-        <div><dt>周期收益率</dt><dd className={(cycle.returnPct ?? 0) < 0 ? "danger-text" : "positive-text"}>{percent(cycle.returnPct)}</dd></div>
+        <div><dt>周期收益</dt><dd className={(cycle.totalPnl ?? 0) < 0 ? "loss-text" : "positive-text"}>{money(cycle.totalPnl)}</dd></div>
+        <div><dt>周期收益率</dt><dd className={(cycle.returnPct ?? 0) < 0 ? "loss-text" : "positive-text"}>{percent(cycle.returnPct)}</dd></div>
         <div><dt>持有时间</dt><dd>{cycle.holdingDays ?? "—"} 个交易日</dd></div>
         <div><dt>买入次数</dt><dd>{cycle.buyCount} 次</dd></div>
         <div><dt>BOLL 中轨</dt><dd>{cycle.bollAboveMiddle == null ? "数据不足" : cycle.bollAboveMiddle ? "已站上" : "未站上"}</dd></div>

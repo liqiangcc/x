@@ -8,6 +8,7 @@ import ReviewPage from "./pages/ReviewPage.jsx";
 import WatchlistPage from "./pages/WatchlistPage.jsx";
 import StrategiesPage from "./pages/StrategiesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+import DataPage from "./pages/DataPage.jsx";
 import { useSession } from "./state/SessionContext.jsx";
 
 function Layout() {
@@ -36,6 +37,7 @@ function Layout() {
           <NavLink to="/watchlist">自选</NavLink>
           <NavLink to="/review">复盘</NavLink>
           <NavLink to="/settings">设置</NavLink>
+          <NavLink to="/data">数据</NavLink>
         </nav>
         {session && location.pathname !== "/watchlist" && <div className="global-clock"><strong>{session.name}</strong><span>第 {session.dayIndex ?? 1} 个交易日</span><button className="primary-button" disabled={busy || !session.clock.nextDate} onClick={advance}>{busy ? "推进中…" : "下一交易日"}</button></div>}
       </header>
@@ -49,6 +51,7 @@ function Layout() {
           <Route element={<Navigate replace to="/watchlist" />} path="/trade" />
           <Route element={<ReviewPage />} path="/review" />
           <Route element={<SettingsPage />} path="/settings" />
+          <Route element={<DataPage />} path="/data" />
           <Route element={<Navigate replace to="/accounts/new" />} path="*" />
         </Routes>
       </main>

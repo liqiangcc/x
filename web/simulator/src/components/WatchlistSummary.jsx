@@ -22,7 +22,7 @@ export default function WatchlistSummary({ detail = {} }) {
     ["BOLL 中轨", detail.boll?.aboveMiddle == null ? "数据不足" : detail.boll.aboveMiddle ? "已站上" : "未站上"],
   ];
   const rows = [metrics.slice(0, 5), metrics.slice(5)];
-  return <div className="watchlist-summary">{rows.map((row, rowIndex) => <div className="watchlist-summary-line" key={rowIndex}>{row.map(([label, value, tone], index) => <span className="watchlist-value" key={label}>{index > 0 && <i aria-hidden="true">/</i>}<strong aria-label={`${label} ${value}`} className={Number.isFinite(tone) ? tone < 0 ? "danger-text" : "positive-text" : ""} title={`${label}：${value}`}>{value}</strong></span>)}</div>)}</div>;
+  return <div className="watchlist-summary">{rows.map((row, rowIndex) => <div className="watchlist-summary-line" key={rowIndex}>{row.map(([label, value, tone], index) => <span className="watchlist-value" key={label}>{index > 0 && <i aria-hidden="true">/</i>}<strong aria-label={`${label} ${value}`} className={Number.isFinite(tone) ? tone < 0 ? "loss-text" : "positive-text" : ""} title={`${label}：${value}`}>{value}</strong></span>)}</div>)}</div>;
 }
 
 export { price, signed };

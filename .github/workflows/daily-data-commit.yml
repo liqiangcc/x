@@ -140,6 +140,10 @@ concurrency:
 
 jobs:
   daily:
+    strategy:
+      fail-fast: false
+      matrix:
+        period: ${{ fromJSON(github.event_name == 'schedule' && '["daily","yearly"]' || format('["{0}"]', github.event.inputs.period)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -172,13 +176,13 @@ jobs:
       - name: AWS kline preflight
         if: ${{ github.event.inputs.engine == 'aws' }}
         env:
-          PERIOD_INPUT: ${{ github.event.inputs.period }}
+          PERIOD_INPUT: ${{ matrix.period }}
         run: node bin/x kline fetch 600519 --period "${PERIOD_INPUT:-daily}" --engine aws > /tmp/kline-aws-preflight.json
 
       - name: Huawei Cloud kline preflight
         if: ${{ github.event.inputs.engine == 'huaweicloud' }}
         env:
-          PERIOD_INPUT: ${{ github.event.inputs.period }}
+          PERIOD_INPUT: ${{ matrix.period }}
           HUAWEICLOUD_ACCESS_KEY: ${{ secrets.HUAWEICLOUD_ACCESS_KEY }}
           HUAWEICLOUD_SECRET_KEY: ${{ secrets.HUAWEICLOUD_SECRET_KEY }}
           HUAWEICLOUD_TARGETS_JSON: ${{ secrets.HUAWEICLOUD_TARGETS_JSON || vars.HUAWEICLOUD_TARGETS_JSON }}
@@ -193,7 +197,7 @@ jobs:
       - name: Run daily data workflow
         env:
           DATE_INPUT: ${{ github.event.inputs.date }}
-          PERIOD_INPUT: ${{ github.event.inputs.period }}
+          PERIOD_INPUT: ${{ matrix.period }}
           LIMIT_INPUT: ${{ github.event.inputs.limit }}
           BATCH_SIZE_INPUT: ${{ github.event.inputs.batch_size }}
           CONCURRENCY_INPUT: ${{ github.event.inputs.concurrency }}

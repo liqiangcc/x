@@ -45,6 +45,7 @@ export function createApiClient({ fetchImpl = fetch, prefix = "/api" } = {}) {
     calculateCandidates: (accountId, body) => request(`/accounts/${accountId}/candidate-calculations`, { body, method: "POST" }),
     getAccountCandidates: (accountId, query = "") => request(`/accounts/${accountId}/candidates${query}`),
     getStrategies: () => request("/strategies"),
+    getDataStatus: (refresh = false) => request(`/data/status${refresh ? "?refresh=true" : ""}`),
     getStrategyBuild: (strategyId) => request(`/strategies/${strategyId}/build`),
     rebuildStrategy: (strategyId) => request(`/strategies/${strategyId}/rebuild`, { method: "POST" }),
     createStrategy: (body) => request("/strategies", { body, method: "POST" }),

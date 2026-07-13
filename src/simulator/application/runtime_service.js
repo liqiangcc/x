@@ -22,6 +22,7 @@ const { digest } = require("../selection/pipeline");
 const { buildSessionReport, identityRows, reconstructStockCycles } = require("./reports");
 const { accountDto, sessionDto } = require("../adapters/http/dto");
 const { normalizeYearDeclineConfig } = require("../../signals/signals/year_decline_close_breakout");
+const { DataStatusService } = require("../../kline/data_status");
 const { calculateFees, cents } = require("../mechanisms/fee_model");
 const { OrderSide, OrderStatus } = require("../core/enums");
 
@@ -137,12 +138,14 @@ function buyReservationInput(entry, input) {
 
 class SimulatorRuntimeService {
   constructor({
+    dataStatusService = new DataStatusService(),
     klineRepository = new ExistingKlineRepository(),
     onPerformance = null,
     repository = null,
     selectionPipeline = null,
     universeRepository = new ExistingUniverseRepository(),
   } = {}) {
+    this.dataStatusService = dataStatusService;
     this.klineRepository = klineRepository;
     this.onPerformance = typeof onPerformance === "function" ? onPerformance : null;
     this.repository = repository;
@@ -509,6 +512,10 @@ class SimulatorRuntimeService {
       ...strategy,
       buildProgress: this.strategyBuilds.get(strategy.id) ?? null,
     })) };
+  }
+
+  getDataStatus({ refresh = false } = {}) {
+    return this.dataStatusService.get({ refresh });
   }
 
   saveStrategy(input, id = randomUUID()) {

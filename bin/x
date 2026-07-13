@@ -48,6 +48,7 @@ const {
 } = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
 const { getKlines, validateKlinePath } = require("../fetch/check_kline_empty");
+const { STRATEGY_ID, buildStrategyUniverse } = require("../src/kline/strategy_universe");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -84,7 +85,7 @@ function printUsage() {
   x kline unlock --period daily|yearly [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--strategy-only|--all-codes] [--strategy-down-transitions N] [--force-strategy-codes] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -135,7 +136,7 @@ function parseOptions(argv, defaults = {}) {
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (["latest", "commit", "force", "forcePool", "forceUniverse", "json", "allowPartial", "proxyPreflight", "noProxyPreflight"].includes(key)) {
+    if (["latest", "commit", "force", "forcePool", "forceUniverse", "forceStrategyCodes", "strategyOnly", "allCodes", "json", "allowPartial", "proxyPreflight", "noProxyPreflight"].includes(key)) {
       options[key] = true;
       continue;
     }
@@ -1255,10 +1256,11 @@ async function buildKlineFreshnessContext({ date, inputDir, options, runDir }) {
   }
 
   const expectedLatestDate = formatExpectedLatestDate(date);
-  const source = options.universe === "market" ? "market_quote_available" : "pool_codes";
-  const codes = options.universe === "market"
+  const marketCodes = options.universe === "market"
     ? await readFreshnessCodesFromMarketUniverse(inputDir)
-    : await loadCodesJson(inputDir);
+    : null;
+  const source = marketCodes ? "market_quote_available" : (options.strategyCodesApplied ? "strategy_codes" : "pool_codes");
+  const codes = marketCodes ?? await loadCodesJson(inputDir);
 
   if (!codes || codes.length === 0) {
     return {
@@ -1456,6 +1458,7 @@ async function commandDaily(argv) {
     market: "hs-a",
     period: "daily",
     poolEngine: "curl",
+    strategyOnly: true,
     outputDir: "data/pool",
     universe: "market",
     universeDir: rel(DEFAULT_UNIVERSE_DIR),
@@ -1626,6 +1629,36 @@ async function commandDaily(argv) {
     input_dir: rel(inputDir),
     total_codes: universeSummary?.total_codes ?? null,
   });
+
+  const universeInputDir = inputDir;
+  let strategyUniverse = null;
+  if (options.strategyOnly && !options.allCodes) {
+    const sourceCodes = await loadCodesJson(inputDir);
+    const strategyDir = path.join(ROOT, "data", "strategy-universe", date.slice(0, 4), STRATEGY_ID);
+    const strategyCodesPath = path.join(strategyDir, "codes.json");
+    strategyUniverse = await withStage("strategy_universe", {
+      date,
+      source_codes: sourceCodes.length,
+      strategy_id: STRATEGY_ID,
+    }, () => buildStrategyUniverse({
+      asOfDate: date,
+      codes: sourceCodes,
+      concurrency: parsePositiveIntegerOption(options.concurrency, 32),
+      downTransitions: parsePositiveIntegerOption(options.strategyDownTransitions, 3),
+      force: Boolean(options.forceStrategyCodes),
+      klineRoot: DEFAULT_KLINE_DIR,
+      outputFile: strategyCodesPath,
+    }));
+    inputDir = strategyDir;
+    options.strategyCodesApplied = true;
+    stageLog("end", "strategy_universe_result", {
+      eligible_codes: strategyUniverse.total_codes,
+      input_dir: rel(inputDir),
+      missing_yearly_codes: strategyUniverse.missing_yearly_count,
+      reused: strategyUniverse.reused,
+      source_codes: strategyUniverse.source_code_count,
+    });
+  }
 
   const freshnessContext = await withStage("freshness_context", {
     date,
@@ -1840,6 +1873,11 @@ async function commandDaily(argv) {
     universe: options.universe,
     market: options.universe === "market" ? options.market : null,
     universe_total_codes: universeSummary?.total_codes ?? null,
+    strategy_only: Boolean(strategyUniverse),
+    strategy_id: strategyUniverse?.strategy_id ?? null,
+    strategy_source_codes: strategyUniverse?.source_code_count ?? null,
+    strategy_codes: strategyUniverse?.total_codes ?? null,
+    strategy_missing_yearly_codes: strategyUniverse?.missing_yearly_count ?? null,
     input: rel(path.join(inputDir, "codes.json")),
     kline_input: rel(klineInputPath),
     status,
@@ -1876,7 +1914,8 @@ async function commandDaily(argv) {
     finished_at: isoNow(),
     artifacts: {
       pool_dir: rel(poolDir),
-      universe_dir: options.universe === "market" ? rel(inputDir) : null,
+      universe_dir: options.universe === "market" ? rel(universeInputDir) : null,
+      strategy_codes: strategyUniverse ? rel(path.join(inputDir, "codes.json")) : null,
       job_progress: jobContext ? rel(jobContext.progressPath) : null,
       job_batch_codes: jobContext ? rel(jobContext.batchCodesPath) : null,
       kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),

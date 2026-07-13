@@ -18,6 +18,10 @@ function dataCommitPathspecs(run) {
   if (runId) {
     paths.push(path.posix.join("runs", runId));
   }
+  const strategyCodes = String(run?.artifacts?.strategy_codes ?? "").trim();
+  if (strategyCodes && !path.isAbsolute(strategyCodes) && strategyCodes.startsWith("data/strategy-universe/")) {
+    paths.push(strategyCodes);
+  }
 
   return paths;
 }
