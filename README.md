@@ -46,6 +46,7 @@ bin/x aws status --profile default --region ap-northeast-1
 - `docs/SIGNALS_DESIGN.md`：可扩展信号系统、基础能力枚举、`year_breakout` 定义和日报输出契约。
 - `docs/TRADING_SIMULATOR_DESIGN.md`：配置驱动、核心能力与机制分离的历史交易练习设计。
 - `docs/TRADING_SIMULATOR_IMPLEMENTATION.md`：模拟器 MVP 实施边界、任务优先级和数据 TODO。
+- `docs/TRADING_SIMULATOR_OPERATIONS.md`：维护、生产部署、备份恢复、升级回滚和故障排查手册。
 
 ## 历史交易练习模拟器
 

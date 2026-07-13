@@ -13,9 +13,9 @@ function session(version = 1) {
 test("empty database initializes every migration and core table", (t) => {
   const repository = new SimulatorRepository({ db: new Database(":memory:") });
   t.after(() => repository.close());
-  assert.deepEqual(repository.versions, [1, 2]);
+  assert.deepEqual(repository.versions, [1, 2, 3, 4, 5, 6, 7]);
   const tables = repository.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => row.name);
-  for (const table of ["sessions", "candidate_snapshots", "candidate_aliases", "orders", "fills", "positions", "account_snapshots", "events"]) {
+  for (const table of ["sessions", "candidate_snapshots", "candidate_aliases", "orders", "fills", "positions", "account_snapshots", "events", "strategies", "account_profiles", "account_watchlist", "candidate_calculations", "strategy_builds", "strategy_signals"]) {
     assert.equal(tables.includes(table), true, table);
   }
 });
@@ -27,7 +27,7 @@ test("migration runner upgrades a version-one database", (t) => {
   db.prepare("INSERT INTO schema_migrations (version) VALUES (1)").run();
   const repository = new SimulatorRepository({ db });
   t.after(() => repository.close());
-  assert.deepEqual(repository.versions, [1, 2]);
+  assert.deepEqual(repository.versions, [1, 2, 3, 4, 5, 6, 7]);
   assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_orders_session_date'").get().name, "idx_orders_session_date");
 });
 
@@ -39,6 +39,36 @@ test("repository persists sessions with optimistic version updates", (t) => {
   assert.equal(repository.updateSessionVersion("session-1", 0, { currentDate: "2026-07-02", status: "running", version: 2 }), false);
   assert.equal(repository.updateSessionVersion("session-1", 1, { currentDate: "2026-07-02", status: "running", version: 2 }), true);
   assert.equal(repository.getSession("session-1").version, 2);
+});
+
+test("watchlist persists the signal snapshot and preserves it on later adds", (t) => {
+  const repository = new SimulatorRepository({ db: new Database(":memory:") });
+  t.after(() => repository.close());
+  repository.saveSession(session());
+  repository.saveWatchlistItem("session-1", {
+    alias: "候选A",
+    candidateId: "cand_a",
+    evidence: { breakout_margin_pct: 2.5, today_close: 12.5, today_date: "2026-07-01" },
+    security: { code: "600001", market: 1 },
+    signalClose: 12.5,
+    signalDate: "2026-07-01",
+    signalSource: "exact",
+    strategyId: "strategy-1",
+  });
+  repository.saveWatchlistItem("session-1", {
+    alias: "候选A",
+    candidateId: "cand_a",
+    security: { code: "600001", market: 1 },
+    signalClose: 15,
+    signalDate: "2026-07-02",
+    signalSource: "exact",
+    strategyId: "strategy-2",
+  });
+  const item = repository.listWatchlist("session-1")[0];
+  assert.equal(item.signalDate, "2026-07-01");
+  assert.equal(item.signalClose, 12.5);
+  assert.equal(item.strategyId, "strategy-1");
+  assert.equal(item.evidence.breakout_margin_pct, 2.5);
 });
 
 test("orders, fills, snapshots and events commit together and roll back together", (t) => {

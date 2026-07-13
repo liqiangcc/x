@@ -23,6 +23,8 @@ class Order {
     this.estimatedPrice = null;
     this.estimatedFees = 0;
     this.reservedAmount = 0;
+    this.referencePrice = null;
+    this.reservationLimitRate = null;
   }
 
   assertMutable() {
@@ -33,11 +35,13 @@ class Order {
     }
   }
 
-  accept({ estimatedFees = 0, estimatedPrice = null, reservedAmount = 0 } = {}) {
+  accept({ estimatedFees = 0, estimatedPrice = null, referencePrice = null, reservationLimitRate = null, reservedAmount = 0 } = {}) {
     if (this.status !== OrderStatus.SUBMITTED) throw new Error("Only submitted orders can be accepted.");
     this.estimatedFees = estimatedFees;
     this.estimatedPrice = estimatedPrice;
     this.reservedAmount = reservedAmount;
+    this.referencePrice = referencePrice;
+    this.reservationLimitRate = reservationLimitRate;
     this.status = OrderStatus.ACCEPTED;
     return this;
   }
@@ -49,7 +53,7 @@ class Order {
     return this;
   }
 
-  revise({ estimatedFees = this.estimatedFees, estimatedPrice = this.estimatedPrice, quantity = this.quantity, reason = this.reason, reservedAmount = this.reservedAmount }) {
+  revise({ estimatedFees = this.estimatedFees, estimatedPrice = this.estimatedPrice, quantity = this.quantity, reason = this.reason, referencePrice = this.referencePrice, reservationLimitRate = this.reservationLimitRate, reservedAmount = this.reservedAmount }) {
     this.assertMutable();
     if (!Number.isInteger(quantity) || quantity <= 0) throw new TypeError("quantity must be a positive integer.");
     this.quantity = quantity;
@@ -57,6 +61,8 @@ class Order {
     this.estimatedFees = estimatedFees;
     this.estimatedPrice = estimatedPrice;
     this.reservedAmount = reservedAmount;
+    this.referencePrice = referencePrice;
+    this.reservationLimitRate = reservationLimitRate;
     return this;
   }
 

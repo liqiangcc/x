@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import PerformanceCharts, { points } from "./PerformanceCharts.jsx";
 import TradeReview from "./TradeReview.jsx";
+import StockCycleReview from "./StockCycleReview.jsx";
 
 describe("review components", () => {
   it("renders equity and drawdown curves with benchmark fallback", () => {
@@ -17,5 +18,14 @@ describe("review components", () => {
     expect(screen.getByText("首次突破")).toBeInTheDocument();
     expect(screen.getByText("1.20%")).toBeInTheDocument();
     expect(screen.getByText(/成交价 10.01/)).toBeInTheDocument();
+  });
+
+  it("renders per-stock cycle return, holding days, buys and BOLL state", () => {
+    render(<StockCycleReview cycles={[{ alias: "候选A", bollAboveMiddle: true, buyCount: 2, candidateId: "cand_a", cycleNumber: 1, holdingDays: 5, remainingQuantity: 100, returnPct: 8.5, startDayIndex: 3, status: "open", totalPnl: 85 }]} />);
+    expect(screen.getByText("+¥85.00")).toBeInTheDocument();
+    expect(screen.getByText("+8.50%")).toBeInTheDocument();
+    expect(screen.getByText("5 个交易日")).toBeInTheDocument();
+    expect(screen.getByText("2 次")).toBeInTheDocument();
+    expect(screen.getByText("已站上")).toBeInTheDocument();
   });
 });

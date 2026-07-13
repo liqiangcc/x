@@ -1,29 +1,55 @@
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { useRef } from "react";
+import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { SessionProvider } from "./state/SessionContext.jsx";
 import CreateSessionPage from "./pages/CreateSessionPage.jsx";
 import CandidatesPage from "./pages/CandidatesPage.jsx";
 import TradePage from "./pages/TradePage.jsx";
 import ReviewPage from "./pages/ReviewPage.jsx";
+import WatchlistPage from "./pages/WatchlistPage.jsx";
+import StrategiesPage from "./pages/StrategiesPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
+import { useSession } from "./state/SessionContext.jsx";
 
 function Layout() {
+  const { busy, client, run, session, setSession } = useSession();
+  const location = useLocation();
+  const stockDetailMode = location.pathname.includes("/stocks/");
+  const advancing = useRef(false);
+  async function advance() {
+    if (advancing.current) return;
+    advancing.current = true;
+    try {
+      const next = await run(() => client.advanceAccount(session.id, session.version));
+      setSession(next);
+    } finally {
+      advancing.current = false;
+    }
+  }
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <NavLink className="brand" to="/create">历史交易练习</NavLink>
+      <header className={`app-header ${stockDetailMode ? "detail-mode" : ""}`}>
+        <NavLink className="brand" to="/accounts/new">历史交易练习</NavLink>
         <nav aria-label="主导航">
-          <NavLink to="/create">创建</NavLink>
-          <NavLink to="/candidates">候选池</NavLink>
-          <NavLink to="/trade">交易</NavLink>
+          <NavLink to="/accounts/new">账号</NavLink>
+          <NavLink to="/strategies">策略</NavLink>
+          <NavLink to="/candidates">候选池{session?.candidateCount !== null && session?.candidateCount !== undefined && <small className="nav-count">{session.candidateCount}</small>}</NavLink>
+          <NavLink to="/watchlist">自选</NavLink>
           <NavLink to="/review">复盘</NavLink>
+          <NavLink to="/settings">设置</NavLink>
         </nav>
+        {session && location.pathname !== "/watchlist" && <div className="global-clock"><strong>{session.name}</strong><span>第 {session.dayIndex ?? 1} 个交易日</span><button className="primary-button" disabled={busy || !session.clock.nextDate} onClick={advance}>{busy ? "推进中…" : "下一交易日"}</button></div>}
       </header>
       <main className="page-shell">
         <Routes>
-          <Route element={<CreateSessionPage />} path="/create" />
+          <Route element={<CreateSessionPage />} path="/accounts/new" />
+          <Route element={<StrategiesPage />} path="/strategies" />
           <Route element={<CandidatesPage />} path="/candidates" />
-          <Route element={<TradePage />} path="/trade" />
+          <Route element={<WatchlistPage />} path="/watchlist" />
+          <Route element={<TradePage />} path="/accounts/:accountId/stocks/:candidateId" />
+          <Route element={<Navigate replace to="/watchlist" />} path="/trade" />
           <Route element={<ReviewPage />} path="/review" />
-          <Route element={<Navigate replace to="/create" />} path="*" />
+          <Route element={<SettingsPage />} path="/settings" />
+          <Route element={<Navigate replace to="/accounts/new" />} path="*" />
         </Routes>
       </main>
     </div>

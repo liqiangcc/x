@@ -1,0 +1,22 @@
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: vibrant_lehmann
+    restart: always
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --dns-resolver-addrs
+      - 1.1.1.1:53
+      - --token
+      - ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN}
+    dns:
+      - 1.1.1.1
+    networks:
+      cloudflare-direct:
+        gw_priority: 1
+
+networks:
+  cloudflare-direct:
+    external: true

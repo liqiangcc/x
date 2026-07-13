@@ -115,3 +115,21 @@ test("existing kline validates input and invalid JSON", async (t) => {
     (error) => error.code === "invalid_kline_file"
   );
 });
+
+test("existing kline cache notices file changes and stays bounded", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-simulator-kline-cache-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const repository = new ExistingKlineRepository({ cacheSize: 1, klineRoot: root });
+  const firstPath = path.join(root, "daily", "600", "600001.json");
+  await write(firstPath, { klines: [rows[0]] });
+  const first = await repository.getLegacyHistory({ code: "600001", market: 1, endDate: "20260702" });
+  assert.equal(first.bars.at(-1).close, 10.2);
+
+  await write(firstPath, { klines: [rows[1]] });
+  const changed = await repository.getLegacyHistory({ code: "600001", market: 1, endDate: "20260702" });
+  assert.equal(changed.bars.at(-1).close, 10.4);
+
+  await write(path.join(root, "daily", "600", "600002.json"), { klines: [rows[2]] });
+  await repository.getLegacyHistory({ code: "600002", market: 1, endDate: "20260702" });
+  assert.equal(repository.cache.size, 1);
+});

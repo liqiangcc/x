@@ -71,7 +71,7 @@ test("report stays anonymous before reveal and export uses atomic final JSON", a
   const runtime = runtimeEntry();
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-simulator-export-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
-  const report = runtime.getReport("manual");
+  const report = await runtime.getReport("manual");
   assert.deepEqual(report.identities, []);
   const exported = await runtime.exportSession("manual", { exportRoot: root });
   const payload = JSON.parse(await fs.readFile(exported.filePath, "utf8"));

@@ -48,7 +48,13 @@ class OrderApplicationService {
     this.orders.set(order.id, order);
     try {
       const reservedAmount = this.#reserve(order, input);
-      order.accept({ estimatedFees: input.estimatedFees ?? 0, estimatedPrice: input.estimatedPrice ?? null, reservedAmount });
+      order.accept({
+        estimatedFees: input.estimatedFees ?? 0,
+        estimatedPrice: input.estimatedPrice ?? null,
+        referencePrice: input.referencePrice ?? input.estimatedPrice ?? null,
+        reservationLimitRate: input.reservationLimitRate ?? null,
+        reservedAmount,
+      });
     } catch (error) {
       order.reject(error.code ?? "reservation_failed");
     }
@@ -64,6 +70,8 @@ class OrderApplicationService {
       estimatedPrice: order.estimatedPrice,
       quantity: order.quantity,
       reason: order.reason,
+      referencePrice: order.referencePrice,
+      reservationLimitRate: order.reservationLimitRate,
       reservedAmount: order.reservedAmount,
     };
     this.account.releaseOrder(order.id);

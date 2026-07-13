@@ -58,6 +58,22 @@ class CandidateAliasRegistry {
     const record = this.#byCandidateId.get(String(candidateId));
     return record ? { ...record.security } : null;
   }
+
+  records() {
+    return [...this.#byCandidateId.values()].map((record) => ({
+      alias: record.alias, candidateId: record.candidateId, security: { ...record.security },
+    }));
+  }
+
+  restore(records) {
+    for (const source of records) {
+      const security = normalizeSecurityId(source.security);
+      const record = Object.freeze({ alias: source.alias, candidateId: source.candidateId, security: Object.freeze(security) });
+      this.#byCandidateId.set(record.candidateId, record);
+      this.#bySecurityKey.set(securityKey(security), record);
+    }
+    return this;
+  }
 }
 
 module.exports = {

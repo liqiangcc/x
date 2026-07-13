@@ -12,6 +12,8 @@ function runtime() {
     getCandidates(_sessionId, options) { return { dataMode: "legacy_approximate", pagination: { items: [{ alias: "候选A", candidateId: "cand_a" }], ...options, total: 1 } }; },
     getChart(_sessionId, candidateId) { return { alias: "候选A", candidateId, daily: [{ close: 10, date: "2026-07-01" }], yearly: [] }; },
     getPortfolio() { return { cash: 100000, positions: [] }; },
+    listOrders() { return { orders: [{ id: "order-1", status: "accepted" }] }; },
+    listFills() { return { fills: [{ id: "fill-1", price: 10 }] }; },
   };
 }
 
@@ -36,6 +38,10 @@ test("query API returns candidates, chart and portfolio without requiring a real
   assert.equal(chart.json().daily[0].close, 10);
   const portfolio = await app.inject({ method: "GET", url: "/api/sessions/s/portfolio" });
   assert.equal(portfolio.json().cash, 100000);
+  const orders = await app.inject({ method: "GET", url: "/api/sessions/s/orders" });
+  assert.equal(orders.json().orders[0].id, "order-1");
+  const fills = await app.inject({ method: "GET", url: "/api/sessions/s/fills" });
+  assert.equal(fills.json().fills[0].id, "fill-1");
 });
 
 test("order API validates parameters and maps unknown resources", async (t) => {

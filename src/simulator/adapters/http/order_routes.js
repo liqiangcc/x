@@ -11,9 +11,16 @@ const ORDER_FIELDS = {
 };
 
 async function orderRoutes(app, { runtime }) {
+  app.get("/sessions/:sessionId/orders", async (request) => runtime.listOrders(request.params.sessionId, {
+    status: request.query.status,
+    tradingDate: request.query.tradingDate,
+  }));
+  app.get("/sessions/:sessionId/fills", async (request) => runtime.listFills(request.params.sessionId, {
+    tradingDate: request.query.tradingDate,
+  }));
   app.post("/sessions/:sessionId/orders", {
     schema: { body: { additionalProperties: false, properties: ORDER_FIELDS, required: ["candidateId", "expectedVersion", "quantity", "reason", "side"], type: "object" } },
-  }, async (request, reply) => reply.code(201).send(runtime.createOrder(request.params.sessionId, request.body)));
+  }, async (request, reply) => reply.code(201).send(await runtime.createOrder(request.params.sessionId, request.body)));
   app.patch("/sessions/:sessionId/orders/:orderId", {
     schema: { body: { additionalProperties: false, properties: {
       estimatedFees: ORDER_FIELDS.estimatedFees,

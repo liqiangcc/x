@@ -1,6 +1,10 @@
 "use strict";
 
+const fs = require("node:fs");
 const { defineConfig } = require("@playwright/test");
+
+const systemChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+  ?? (fs.existsSync("/snap/bin/chromium") ? "/snap/bin/chromium" : null);
 
 module.exports = defineConfig({
   expect: { timeout: 5000 },
@@ -19,7 +23,7 @@ module.exports = defineConfig({
     baseURL: "http://127.0.0.1:4173",
     launchOptions: {
       args: ["--no-sandbox"],
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "/snap/bin/chromium",
+      ...(systemChromium ? { executablePath: systemChromium } : {}),
     },
     screenshot: "only-on-failure",
     trace: "retain-on-failure",

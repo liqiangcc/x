@@ -123,7 +123,7 @@ class SimulatorRepository {
   }
 
   saveFill(sessionId, fill) {
-    this.db.prepare(`INSERT INTO fills
+    this.db.prepare(`INSERT OR REPLACE INTO fills
       (id, session_id, order_id, price_cents, quantity, fee_cents, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).run(fill.id, sessionId, fill.orderId, cents(fill.price), fill.quantity, cents(fill.fees.total), json(fill));
   }
@@ -151,6 +151,125 @@ class SimulatorRepository {
   appendEvent(sessionId, event) {
     this.db.prepare("INSERT INTO events (session_id, sequence, type, payload_json) VALUES (?, ?, ?, ?)")
       .run(sessionId, event.sequence, event.type, json(event.payload));
+  }
+
+  saveStrategy(strategy) {
+    this.db.prepare(`INSERT INTO strategies (id, name, version, is_system, config_json, status, data_version, failure_reason, archived)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET name=excluded.name, version=excluded.version,
+        config_json=excluded.config_json, status=excluded.status, data_version=excluded.data_version,
+        failure_reason=excluded.failure_reason, archived=excluded.archived, updated_at=CURRENT_TIMESTAMP`)
+      .run(strategy.id, strategy.name, strategy.version, strategy.isSystem ? 1 : 0, json(strategy.config),
+        strategy.status ?? "draft", strategy.dataVersion ?? null, strategy.failureReason ?? null, strategy.archived ? 1 : 0);
+  }
+
+  listStrategies() {
+    return this.db.prepare("SELECT * FROM strategies ORDER BY is_system DESC, created_at")
+      .all().map((row) => ({ archived: row.archived === 1, config: parse(row.config_json), dataVersion: row.data_version, failureReason: row.failure_reason,
+        id: row.id, isSystem: row.is_system === 1, name: row.name, status: row.status, version: row.version }));
+  }
+
+  deleteStrategy(id) {
+    return this.db.prepare("DELETE FROM strategies WHERE id = ? AND is_system = 0").run(id).changes === 1;
+  }
+
+  saveAccountProfile(profile) {
+    this.db.prepare(`INSERT INTO account_profiles
+      (account_id, name, start_mode, requested_start_date, actual_start_date, calculated_date, strategy_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(account_id) DO UPDATE SET name=excluded.name, calculated_date=excluded.calculated_date,
+        strategy_id=excluded.strategy_id`)
+      .run(profile.accountId, profile.name, profile.startMode, profile.requestedStartDate ?? null,
+        profile.actualStartDate, profile.calculatedDate ?? null, profile.strategyId ?? null);
+  }
+
+  listAccountProfiles() {
+    return this.db.prepare("SELECT * FROM account_profiles ORDER BY created_at DESC").all().map((row) => ({
+      accountId: row.account_id, actualStartDate: row.actual_start_date, calculatedDate: row.calculated_date,
+      name: row.name, requestedStartDate: row.requested_start_date, startMode: row.start_mode, strategyId: row.strategy_id,
+    }));
+  }
+
+  saveWatchlistItem(accountId, item) {
+    this.db.prepare(`INSERT INTO account_watchlist
+      (account_id, candidate_id, alias, security_json, strategy_id, signal_date, signal_close, evidence_json, signal_source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(account_id, candidate_id) DO UPDATE SET
+        alias=excluded.alias, security_json=excluded.security_json,
+        strategy_id=COALESCE(account_watchlist.strategy_id, excluded.strategy_id),
+        signal_date=COALESCE(account_watchlist.signal_date, excluded.signal_date),
+        signal_close=COALESCE(account_watchlist.signal_close, excluded.signal_close),
+        evidence_json=COALESCE(account_watchlist.evidence_json, excluded.evidence_json),
+        signal_source=COALESCE(account_watchlist.signal_source, excluded.signal_source)`)
+      .run(accountId, item.candidateId, item.alias, json(item.security), item.strategyId ?? null,
+        item.signalDate ?? null, item.signalClose ?? null, json(item.evidence), item.signalSource ?? null);
+  }
+
+  deleteWatchlistItem(accountId, candidateId) {
+    return this.db.prepare("DELETE FROM account_watchlist WHERE account_id = ? AND candidate_id = ?")
+      .run(accountId, candidateId).changes === 1;
+  }
+
+  listWatchlist(accountId) {
+    return this.db.prepare("SELECT * FROM account_watchlist WHERE account_id = ? ORDER BY added_at")
+      .all(accountId).map((row) => ({
+        alias: row.alias,
+        candidateId: row.candidate_id,
+        evidence: parse(row.evidence_json),
+        security: parse(row.security_json),
+        signalClose: row.signal_close,
+        signalDate: row.signal_date,
+        signalSource: row.signal_source,
+        strategyId: row.strategy_id,
+      }));
+  }
+
+  saveCandidateCalculation(calculation) {
+    this.db.prepare(`INSERT INTO candidate_calculations
+      (id, account_id, strategy_id, trading_date, status, result_count, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(calculation.id, calculation.accountId, calculation.strategyId, calculation.tradingDate,
+        calculation.status, calculation.resultCount, json(calculation));
+  }
+
+  saveStrategyBuild(build) {
+    this.db.prepare(`INSERT INTO strategy_builds
+      (id, strategy_id, strategy_version, data_version, status, phase, completed, total, signal_count, failure_reason, algorithm_version)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET status=excluded.status, phase=excluded.phase,
+        completed=excluded.completed, total=excluded.total, signal_count=excluded.signal_count,
+        failure_reason=excluded.failure_reason, algorithm_version=excluded.algorithm_version, updated_at=CURRENT_TIMESTAMP`)
+      .run(build.id, build.strategyId, build.strategyVersion, build.dataVersion, build.status,
+        build.phase, build.completed ?? 0, build.total ?? 0, build.signalCount ?? 0, build.failureReason ?? null,
+        build.algorithmVersion ?? 1);
+  }
+
+  replaceStrategySignals(build, byDate) {
+    this.db.prepare("DELETE FROM strategy_signals WHERE build_id = ?").run(build.id);
+    const insert = this.db.prepare(`INSERT INTO strategy_signals
+      (build_id, strategy_id, strategy_version, data_version, trading_date, security_key, payload_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    for (const [date, candidates] of byDate) {
+      for (const candidate of candidates) insert.run(build.id, build.strategyId, build.strategyVersion,
+        build.dataVersion, date, candidate.securityKey, json(candidate));
+    }
+  }
+
+  latestStrategyBuild(strategyId) {
+    const row = this.db.prepare("SELECT * FROM strategy_builds WHERE strategy_id = ? ORDER BY created_at DESC LIMIT 1").get(strategyId);
+    return row ? { algorithmVersion: row.algorithm_version, completed: row.completed, dataVersion: row.data_version, failureReason: row.failure_reason,
+      id: row.id, phase: row.phase, signalCount: row.signal_count, status: row.status,
+      strategyId: row.strategy_id, strategyVersion: row.strategy_version, total: row.total } : null;
+  }
+
+  loadStrategySignals(buildId) {
+    const rows = this.db.prepare("SELECT trading_date, payload_json FROM strategy_signals WHERE build_id = ? ORDER BY trading_date, security_key").all(buildId);
+    const byDate = new Map();
+    for (const row of rows) {
+      if (!byDate.has(row.trading_date)) byDate.set(row.trading_date, []);
+      byDate.get(row.trading_date).push(parse(row.payload_json));
+    }
+    return byDate;
   }
 }
 

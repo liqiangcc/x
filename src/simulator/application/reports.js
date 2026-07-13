@@ -118,7 +118,79 @@ function identityRows(entry) {
   }));
 }
 
-function buildSessionReport(entry) {
+function reconstructStockCycles(entry) {
+  const orders = entry.orderService?.orders ?? new Map();
+  const active = new Map();
+  const completed = [];
+  const sequence = new Map();
+  for (const fill of entry.engine?.fills ?? []) {
+    const order = orders.get(fill.orderId);
+    if (!order?.security) continue;
+    const key = `${order.security.market}.${order.security.code}`;
+    let cycle = active.get(key);
+    if (!cycle && fill.side === "buy") {
+      const cycleNumber = (sequence.get(key) ?? 0) + 1;
+      sequence.set(key, cycleNumber);
+      cycle = {
+        buyCount: 0, buyCost: 0, candidateId: order.candidateId, cycleNumber,
+        endDate: null, fees: 0, quantity: 0, security: order.security,
+        sellProceeds: 0, startDate: fill.date, status: "open",
+      };
+      active.set(key, cycle);
+    }
+    if (!cycle) continue;
+    cycle.fees += Number(fill.fees?.total ?? 0);
+    if (fill.side === "buy") {
+      cycle.buyCount += 1;
+      cycle.buyCost += Number(fill.cashAmount ?? 0);
+      cycle.quantity += fill.quantity;
+    } else if (fill.side === "sell") {
+      cycle.sellProceeds += Number(fill.cashAmount ?? 0);
+      cycle.quantity = Math.max(0, cycle.quantity - fill.quantity);
+      if (cycle.quantity === 0) {
+        cycle.endDate = fill.date;
+        cycle.status = "closed";
+        completed.push(cycle);
+        active.delete(key);
+      }
+    }
+  }
+  return [...completed, ...active.values()].sort((left, right) => left.startDate.localeCompare(right.startDate));
+}
+
+async function stockCycleReviews(entry, quoteFor = async () => null) {
+  const currentDate = entry.session.clock.currentDate;
+  return Promise.all(reconstructStockCycles(entry).map(async (cycle) => {
+    const valuationDate = cycle.endDate ?? currentDate;
+    const quote = await quoteFor(cycle.security, valuationDate);
+    const marketValue = cycle.status === "open" && Number.isFinite(quote?.close) ? cycle.quantity * quote.close : 0;
+    const totalPnl = cycle.sellProceeds + marketValue - cycle.buyCost;
+    const startIndex = entry.session.clock.dates.indexOf(cycle.startDate);
+    const endIndex = entry.session.clock.dates.indexOf(valuationDate);
+    const identity = entry.aliases.publicForSecurity(cycle.security);
+    return {
+      alias: identity?.alias ?? "匿名候选",
+      bollAboveMiddle: quote?.aboveMiddle ?? null,
+      bollMiddle: quote?.bollMiddle ?? null,
+      buyCost: metric(cycle.buyCost),
+      buyCount: cycle.buyCount,
+      candidateId: identity?.candidateId ?? cycle.candidateId,
+      cycleNumber: cycle.cycleNumber,
+      endDayIndex: endIndex < 0 ? null : endIndex + 1,
+      fees: metric(cycle.fees),
+      holdingDays: startIndex < 0 || endIndex < 0 ? null : endIndex - startIndex + 1,
+      currentPrice: quote?.close ?? null,
+      remainingQuantity: cycle.quantity,
+      returnPct: cycle.buyCost > 0 && (cycle.status === "closed" || Number.isFinite(quote?.close)) ? metric((totalPnl / cycle.buyCost) * 100) : null,
+      sellProceeds: metric(cycle.sellProceeds),
+      startDayIndex: startIndex < 0 ? null : startIndex + 1,
+      status: cycle.status,
+      totalPnl: cycle.status === "closed" || Number.isFinite(quote?.close) ? metric(totalPnl) : null,
+    };
+  }));
+}
+
+async function buildSessionReport(entry, { quoteFor } = {}) {
   const account = accountDto(entry.session.finalAccountSnapshot ?? entry.account.snapshot(), entry.aliases);
   const candidates = entry.session.candidateSnapshot.candidates;
   const orders = entry.orderService ? [...entry.orderService.orders.values()].map((order) => ({
@@ -159,6 +231,7 @@ function buildSessionReport(entry) {
     }),
     revealedAt: entry.session.revealedAt ?? null,
     session: sessionDto(entry),
+    stockCycles: await stockCycleReviews(entry, quoteFor),
   };
 }
 
@@ -170,4 +243,6 @@ module.exports = {
   equityReturns,
   identityRows,
   maximumDrawdown,
+  reconstructStockCycles,
+  stockCycleReviews,
 };

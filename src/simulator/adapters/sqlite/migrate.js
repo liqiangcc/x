@@ -3,6 +3,11 @@
 const migrations = [
   require("./migrations/001_initial"),
   require("./migrations/002_indexes"),
+  require("./migrations/003_accounts"),
+  require("./migrations/004_strategy_index"),
+  require("./migrations/005_strategy_archive"),
+  require("./migrations/006_strategy_algorithm"),
+  require("./migrations/007_watchlist_signals"),
 ];
 
 function migrate(db) {

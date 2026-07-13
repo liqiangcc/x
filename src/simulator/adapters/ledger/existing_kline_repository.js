@@ -30,32 +30,6 @@ function extractRows(payload) {
   return [];
 }
 
-async function readFirst(paths) {
-  for (const filePath of paths) {
-    try {
-      const source = await fs.readFile(filePath, "utf8");
-      let payload;
-      try {
-        payload = JSON.parse(source);
-      } catch (error) {
-        const wrapped = new Error(`Unable to parse kline file: ${filePath}`);
-        wrapped.code = "invalid_kline_file";
-        wrapped.cause = error;
-        throw wrapped;
-      }
-      return {
-        filePath,
-        hash: crypto.createHash("sha256").update(source).digest("hex"),
-        payload,
-      };
-    } catch (error) {
-      if (error.code === "ENOENT") continue;
-      throw error;
-    }
-  }
-  return null;
-}
-
 function executionIssues(bar) {
   if (!bar) return ["missing_execution_bar"];
   if (![bar.open, bar.high, bar.low, bar.close].every((value) => Number.isFinite(value) && value > 0)) {
@@ -65,8 +39,67 @@ function executionIssues(bar) {
 }
 
 class ExistingKlineRepository {
-  constructor({ klineRoot = path.join("data", "kline") } = {}) {
+  constructor({ cacheSize = 256, klineRoot = path.join("data", "kline") } = {}) {
+    if (!Number.isInteger(cacheSize) || cacheSize < 1) throw new TypeError("cacheSize must be a positive integer.");
+    this.cache = new Map();
+    this.cacheSize = cacheSize;
+    this.inFlight = new Map();
     this.klineRoot = klineRoot;
+  }
+
+  async loadFirst(paths) {
+    for (const filePath of paths) {
+      let stat;
+      try {
+        stat = await fs.stat(filePath);
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw error;
+      }
+      const signature = `${stat.mtimeMs}:${stat.ctimeMs}:${stat.size}`;
+      const cached = this.cache.get(filePath);
+      if (cached?.signature === signature) {
+        this.cache.delete(filePath);
+        this.cache.set(filePath, cached);
+        return cached.value;
+      }
+      const inFlightKey = `${filePath}:${signature}`;
+      let loading = this.inFlight.get(inFlightKey);
+      if (!loading) {
+        loading = this.loadFile(filePath, signature);
+        this.inFlight.set(inFlightKey, loading);
+      }
+      try {
+        return await loading;
+      } finally {
+        if (this.inFlight.get(inFlightKey) === loading) this.inFlight.delete(inFlightKey);
+      }
+    }
+    return null;
+  }
+
+  async loadFile(filePath, signature) {
+    const source = await fs.readFile(filePath, "utf8");
+    let payload;
+    try {
+      payload = JSON.parse(source);
+    } catch (error) {
+      const wrapped = new Error(`Unable to parse kline file: ${filePath}`);
+      wrapped.code = "invalid_kline_file";
+      wrapped.cause = error;
+      throw wrapped;
+    }
+    const normalized = normalizeKlineRows(extractRows(payload));
+    const value = {
+      filePath,
+      hash: crypto.createHash("sha256").update(source).digest("hex"),
+      issues: [...new Set(normalized.issues)].sort(),
+      rows: normalized.rows,
+    };
+    this.cache.delete(filePath);
+    this.cache.set(filePath, { signature, value });
+    while (this.cache.size > this.cacheSize) this.cache.delete(this.cache.keys().next().value);
+    return value;
   }
 
   async getLegacyHistory({ code, market, endDate, limit = null, period = "daily" }) {
@@ -79,7 +112,7 @@ class ExistingKlineRepository {
       throw new TypeError("limit must be a positive integer or null.");
     }
 
-    const loaded = await readFirst(klinePaths(this.klineRoot, period, security.code));
+    const loaded = await this.loadFirst(klinePaths(this.klineRoot, period, security.code));
     if (!loaded) {
       return {
         dataMode: DataMode.LEGACY_APPROXIMATE,
@@ -94,8 +127,7 @@ class ExistingKlineRepository {
       };
     }
 
-    const normalized = normalizeKlineRows(extractRows(loaded.payload));
-    const truncated = normalized.rows.filter((bar) => bar.date <= cutoff);
+    const truncated = loaded.rows.filter((bar) => bar.date <= cutoff);
     const bars = limit === null ? truncated : truncated.slice(-limit);
     return {
       dataMode: DataMode.LEGACY_APPROXIMATE,
@@ -106,7 +138,7 @@ class ExistingKlineRepository {
       bars,
       contentHash: loaded.hash,
       sourcePath: loaded.filePath,
-      qualityIssues: [...new Set(normalized.issues)].sort(),
+      qualityIssues: loaded.issues,
     };
   }
 

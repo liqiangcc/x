@@ -6,6 +6,7 @@ const {
   calculateBollSeries,
   calculateBollWindow,
 } = require("../src/signals/indicators/boll");
+const { dailyChartWindow, justCrossedBollMiddle, positionCycleOpenDates, prioritizeHeldWatchlist } = require("../src/simulator/application/runtime_service");
 const {
   evaluateYearDeclineCloseBreakout,
 } = require("../src/signals/signals/year_decline_close_breakout");
@@ -83,6 +84,57 @@ test("BOLL validates configuration and keeps invalid windows empty", () => {
   assert.equal(series[1].middle, null);
 });
 
+test("detail chart warms BOLL with 19 hidden bars and returns 20 visible bars", () => {
+  const bars = Array.from({ length: 45 }, (_item, index) => ({
+    close: index + 1,
+    date: `d${index + 1}`,
+    high: index + 1,
+    low: index + 1,
+    open: index + 1,
+  }));
+  const visible = dailyChartWindow(bars, "d30");
+  assert.equal(visible.length, 20);
+  assert.equal(visible[0].date, "d26");
+  assert.equal(visible[0].bollMiddle, 16.5);
+  assert.equal(visible.filter((bar) => bar.signal).length, 1);
+});
+
+test("watchlist BOLL cross requires yesterday at or below and today above the middle line", () => {
+  assert.equal(justCrossedBollMiddle({ bollMiddle: 10, close: 10 }, { bollMiddle: 10.5, close: 11 }), true);
+  assert.equal(justCrossedBollMiddle({ bollMiddle: 10, close: 10.1 }, { bollMiddle: 10.5, close: 11 }), false);
+  assert.equal(justCrossedBollMiddle({ bollMiddle: null, close: 9 }, { bollMiddle: 10, close: 11 }), null);
+});
+
+test("position holding cycle starts on first buy and resets only after a full exit", () => {
+  const security = { code: "600001", market: 1 };
+  const orders = new Map([
+    ["buy-1", { id: "buy-1", security }],
+    ["buy-2", { id: "buy-2", security }],
+    ["sell-1", { id: "sell-1", security }],
+    ["sell-2", { id: "sell-2", security }],
+    ["buy-3", { id: "buy-3", security }],
+  ]);
+  const fills = [
+    { date: "2026-07-01", orderId: "buy-1", quantity: 100, side: "buy" },
+    { date: "2026-07-02", orderId: "buy-2", quantity: 100, side: "buy" },
+    { date: "2026-07-03", orderId: "sell-1", quantity: 100, side: "sell" },
+    { date: "2026-07-06", orderId: "sell-2", quantity: 100, side: "sell" },
+    { date: "2026-07-07", orderId: "buy-3", quantity: 100, side: "buy" },
+  ];
+  assert.equal(positionCycleOpenDates({ fills: fills.slice(0, 3), orders }).get("1.600001"), "2026-07-01");
+  assert.equal(positionCycleOpenDates({ fills, orders }).get("1.600001"), "2026-07-07");
+});
+
+test("watchlist sorts held stocks by return and keeps unavailable returns stable at the end", () => {
+  const items = [
+    { candidateId: "a", detail: { holding: null } },
+    { candidateId: "b", detail: { holding: { quantity: 100, unrealizedPnlPct: -5 } } },
+    { candidateId: "c", detail: { holding: null } },
+    { candidateId: "d", detail: { holding: { quantity: 200, unrealizedPnlPct: 10 } } },
+  ];
+  assert.deepEqual(prioritizeHeldWatchlist(items).map((item) => item.candidateId), ["d", "b", "a", "c"]);
+});
+
 test("default composite candidate requires four consecutive declining complete years", () => {
   const result = evaluateYearDeclineCloseBreakout(candidateContext());
   assert.equal(result.ok, true);
@@ -94,6 +146,15 @@ test("default composite candidate requires four consecutive declining complete y
   assert.equal(evaluateYearDeclineCloseBreakout(candidateContext({
     closes: [20, 18, 19, 14],
   })).ok, false);
+});
+
+test("decline transitions parameter determines the required complete years", () => {
+  const twoTransitions = evaluateYearDeclineCloseBreakout(candidateContext(), { downTransitions: 2 });
+  assert.equal(twoTransitions.ok, true);
+  assert.equal(twoTransitions.evidence.required_complete_years, 3);
+  assert.equal(twoTransitions.evidence.down_transitions, 2);
+  assert.deepEqual(twoTransitions.evidence.annual_points.map((point) => point.year), [2023, 2024, 2025]);
+  assert.throws(() => evaluateYearDeclineCloseBreakout(candidateContext(), { downTransitions: 0 }), /downTransitions/);
 });
 
 test("default composite candidate reports a quality failure for a missing natural year", () => {
@@ -199,6 +260,45 @@ test("selection pipeline filters, sorts, paginates and reuses a versioned snapsh
 
   await pipeline.select({ asOfDate: "20260701", dataVersion: "fixture-v2" });
   assert.equal(historyReads, 12);
+});
+
+test("selection pipeline prepares every trading date with one bounded history pass", async () => {
+  let historyReads = 0;
+  const bars = new Map([["600001", repositoryBars(2)]]);
+  const pipeline = new CandidateSelectionPipeline({
+    historicalUniverse: new HistoricalUniverse({
+      repository: { async listAvailableCodes() {
+        return { qualityIssues: [], securities: [{ code: "600001", market: 1, status: "normal" }], source: "fixture" };
+      } },
+    }),
+    klineRepository: { async getLegacyHistory({ code, period }) {
+      historyReads += 1;
+      return { bars: bars.get(code)[period], qualityIssues: [] };
+    } },
+  });
+  await pipeline.prepare({ dates: ["2026-06-30", "2026-07-01"], dataVersion: "prepared-v1" });
+  assert.equal(historyReads, 2);
+  const result = await pipeline.select({ asOfDate: "2026-07-01", dataVersion: "prepared-v1" });
+  assert.equal(result.pagination.total, 1);
+  assert.equal(historyReads, 2);
+});
+
+test("full strategy index finds the same first-breakout occurrence in one history pass", async () => {
+  let reads = 0;
+  const bars = new Map([["600001", repositoryBars(2)]]);
+  const pipeline = new CandidateSelectionPipeline({
+    historicalUniverse: new HistoricalUniverse({ repository: { async listAvailableCodes() {
+      return { qualityIssues: [], securities: [{ code: "600001", market: 1, status: "normal" }], source: "fixture" };
+    } } }),
+    klineRepository: { async getLegacyHistory({ code, period }) {
+      reads += 1;
+      return { bars: bars.get(code)[period], qualityIssues: [] };
+    } },
+  });
+  const index = await pipeline.buildAll({ dataVersion: "index-v1" });
+  assert.equal(reads, 2);
+  assert.equal(index.signalCount, 1);
+  assert.equal(index.byDate.get("2026-07-01")[0].code, "600001");
 });
 
 test("candidate pagination defaults to 20 and validates input", () => {

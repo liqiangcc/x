@@ -7,6 +7,7 @@ const { OrderApplicationService } = require("../src/simulator/application/orders
 const { CandidateAliasRegistry } = require("../src/simulator/selection/aliases");
 const { SimulatorSession } = require("../src/simulator/core/session");
 const { OrderSide, OrderStatus, SessionStatus } = require("../src/simulator/core/enums");
+const { buyReservationInput, reservationLimitRate } = require("../src/simulator/application/runtime_service");
 
 const DATES = ["2026-07-01", "2026-07-02", "2026-07-03"];
 const SECURITIES = [{ code: "600001", market: 1 }, { code: "000002", market: 0 }];
@@ -58,4 +59,19 @@ test("completeDecision locks all order editing and returns the session to runnin
   assert.equal(session.status, SessionStatus.RUNNING);
   assert.throws(() => service.update(order.id, { reason: "不能修改" }), (error) => error.code === "decision_locked");
   assert.throws(() => service.cancel(order.id), (error) => error.code === "decision_locked");
+});
+
+test("buy reservations use server-side board limits and ignore client estimates", () => {
+  assert.equal(reservationLimitRate({ code: "600001" }), 0.10);
+  assert.equal(reservationLimitRate({ code: "300001" }), 0.20);
+  assert.equal(reservationLimitRate({ code: "688001" }), 0.20);
+  assert.equal(reservationLimitRate({ code: "920001" }), 0.30);
+  const input = buyReservationInput({
+    aliases: { resolve: () => ({ code: "300001", market: 0 }) },
+    config: { execution: {} },
+    session: { candidateSnapshot: { candidates: [{ candidateId: "candidate", evidence: { today_close: 10 } }] } },
+  }, { candidateId: "candidate", estimatedFees: 1, estimatedPrice: 1, quantity: 100, side: "buy" });
+  assert.equal(input.referencePrice, 10);
+  assert.equal(input.estimatedPrice, 12);
+  assert.equal(input.estimatedFees, 5);
 });

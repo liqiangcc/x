@@ -2,6 +2,22 @@
 
 const REQUIRED_COMPLETE_YEARS = 4;
 
+function normalizeYearDeclineConfig(input = {}) {
+  const downTransitions = input.downTransitions ?? 3;
+  if (!Number.isInteger(downTransitions) || downTransitions < 1 || downTransitions > 20) {
+    throw new TypeError("downTransitions must be an integer between 1 and 20.");
+  }
+  const requireConsecutiveCalendarYears = input.requireConsecutiveCalendarYears ?? true;
+  if (requireConsecutiveCalendarYears !== true) {
+    throw new TypeError("Only consecutive calendar years are currently supported.");
+  }
+  const firstBreakoutScope = input.firstBreakoutScope ?? "current_year";
+  if (firstBreakoutScope !== "current_year") throw new TypeError("firstBreakoutScope must be current_year.");
+  const breakoutOperator = input.breakoutOperator ?? "gt";
+  if (breakoutOperator !== "gt") throw new TypeError("breakoutOperator must be gt.");
+  return Object.freeze({ breakoutOperator, downTransitions, firstBreakoutScope, requireConsecutiveCalendarYears });
+}
+
 function finite(value) {
   return Number.isFinite(value);
 }
@@ -10,11 +26,13 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function evaluateYearDeclineCloseBreakout(context) {
+function evaluateYearDeclineCloseBreakout(context, inputConfig = {}) {
+  const config = normalizeYearDeclineConfig(inputConfig);
+  const requiredCompleteYears = config.downTransitions + 1;
   const today = context?.features?.today ?? null;
   const currentYear = Number(String(context?.isoDate ?? today?.date ?? "").slice(0, 4));
   const requiredYears = Number.isInteger(currentYear)
-    ? Array.from({ length: REQUIRED_COMPLETE_YEARS }, (_, index) => currentYear - REQUIRED_COMPLETE_YEARS + index)
+    ? Array.from({ length: requiredCompleteYears }, (_, index) => currentYear - requiredCompleteYears + index)
     : [];
   const completedByYear = new Map(
     (context?.features?.completedYears ?? []).map((bar) => [Number(bar.year), bar]),
@@ -22,7 +40,7 @@ function evaluateYearDeclineCloseBreakout(context) {
   const annualPoints = requiredYears.map((year) => completedByYear.get(year) ?? null);
   const qualityIssues = [];
 
-  if (requiredYears.length !== REQUIRED_COMPLETE_YEARS || annualPoints.some((point) => !point || !finite(point.close) || !finite(point.high))) {
+  if (requiredYears.length !== requiredCompleteYears || annualPoints.some((point) => !point || !finite(point.close) || !finite(point.high))) {
     qualityIssues.push("insufficient_consecutive_complete_years");
   }
   if (!today || !finite(today.close) || !today.date) {
@@ -39,7 +57,7 @@ function evaluateYearDeclineCloseBreakout(context) {
     ? Math.max(...previousCurrentYearCloses)
     : null;
 
-  const consecutiveDecline = annualPoints.length === REQUIRED_COMPLETE_YEARS
+  const consecutiveDecline = annualPoints.length === requiredCompleteYears
     && annualPoints.every(Boolean)
     && annualPoints.slice(1).every((point, index) => point.close < annualPoints[index].close);
   const neverClosedAbove = previousYearHigh !== null
@@ -59,7 +77,9 @@ function evaluateYearDeclineCloseBreakout(context) {
       breakout_margin_pct: marginPct,
       max_previous_current_year_close: maxPreviousCurrentYearClose,
       previous_year_high: previousYearHigh,
-      required_complete_years: REQUIRED_COMPLETE_YEARS,
+      down_transitions: config.downTransitions,
+      required_complete_years: requiredCompleteYears,
+      rule_summary: `${requiredCompleteYears}个完整年度收盘逐年降低，当前年度首次收盘突破去年最高价`,
       today_close: today?.close ?? null,
       today_date: today?.date ?? null,
     },
@@ -78,5 +98,6 @@ const yearDeclineCloseBreakoutSignal = {
 module.exports = {
   REQUIRED_COMPLETE_YEARS,
   evaluateYearDeclineCloseBreakout,
+  normalizeYearDeclineConfig,
   yearDeclineCloseBreakoutSignal,
 };

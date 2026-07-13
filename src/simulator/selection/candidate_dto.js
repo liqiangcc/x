@@ -4,9 +4,11 @@ const EVIDENCE_FIELDS = [
   "annual_points",
   "breakout_margin",
   "breakout_margin_pct",
+  "down_transitions",
   "max_previous_current_year_close",
   "previous_year_high",
   "required_complete_years",
+  "rule_summary",
   "today_close",
   "today_date",
 ];
@@ -36,15 +38,16 @@ function candidateDto(candidate, identity) {
 function barDto(bar) {
   return pick(bar, [
     "date", "open", "close", "high", "low", "volume", "amount",
-    "bollLower", "bollMiddle", "bollUpper", "breakout", "previousYearHigh",
+    "bollLower", "bollMiddle", "bollUpper", "breakout", "previousYearHigh", "signal",
   ]);
 }
 
-function chartDto({ candidateId, alias, daily = [], yearly = [] }) {
+function chartDto({ candidateId, alias, daily = [], detail = null, yearly = [] }) {
   return {
     alias,
     candidateId,
     daily: daily.map(barDto),
+    detail,
     yearly: yearly.map((bar) => pick(bar, ["year", "open", "close", "high", "low", "volume", "amount"])),
   };
 }
@@ -55,9 +58,13 @@ function holdingDto(holding, identity) {
     availableQuantity: holding.availableQuantity,
     averageCost: holding.averageCost,
     candidateId: identity.candidateId,
+    currentPrice: holding.currentPrice,
+    holdingDays: holding.holdingDays,
     marketValue: holding.marketValue,
+    priceDayOffset: holding.priceDayOffset,
     quantity: holding.quantity,
     unrealizedPnl: holding.unrealizedPnl,
+    unrealizedPnlPct: holding.unrealizedPnlPct,
   };
 }
 
