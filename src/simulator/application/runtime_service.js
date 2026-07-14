@@ -285,8 +285,10 @@ class SimulatorRuntimeService {
       }
       const build = this.repository?.latestStrategyBuild?.(strategy.id);
       if (build) this.strategyBuilds.set(strategy.id, build);
-      if (strategy.status === "ready" && build?.status === "ready" && build.algorithmVersion === strategyAlgorithmVersion(strategy)) {
-        this.strategyIndexes.set(strategy.id, this.repository.loadStrategySignals(build.id));
+      const readyBuild = this.repository?.latestReadyStrategyBuild?.(strategy.id, strategyAlgorithmVersion(strategy))
+        ?? (build?.status === "ready" && build.algorithmVersion === strategyAlgorithmVersion(strategy) ? build : null);
+      if (strategy.status === "ready" && readyBuild) {
+        this.strategyIndexes.set(strategy.id, this.repository.loadStrategySignals(readyBuild.id));
         if (strategy.config?.strategy?.schemaVersion !== 3) {
           const revision = (strategy.activeRevision ?? strategy.version) + 1;
           const candidateStrategy = {

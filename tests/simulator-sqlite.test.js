@@ -100,6 +100,17 @@ test("repository keeps immutable template and strategy revision histories", (t) 
   assert.equal(repository.listStrategyTemplateRevisions("template-1")[0].definition.value, "original");
 });
 
+test("repository restores the latest compatible ready build behind failed attempts", (t) => {
+  const repository = new SimulatorRepository({ db: new Database(":memory:") });
+  t.after(() => repository.close());
+  repository.saveStrategy({ config: {}, id: "strategy-1", isSystem: false, name: "策略", status: "ready", version: 1 });
+  repository.saveStrategyBuild({ algorithmVersion: 7, dataVersion: "v1", id: "ready", phase: "completed", status: "ready", strategyId: "strategy-1", strategyVersion: 1 });
+  repository.saveStrategyBuild({ algorithmVersion: 8, dataVersion: "v1", id: "failed", phase: "failed", status: "failed", strategyId: "strategy-1", strategyVersion: 2 });
+  assert.equal(repository.latestStrategyBuild("strategy-1").id, "failed");
+  assert.equal(repository.latestReadyStrategyBuild("strategy-1", 7).id, "ready");
+  assert.equal(repository.latestReadyStrategyBuild("strategy-1", 8), null);
+});
+
 test("orders, fills, snapshots and events commit together and roll back together", (t) => {
   const repository = new SimulatorRepository({ db: new Database(":memory:") });
   t.after(() => repository.close());

@@ -315,7 +315,16 @@ class SimulatorRepository {
   }
 
   latestStrategyBuild(strategyId) {
-    const row = this.db.prepare("SELECT * FROM strategy_builds WHERE strategy_id = ? ORDER BY created_at DESC LIMIT 1").get(strategyId);
+    const row = this.db.prepare("SELECT * FROM strategy_builds WHERE strategy_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1").get(strategyId);
+    return row ? { algorithmVersion: row.algorithm_version, completed: row.completed, dataVersion: row.data_version, failureReason: row.failure_reason,
+      id: row.id, phase: row.phase, signalCount: row.signal_count, status: row.status,
+      strategyId: row.strategy_id, strategyVersion: row.strategy_version, total: row.total } : null;
+  }
+
+  latestReadyStrategyBuild(strategyId, algorithmVersion) {
+    const row = this.db.prepare(`SELECT * FROM strategy_builds
+      WHERE strategy_id = ? AND status = 'ready' AND algorithm_version = ?
+      ORDER BY created_at DESC, rowid DESC LIMIT 1`).get(strategyId, algorithmVersion);
     return row ? { algorithmVersion: row.algorithm_version, completed: row.completed, dataVersion: row.data_version, failureReason: row.failure_reason,
       id: row.id, phase: row.phase, signalCount: row.signal_count, status: row.status,
       strategyId: row.strategy_id, strategyVersion: row.strategy_version, total: row.total } : null;
