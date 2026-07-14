@@ -5,6 +5,7 @@ import PerformanceCharts from "../components/PerformanceCharts.jsx";
 import TradeReview from "../components/TradeReview.jsx";
 import StockCycleReview from "../components/StockCycleReview.jsx";
 import { useSession } from "../state/SessionContext.jsx";
+import { securityLabel, tradingDayLabel } from "../utils/securityDisplay.js";
 
 function percent(value) {
   return Number.isFinite(value) ? `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%` : "—";
@@ -15,7 +16,7 @@ function money(value) {
 }
 
 export default function ReviewPage() {
-  const { busy, client, error, run, session, sessionId, setSession } = useSession();
+  const { busy, client, error, run, session, sessionId, setSession, settings } = useSession();
   const [report, setReport] = useState(null);
   const [exportPath, setExportPath] = useState(null);
 
@@ -32,12 +33,6 @@ export default function ReviewPage() {
     setReport(await client.getReport(sessionId));
   }
 
-  async function reveal() {
-    const response = await run(() => client.reveal(sessionId, session.version));
-    setSession({ ...session, revealedAt: response.revealedAt, version: response.sessionVersion });
-    setReport(await client.getReport(sessionId));
-  }
-
   async function exportReport() {
     const result = await run(() => client.exportSession(sessionId));
     setExportPath(result.filePath);
@@ -45,18 +40,21 @@ export default function ReviewPage() {
 
   const performance = report?.performance;
   const totalProfit = performance ? performance.endingEquity - performance.initialCash : null;
+  const startDate = report?.equityCurve?.[0]?.date ?? report?.session?.config?.startDate ?? null;
+  const endDate = report?.session?.clock?.currentDate ?? null;
   return (
     <section>
       <div className="page-heading-row"><div><p className="eyebrow">证据与理由</p><h1>练习复盘</h1></div><span className="data-badge">近似价格</span></div>
       <ErrorNotice error={error} />
-      <div className="review-actions">{session.status !== "completed" && <button className="primary-button" disabled={busy} onClick={finish}>结束并估值</button>}{!session.revealedAt && (session.mode !== "blind" || session.status === "completed") && <button className="secondary-button" disabled={busy} onClick={reveal}>揭晓身份</button>}<button className="secondary-button" disabled={busy} onClick={exportReport}>导出 JSON</button></div>
+      <div className="review-actions">{session.status !== "completed" && <button className="primary-button" disabled={busy} onClick={finish}>结束并估值</button>}<button className="secondary-button" disabled={busy} onClick={exportReport}>导出 JSON</button></div>
       {exportPath && <p className="export-note">已导出：{exportPath}</p>}
       {!report ? <div className="chart-loading">加载复盘…</div> : <>
-        <div className="metric-grid"><div><span>总收益</span><strong className={totalProfit < 0 ? "loss-text" : "positive-text"}>{money(totalProfit)} / {percent(performance.totalReturn)}</strong></div><div><span>最大回撤</span><strong>{percent(performance.maxDrawdown)}</strong></div><div><span>年化收益</span><strong>{percent(performance.annualizedReturn)}</strong></div><div><span>Sharpe</span><strong>{performance.sharpe.toFixed(2)}</strong></div><div><span>费用</span><strong>¥{performance.fees.toFixed(2)}</strong></div><div><span>滑点</span><strong>¥{performance.slippage.toFixed(2)}</strong></div></div>
+        <div className="review-meta"><p>练习区间：{tradingDayLabel({ anonymousMode: settings.anonymousMode, date: startDate, dayIndex: 1 })} → {tradingDayLabel({ anonymousMode: settings.anonymousMode, date: endDate, dayIndex: session.dayIndex ?? report.equityCurve.length })}</p><p>页面显示：{settings.anonymousMode ? "匿名" : "实名"}</p></div>
+        <div className="metric-grid"><div><span>总收益</span><strong className={totalProfit < 0 ? "loss-text" : "positive-text"}>{money(totalProfit)} / {percent(performance.totalReturn)}</strong></div><div><span>期初 / 期末</span><strong>¥{performance.initialCash.toFixed(2)} / ¥{performance.endingEquity.toFixed(2)}</strong></div><div><span>已实现 / 浮动</span><strong>{money(performance.realizedPnl)} / {money(performance.unrealizedPnl)}</strong></div><div><span>胜率</span><strong>{performance.winRate == null ? "—" : percent(performance.winRate)}</strong></div><div><span>订单 / 平仓</span><strong>{performance.orderCount} / {performance.closedTradeCount}</strong></div><div><span>最大回撤</span><strong>{percent(performance.maxDrawdown)}</strong></div><div><span>年化收益</span><strong>{percent(performance.annualizedReturn)}</strong></div><div><span>Sharpe / Sortino</span><strong>{performance.sharpe.toFixed(2)} / {performance.sortino.toFixed(2)}</strong></div><div><span>费用 / 滑点</span><strong>¥{performance.fees.toFixed(2)} / ¥{performance.slippage.toFixed(2)}</strong></div></div>
         <PerformanceCharts benchmark={report.benchmark} equityCurve={report.equityCurve} />
-        <StockCycleReview cycles={report.stockCycles} />
-        <TradeReview candidates={report.candidates} fills={report.fills} orders={report.orders} />
-        <div className="review-meta"><p>实名状态：{report.revealedAt ? "已揭晓" : "保持匿名"}</p><p>盲测模式：{session.mode === "blind" ? "是" : "否"}</p><p>父会话：{report.lineage?.parentSessionId ?? "无"}</p>{report.account.positions?.length > 0 && <p>未平仓持仓：{report.account.positions.map((item) => `${item.alias} ${item.quantity}股`).join("、")}（结束估值，未强平）</p>}</div>
+        <StockCycleReview anonymousMode={settings.anonymousMode} cycles={report.stockCycles} />
+        <TradeReview anonymousMode={settings.anonymousMode} candidates={report.candidates} fills={report.fills} orders={report.orders} />
+        <div className="review-meta"><p>数据模式：历史近似成交 · 持仓按当前练习日估值</p><p>父会话：{report.lineage?.parentSessionId ?? "无"}</p>{report.account.positions?.length > 0 && <p>未平仓持仓：{report.account.positions.map((item) => `${securityLabel(item, settings.anonymousMode)} ${item.quantity}股`).join("、")}（结束估值，未强平）</p>}</div>
       </>}
     </section>
   );

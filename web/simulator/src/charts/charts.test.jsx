@@ -28,9 +28,28 @@ describe("simulator chart options", () => {
     expect(option.grid[0].bottom).toBe(42);
   });
 
+  it("limits the visible daily K-line range for left and right navigation", () => {
+    const rows = Array.from({ length: 30 }, (_, index) => ({ close: index, high: index, low: index, open: index }));
+    const option = buildDailyOption(rows, { windowEnd: 29, windowStart: 10 });
+    expect(option.dataZoom[0]).toMatchObject({ endValue: 29, startValue: 10 });
+    expect(option.dataZoom[1]).toMatchObject({ endValue: 29, startValue: 10 });
+  });
+
   it("builds the separate yearly candlestick view", () => {
     const option = buildYearlyOption([{ close: 14, high: 17, low: 12, open: 16, year: 2025 }]);
-    expect(option.xAxis.data).toEqual(["本年"]);
+    expect(option.xAxis.data).toEqual([""]);
+    expect(option.xAxis.axisLabel.show).toBe(false);
     expect(option.series[0].data[0]).toEqual([16, 14, 12, 17]);
+  });
+
+  it("shows real years only after anonymous mode is disabled", () => {
+    const option = buildYearlyOption([{ year: 2024 }, { year: 2025 }], { anonymousMode: false });
+    expect(option.xAxis.data).toEqual(["2024", "2025"]);
+    expect(option.xAxis.axisLabel.show).toBe(true);
+  });
+
+  it("limits the visible yearly K-line range for left and right navigation", () => {
+    const option = buildYearlyOption(Array.from({ length: 15 }, (_, index) => ({ year: 2010 + index })), { windowEnd: 14, windowStart: 5 });
+    expect(option.dataZoom[0]).toMatchObject({ endValue: 14, startValue: 5 });
   });
 });

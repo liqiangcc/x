@@ -178,6 +178,12 @@ function parseArguments(argv) {
       continue;
     }
 
+    if (arg === "--proxy-max-p95-ms") {
+      options.proxyMaxP95Ms = parsePositiveInteger(argv[index + 1], "--proxy-max-p95-ms");
+      index += 1;
+      continue;
+    }
+
     if (arg === "--proxy-preflight-concurrency") {
       options.proxyPreflightConcurrency = parsePositiveInteger(argv[index + 1], "--proxy-preflight-concurrency");
       index += 1;
@@ -568,14 +574,14 @@ async function selectCodes(codes, options) {
   let candidates = codes;
   let selectionMode = "all";
 
-  if (options.batchSize && !options.limit && !options.force) {
+  if (!options.limit && !options.force && (options.batchSize || options.expectedLatestDate)) {
     candidates = [];
     for (const code of codes) {
       if (await codeNeedsProcessing(code, options)) {
         candidates.push(code);
       }
     }
-    selectionMode = "next_missing";
+    selectionMode = options.batchSize ? "next_missing" : "stale_or_missing";
   }
 
   const offsetCodes = candidates.slice(options.offset);
@@ -1443,6 +1449,7 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     proxyMaxAttemptsExplicit: options.proxyMaxAttemptsExplicit ?? false,
     proxyMinAvailable: options.proxyMinAvailable ?? 5,
     proxyMinSuccessRate: options.proxyMinSuccessRate ?? 0.6,
+    proxyMaxP95Ms: options.proxyMaxP95Ms ?? null,
     proxyPreflight: options.proxyPreflight ?? options.policy === "proxy-only",
     proxyPreflightConcurrency: options.proxyPreflightConcurrency ?? 16,
     proxyPreflightTimeoutMs: options.proxyPreflightTimeoutMs ?? 3000,
@@ -1453,30 +1460,6 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     routerRegion: options.routerRegion ?? "auto",
   };
   let proxyRuntime = null;
-  if (effectiveOptions.proxyPreflight && fetchKline === fetchSingleKline) {
-    proxyRuntime = new ProxyBatchRuntime({
-      classifyError: classifyProxyError,
-      cooldownForError: cooldownMs,
-      stateFile: process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE,
-    });
-    try {
-      effectiveOptions.proxy_preflight = await proxyRuntime.prepare({
-        concurrency: effectiveOptions.proxyPreflightConcurrency,
-        minAvailable: effectiveOptions.proxyMinAvailable,
-        minSuccessRate: effectiveOptions.proxyMinSuccessRate,
-        timeoutMs: effectiveOptions.proxyPreflightTimeoutMs,
-      });
-    } catch (error) {
-      await proxyRuntime.close();
-      throw error;
-    }
-    effectiveOptions.proxyRuntime = proxyRuntime;
-    if (options.concurrency === null || options.concurrency === undefined) {
-      effectiveOptions.concurrency = Math.max(1, Math.min(16, proxyRuntime.available.length));
-      effectiveOptions.adaptiveConcurrency = true;
-      effectiveOptions.maxAdaptiveConcurrency = Math.min(16, proxyRuntime.available.length);
-    }
-  }
   effectiveOptions.freshnessCodes = await loadFreshnessCodes({
     ...options,
     expectedLatestDate: effectiveOptions.expectedLatestDate,
@@ -1506,6 +1489,31 @@ async function queryPoolKlines(options, fetchKline = fetchSingleKline) {
     selection_mode: selection.selectionMode,
   });
   const selectedCodes = selection.selectedCodes;
+  if (selectedCodes.length > 0 && effectiveOptions.proxyPreflight && fetchKline === fetchSingleKline) {
+    proxyRuntime = new ProxyBatchRuntime({
+      classifyError: classifyProxyError,
+      cooldownForError: cooldownMs,
+      stateFile: process.env.X_PROXY_POOL_STATE_FILE ?? DEFAULT_STATE_FILE,
+    });
+    try {
+      effectiveOptions.proxy_preflight = await proxyRuntime.prepare({
+        concurrency: effectiveOptions.proxyPreflightConcurrency,
+        maxP95Ms: effectiveOptions.proxyMaxP95Ms,
+        minAvailable: effectiveOptions.proxyMinAvailable,
+        minSuccessRate: effectiveOptions.proxyMinSuccessRate,
+        timeoutMs: effectiveOptions.proxyPreflightTimeoutMs,
+      });
+    } catch (error) {
+      await proxyRuntime.close();
+      throw error;
+    }
+    effectiveOptions.proxyRuntime = proxyRuntime;
+    if (options.concurrency === null || options.concurrency === undefined) {
+      effectiveOptions.concurrency = Math.max(1, Math.min(16, proxyRuntime.available.length));
+      effectiveOptions.adaptiveConcurrency = true;
+      effectiveOptions.maxAdaptiveConcurrency = Math.min(16, proxyRuntime.available.length);
+    }
+  }
   const periodDir = path.join(effectiveOptions.outputDir, effectiveOptions.period);
   await fs.mkdir(periodDir, { recursive: true });
   const checkpointId = crypto.createHash("sha256")

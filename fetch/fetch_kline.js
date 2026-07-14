@@ -344,25 +344,16 @@ function resolveHuaweiCloudRegions(value, targets) {
 }
 
 async function fetchLocalKline(secid, klt, options = {}) {
-  let lastError;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      return await getKline({
-        secid,
-        klt,
-        lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
-        end: "20991231",
-      });
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) {
-        await new Promise((resolve) => {
-          setTimeout(resolve, attempt * 500);
-        });
-      }
-    }
-  }
-  throw lastError;
+  return getKline({
+    secid,
+    klt,
+    lmt: options.klineLimit ?? DEFAULT_KLINE_LMT,
+    end: "20991231",
+    requestOptions: {
+      retries: options.localRequestRetries ?? 2,
+      timeoutMs: options.localTimeoutMs ?? 8000,
+    },
+  });
 }
 
 async function fetchProxyPoolKline(secid, klt, options, env = process.env) {

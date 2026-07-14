@@ -2,17 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ErrorNotice from "../components/ErrorNotice.jsx";
 import { useSession } from "../state/SessionContext.jsx";
+import { accountLabel, tradingDayLabel } from "../utils/securityDisplay.js";
 
 const DEFAULT_SELECTION = {
   excludeSpecialTreatment: true,
   limit: 20,
   orderBy: "breakout_margin_ascending",
   strategy: { type: "year_decline_close_breakout" },
+  universe: { beijingExchange: false, chiNext: true, mainBoard: true, starMarket: false },
 };
 
 export default function CreateSessionPage() {
   const navigate = useNavigate();
-  const { busy, client, error, run, setSession } = useSession();
+  const { busy, client, error, run, setSession, settings } = useSession();
   const [form, setForm] = useState({
     initialCash: 100000,
     name: "练习账号",
@@ -60,7 +62,7 @@ export default function CreateSessionPage() {
           <button className="primary-button" disabled={busy || !strategies.some((strategy) => strategy.id === form.strategyId && strategy.status === "ready")} type="submit">{busy ? "正在创建账号…" : "创建并开始"}</button>
         </div>
       </form>
-      {accounts.length > 0 && <div className="panel form-card"><h2>已有账号</h2>{accounts.map((account) => <div className="order-row" key={account.id}><strong>{account.name}</strong><small>第 {account.dayIndex ?? 1} 个交易日 · 可用资金 ¥{account.account.cashAvailable.toLocaleString("zh-CN")}</small><button className="secondary-button" onClick={() => { setSession(account); navigate("/candidates"); }} type="button">进入账号</button></div>)}</div>}
+      {accounts.length > 0 && <div className="panel form-card"><h2>已有账号</h2>{accounts.map((account, index) => <div className="order-row" key={account.id}><strong>{accountLabel(account, settings.anonymousMode, index)}</strong><small>{tradingDayLabel({ anonymousMode: settings.anonymousMode, date: account.clock.currentDate, dayIndex: account.dayIndex ?? 1 })} · 可用资金 ¥{account.account.cashAvailable.toLocaleString("zh-CN")}</small><button className="secondary-button" onClick={() => { setSession(account); navigate("/candidates"); }} type="button">进入账号</button></div>)}</div>}
     </section>
   );
 }

@@ -88,4 +88,7 @@ test("stock review records closed and open holding cycles with return, days and 
   assert.equal(cycles[0].totalPnl, 89.5);
   assert.equal(cycles[1].totalPnl, 95);
   assert.equal(cycles[1].bollAboveMiddle, true);
+  assert.equal(cycles[0].startDate, "2026-07-01");
+  assert.equal(cycles[0].valuationDate, "2026-07-02");
+  assert.equal(cycles[1].valuationDate, "2026-07-06");
 });

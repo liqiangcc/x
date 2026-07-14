@@ -38,7 +38,7 @@ const SIMULATOR_CONFIG_SCHEMA = Object.freeze({
     selection: {
       type: "object",
       additionalProperties: false,
-      required: ["strategy", "excludeSpecialTreatment", "orderBy", "limit"],
+      required: ["strategy", "excludeSpecialTreatment", "orderBy", "limit", "universe"],
       properties: {
         strategy: {
           type: "object",
@@ -55,6 +55,17 @@ const SIMULATOR_CONFIG_SCHEMA = Object.freeze({
         excludeSpecialTreatment: { type: "boolean" },
         orderBy: { const: "breakout_margin_ascending" },
         limit: { type: "integer", minimum: 1 },
+        universe: {
+          type: "object",
+          additionalProperties: false,
+          required: ["mainBoard", "chiNext", "starMarket", "beijingExchange"],
+          properties: {
+            mainBoard: { type: "boolean" },
+            chiNext: { type: "boolean" },
+            starMarket: { type: "boolean" },
+            beijingExchange: { type: "boolean" },
+          },
+        },
       },
     },
     execution: {

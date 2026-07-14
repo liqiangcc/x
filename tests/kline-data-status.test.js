@@ -42,5 +42,8 @@ test("data status reports latest coverage and strategy sync universe", async (co
   assert.equal(await latestDateFromFile(path.join(root, "kline", "daily", "600", "600001.json")), "2026-07-13");
 
   const service = new DataStatusService({ cacheTtlMs: 60000, klineRoot: path.join(root, "kline") });
-  assert.equal(await service.get(), await service.get());
+  const cached = await service.get();
+  assert.equal(cached, await service.get());
+  service.invalidate();
+  assert.notEqual(cached, await service.get());
 });

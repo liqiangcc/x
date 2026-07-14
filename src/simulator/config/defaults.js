@@ -22,6 +22,12 @@ const DEFAULT_SIMULATOR_CONFIG = Object.freeze({
     excludeSpecialTreatment: true,
     orderBy: "breakout_margin_ascending",
     limit: 20,
+    universe: Object.freeze({
+      mainBoard: true,
+      chiNext: true,
+      starMarket: false,
+      beijingExchange: false,
+    }),
   }),
   execution: Object.freeze({
     orderType: OrderType.NEXT_OPEN,

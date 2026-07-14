@@ -12,6 +12,9 @@ function dataCommitPathspecs(run) {
   if (period) {
     paths.push(path.posix.join("data", "kline", period));
   }
+  if (period === "daily" && Number(run?.yearly_aggregation_updated ?? 0) > 0) {
+    paths.push(path.posix.join("data", "kline", "yearly"));
+  }
   if (date && period && jobId) {
     paths.push(path.posix.join("data", "jobs", date, period, jobId));
   }

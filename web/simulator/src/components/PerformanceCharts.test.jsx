@@ -17,7 +17,14 @@ describe("review components", () => {
     render(<TradeReview candidates={[]} fills={[{ orderId: "o1", price: 10.01, slippageAmount: 1 }]} orders={[{ candidateId: "c1", candidateSnapshot: { alias: "候选A", evidence: { breakout_margin_pct: 1.2 } }, id: "o1", quantity: 100, reason: "首次突破", side: "buy", status: "filled", tradingDate: "2026-07-01" }]} />);
     expect(screen.getByText("首次突破")).toBeInTheDocument();
     expect(screen.getByText("1.20%")).toBeInTheDocument();
-    expect(screen.getByText(/成交价 10.01/)).toBeInTheDocument();
+    expect(screen.getByText("¥10.01 / —")).toBeInTheDocument();
+  });
+
+  it("shows decision and fill dates in real-name review mode", () => {
+    render(<TradeReview anonymousMode={false} candidates={[]} fills={[{ date: "2026-07-02", dayIndex: 2, fees: { total: 5 }, grossAmount: 1000, orderId: "o1", price: 10, slippageAmount: 1 }]} orders={[{ candidateId: "c1", candidateSnapshot: { alias: "候选A", security: { code: "600001", market: 1, name: "示例股份" } }, dayIndex: 1, estimatedPrice: 9.9, id: "o1", quantity: 100, reason: "首次突破", side: "buy", status: "filled", tradingDate: "2026-07-01" }]} />);
+    expect(screen.getByText(/2026-07-01/)).toBeInTheDocument();
+    expect(screen.getByText(/2026-07-02/)).toBeInTheDocument();
+    expect(screen.getByText("示例股份 / 600001")).toBeInTheDocument();
   });
 
   it("renders per-stock cycle return, holding days, buys and BOLL state", () => {

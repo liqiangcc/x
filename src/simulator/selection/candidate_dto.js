@@ -32,6 +32,7 @@ function candidateDto(candidate, identity) {
     evidence: evidenceDto(candidate.evidence),
     qualityIssues: [...(candidate.qualityIssues ?? [])],
     rank: candidate.rank ?? null,
+    security: identity.security ?? null,
   };
 }
 
@@ -42,12 +43,13 @@ function barDto(bar) {
   ]);
 }
 
-function chartDto({ candidateId, alias, daily = [], detail = null, yearly = [] }) {
+function chartDto({ candidateId, alias, daily = [], detail = null, security = null, yearly = [] }) {
   return {
     alias,
     candidateId,
     daily: daily.map(barDto),
     detail,
+    security,
     yearly: yearly.map((bar) => pick(bar, ["year", "open", "close", "high", "low", "volume", "amount"])),
   };
 }
@@ -63,6 +65,7 @@ function holdingDto(holding, identity) {
     marketValue: holding.marketValue,
     priceDayOffset: holding.priceDayOffset,
     quantity: holding.quantity,
+    security: identity.security ?? null,
     unrealizedPnl: holding.unrealizedPnl,
     unrealizedPnlPct: holding.unrealizedPnlPct,
   };

@@ -38,4 +38,15 @@ describe("API client", () => {
     resolveFetch({ json: async () => ({ order: { id: "order-a" }, sessionVersion: 9 }), ok: true, status: 201 });
     await Promise.all([first, second]);
   });
+
+  it("sends an explicit JSON object for strategy sync POST requests", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ json: async () => ({ job: { status: "queued" } }), ok: true, status: 202 });
+    const client = createApiClient({ fetchImpl });
+    await client.startStrategySync("strategy-a");
+    expect(fetchImpl).toHaveBeenCalledWith("/api/strategies/strategy-a/sync", expect.objectContaining({
+      body: "{}",
+      headers: expect.objectContaining({ "content-type": "application/json" }),
+      method: "POST",
+    }));
+  });
 });

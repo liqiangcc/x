@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import WatchlistPage from "./WatchlistPage.jsx";
 import { SessionProvider, useSession } from "../state/SessionContext.jsx";
@@ -11,6 +11,10 @@ function Seed({ children }) {
     queueMicrotask(() => setSession({ clock: { currentDate: "2026-07-01", nextDate: "2026-07-02" }, id: "a1", status: "waiting_for_decision", version: 1 }));
   }
   return <>{children}<button onClick={() => setSession({ ...session, clock: { currentDate: "2026-07-02" }, version: 2 })}>推进测试</button></>;
+}
+
+function LocationProbe() {
+  return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
 describe("WatchlistPage", () => {
@@ -70,5 +74,14 @@ describe("WatchlistPage", () => {
     expect(client.getWatchlist).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "操作候选A" }));
     expect(screen.getByText("查看走势")).toHaveAttribute("href", "/accounts/a1/stocks/cand_a");
+  });
+
+  it("opens stock detail when clicking a watchlist row", async () => {
+    window.__watchlistSeeded = false;
+    const item = { alias: "候选A", candidateId: "cand_a", detail: { boll: { justCrossedMiddle: true } } };
+    const client = { getWatchlist: vi.fn().mockResolvedValue({ items: [item] }) };
+    render(<MemoryRouter><SessionProvider client={client}><Seed><WatchlistPage /></Seed><LocationProbe /></SessionProvider></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("link", { name: "查看候选A详情" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/accounts/a1/stocks/cand_a");
   });
 });

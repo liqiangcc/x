@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { DEFAULT_WINDOW_SIZE, readHealthState, summarizeSamples } = require("./health/store");
 const { ProxyPoolProvider } = require("./providers/proxypool");
+const { GithubProxyRepositoryProvider } = require("./providers/github_repository");
 const { createEastmoneyKlineProbe, TARGET } = require("./probes/eastmoney_kline");
 const { ProxyTransportSession } = require("./transport/http_proxy");
 
@@ -74,10 +75,12 @@ class BufferedHealthStore {
 }
 
 class ProxyBatchRuntime {
-  constructor({ classifyError, cooldownForError, stateFile, ...options }) {
+  constructor({ classifyError, cooldownForError, enableGithub, githubProvider, provider, stateFile, ...options }) {
     this.classifyError = classifyError;
     this.options = options;
-    this.provider = new ProxyPoolProvider({ ...options, all: true });
+    this.provider = provider ?? new ProxyPoolProvider({ ...options, all: true });
+    const githubEnabled = enableGithub ?? (!provider && !options.fetchImpl && process.env.X_PROXY_GITHUB_ENABLED !== "false");
+    this.githubProvider = githubEnabled ? githubProvider ?? new GithubProxyRepositoryProvider(options.github ?? {}) : null;
     this.healthStore = new BufferedHealthStore({ cooldownForError, stateFile });
     this.transport = new ProxyTransportSession(options);
     this.candidates = null;
@@ -86,8 +89,21 @@ class ProxyBatchRuntime {
     this.leased = new Set();
   }
 
-  async prepare({ concurrency = 16, limit, minAvailable = 5, minSuccessRate = 0.6, startIndex = 0, timeoutMs = 3000 } = {}) {
-    this.candidates = await this.provider.listCandidates({ all: true });
+  async prepare({ concurrency = 16, limit, maxP95Ms = null, minAvailable = 5, minSuccessRate = 0.6, startIndex = 0, timeoutMs = 3000 } = {}) {
+    const sources = [
+      { name: "local-pool", provider: this.provider },
+      ...(this.githubProvider ? [{ name: "github-cn", provider: this.githubProvider }] : []),
+    ];
+    const loaded = await Promise.all(sources.map(async ({ name, provider: source }) => {
+      try {
+        const proxies = await source.listCandidates({ all: true });
+        return { name, proxies, count: proxies.length, ok: true };
+      } catch (error) {
+        return { name, proxies: [], count: 0, ok: false, error: error.message };
+      }
+    }));
+    this.sourceReports = loaded.map(({ proxies, ...report }) => report);
+    this.candidates = [...new Map(loaded.flatMap((item) => item.proxies).map((proxy) => [proxy.endpoint, proxy])).values()];
     if (this.candidates.length > 0 && startIndex > 0) {
       const offset = startIndex % this.candidates.length;
       this.candidates = [...this.candidates.slice(offset), ...this.candidates.slice(0, offset)];
@@ -120,17 +136,33 @@ class ProxyBatchRuntime {
       return counts;
     }, {});
     const successRate = results.length === 0 ? 0 : this.available.length / results.length;
+    const p95DurationMs = percentile(durations, 0.95);
+    const sourceReports = this.sourceReports.map((source) => {
+      const sourceResults = results.filter((item) => item.proxy.source === (source.name === "github-cn"
+        ? `github:${this.githubProvider?.repository}`
+        : "proxypool"));
+      const sourceDurations = sourceResults.filter((item) => item.ok).map((item) => item.duration_ms);
+      return {
+        ...source,
+        checked_count: sourceResults.length,
+        available_count: sourceResults.filter((item) => item.ok).length,
+        p95_duration_ms: percentile(sourceDurations, 0.95),
+      };
+    });
+    const latencyPassed = !Number.isFinite(maxP95Ms) || (Number.isFinite(p95DurationMs) && p95DurationMs <= maxP95Ms);
     this.preflightReport = {
       candidate_count: results.length,
       available_count: this.available.length,
       success_rate: successRate,
-      passed: this.available.length >= minAvailable && successRate >= minSuccessRate,
+      passed: this.available.length >= minAvailable && successRate >= minSuccessRate && latencyPassed,
       p50_duration_ms: percentile(durations, 0.5),
-      p95_duration_ms: percentile(durations, 0.95),
+      p95_duration_ms: p95DurationMs,
+      max_p95_ms: maxP95Ms,
       error_counts: errorCounts,
+      sources: sourceReports,
     };
     if (!this.preflightReport.passed) {
-      throw new Error(`Proxy preflight failed: available=${this.available.length}/${minAvailable}, success_rate=${successRate.toFixed(3)}/${minSuccessRate}`);
+      throw new Error(`Proxy preflight failed: available=${this.available.length}/${minAvailable}, success_rate=${successRate.toFixed(3)}/${minSuccessRate}, p95=${p95DurationMs ?? "n/a"}/${maxP95Ms ?? "any"}ms`);
     }
     return this.preflightReport;
   }

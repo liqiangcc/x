@@ -25,6 +25,7 @@
   "huaweicloud_secret_key_env": "HUAWEICLOUD_SECRET_KEY",
   "policies": {
     "auto": { "engines": ["huaweicloud", "aws", "local"] },
+    "cn-proxy-only": { "engines": [{ "name": "proxy-pool", "attempts": 1, "selector": "reliable-fastest", "maxAttempts": 2, "timeoutMs": 3000 }] },
     "proxy-first": { "engines": [{ "name": "proxy-pool", "selector": "reliable-fastest", "maxAttempts": 1, "timeoutMs": 10000, "selectedOnly": true, "selectedFile": "var/proxy-pool/selected.json", "selectedMaxAgeMs": 3600000 }, "aws-router", "aws", "local"] },
     "proxy-only": { "engines": [{ "name": "proxy-pool", "selector": "reliable-fastest", "maxAttempts": 1, "timeoutMs": 10000, "selectedOnly": true, "selectedFile": "var/proxy-pool/selected.json", "selectedMaxAgeMs": 3600000 }] },
     "cloud-first": { "engines": ["huaweicloud", "aws", { "name": "proxy-pool", "selector": "balanced", "maxAttempts": 3, "timeoutMs": 6000 }, "local"] }

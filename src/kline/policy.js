@@ -2,6 +2,7 @@
 
 const BUILTIN_POLICIES = {
   auto: { engines: ["huaweicloud", "aws", "local"] },
+  "cn-proxy-only": { engines: [{ name: "proxy-pool", attempts: 1, maxAttempts: 2, selector: "reliable-fastest", timeoutMs: 3000 }] },
   "cloud-first": { engines: ["huaweicloud", "aws", "proxy-pool", "local"] },
   "proxy-first": { engines: ["proxy-pool", "huaweicloud", "aws", "local"] },
   "proxy-only": { engines: ["proxy-pool"] },

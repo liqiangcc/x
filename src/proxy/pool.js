@@ -67,6 +67,12 @@ function cooldownMs(errorClass) {
   if (["tls_error", "invalid_payload"].includes(errorClass)) {
     return 24 * 60 * 60 * 1000;
   }
+  if (["network_error", "headers_timeout", "body_timeout", "total_timeout"].includes(errorClass)) {
+    return 1000;
+  }
+  if (errorClass === "proxy_connect_timeout") {
+    return 5000;
+  }
   return 30 * 60 * 1000;
 }
 

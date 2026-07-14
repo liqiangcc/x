@@ -143,7 +143,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        period: ${{ fromJSON(github.event_name == 'schedule' && '["daily","yearly"]' || format('["{0}"]', github.event.inputs.period)) }}
+        period: ${{ fromJSON(github.event_name == 'schedule' && '["daily"]' || format('["{0}"]', github.event.inputs.period)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:

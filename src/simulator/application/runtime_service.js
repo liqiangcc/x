@@ -11,8 +11,9 @@ const { SessionMode } = require("../core/enums");
 const { ExistingKlineRepository } = require("../adapters/ledger/existing_kline_repository");
 const { LegacyTradingCalendar } = require("../data/legacy_trading_calendar");
 const { ExistingUniverseRepository } = require("../adapters/ledger/existing_universe");
+const { SecurityIdentityDirectory } = require("../adapters/ledger/security_identity_directory");
 const { HistoricalUniverse } = require("../selection/historical_universe");
-const { CandidateSelectionPipeline, paginate } = require("../selection/pipeline");
+const { CandidateSelectionPipeline, compareCandidate, paginate } = require("../selection/pipeline");
 const { CandidateAliasRegistry } = require("../selection/aliases");
 const { candidateDto, chartDto, holdingDto } = require("../selection/candidate_dto");
 const { calculateBollSeries } = require("../../signals/indicators/boll");
@@ -23,10 +24,13 @@ const { buildSessionReport, identityRows, reconstructStockCycles } = require("./
 const { accountDto, sessionDto } = require("../adapters/http/dto");
 const { normalizeYearDeclineConfig } = require("../../signals/signals/year_decline_close_breakout");
 const { DataStatusService } = require("../../kline/data_status");
+const { ProxyQualityService } = require("./proxy_quality_service");
+const { StrategySyncOrchestrator } = require("./strategy_sync_orchestrator");
 const { calculateFees, cents } = require("../mechanisms/fee_model");
 const { OrderSide, OrderStatus } = require("../core/enums");
+const { DEFAULT_STRATEGY_MARKET_BOARDS, normalizeMarketBoards } = require("../../core/market_board");
 
-const STRATEGY_ALGORITHM_VERSION = 4;
+const STRATEGY_ALGORITHM_VERSION = 5;
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -83,8 +87,8 @@ function positionCycleOpenDates({ fills = [], orders = new Map() } = {}) {
   return openedAt;
 }
 
-function dailyChartWindow(bars, signalDate = null) {
-  const source = bars.slice(-39);
+function dailyChartWindow(bars, signalDate = null, visibleBars = 20) {
+  const source = bars.slice(-(visibleBars + 19));
   const boll = calculateBollSeries(source);
   return source.map((bar, index) => ({
     ...bar,
@@ -92,7 +96,28 @@ function dailyChartWindow(bars, signalDate = null) {
     bollMiddle: boll[index].middle,
     bollUpper: boll[index].upper,
     signal: bar.date === signalDate,
-  })).slice(-20);
+  })).slice(-visibleBars);
+}
+
+function yearlyChartWindow(yearlyBars, dailyBars, endDate) {
+  const currentYear = Number(String(endDate).slice(0, 4));
+  const completed = yearlyBars
+    .map((bar) => ({ ...bar, year: Number(bar.date.slice(0, 4)) }))
+    .filter((bar) => bar.year !== currentYear);
+  const currentRows = dailyBars.filter((bar) => Number(bar.date.slice(0, 4)) === currentYear);
+  if (currentRows.length === 0) {
+    const storedCurrent = yearlyBars.find((bar) => Number(bar.date.slice(0, 4)) === currentYear);
+    return storedCurrent ? [...completed, { ...storedCurrent, year: currentYear }] : completed;
+  }
+  return [...completed, {
+    amount: currentRows.reduce((sum, bar) => sum + bar.amount, 0),
+    close: currentRows.at(-1).close,
+    high: Math.max(...currentRows.map((bar) => bar.high)),
+    low: Math.min(...currentRows.map((bar) => bar.low)),
+    open: currentRows[0].open,
+    volume: currentRows.reduce((sum, bar) => sum + bar.volume, 0),
+    year: currentYear,
+  }];
 }
 
 function justCrossedBollMiddle(previous, latest) {
@@ -113,6 +138,21 @@ function prioritizeHeldWatchlist(items) {
         || left.index - right.index;
     })
     .map(({ item }) => item);
+}
+
+function mergeStrategySignals(currentByDate, changedByDate, changedCodes) {
+  const codes = new Set((changedCodes ?? []).map(String));
+  const merged = new Map();
+  for (const [date, candidates] of currentByDate ?? []) {
+    const retained = candidates.filter((candidate) => !codes.has(String(candidate.code)));
+    if (retained.length > 0) merged.set(date, [...retained]);
+  }
+  for (const [date, candidates] of changedByDate ?? []) {
+    const combined = [...(merged.get(date) ?? []), ...candidates];
+    combined.sort(compareCandidate);
+    if (combined.length > 0) merged.set(date, combined);
+  }
+  return merged;
 }
 
 function buyReservationInput(entry, input) {
@@ -139,20 +179,26 @@ function buyReservationInput(entry, input) {
 class SimulatorRuntimeService {
   constructor({
     dataStatusService = new DataStatusService(),
+    proxyQualityService = new ProxyQualityService(),
     klineRepository = new ExistingKlineRepository(),
+    identityDirectory = new SecurityIdentityDirectory(),
     onPerformance = null,
     repository = null,
     selectionPipeline = null,
+    strategySyncOrchestrator = new StrategySyncOrchestrator(),
     universeRepository = new ExistingUniverseRepository(),
   } = {}) {
     this.dataStatusService = dataStatusService;
+    this.proxyQualityService = proxyQualityService;
     this.klineRepository = klineRepository;
+    this.identityDirectory = identityDirectory;
     this.onPerformance = typeof onPerformance === "function" ? onPerformance : null;
     this.repository = repository;
     this.selectionPipeline = selectionPipeline ?? new CandidateSelectionPipeline({
       historicalUniverse: new HistoricalUniverse({ repository: universeRepository }),
       klineRepository,
     });
+    this.strategySyncOrchestrator = strategySyncOrchestrator;
     this.entries = new Map();
     this.accountProfiles = new Map();
     this.strategies = new Map();
@@ -160,7 +206,7 @@ class SimulatorRuntimeService {
     this.strategyIndexes = new Map();
     this.strategyBuildQueue = Promise.resolve();
     const defaultStrategy = {
-      config: { excludeSpecialTreatment: true, limit: 20, orderBy: "breakout_margin_ascending", strategy: { type: "year_decline_close_breakout" } },
+      config: { excludeSpecialTreatment: true, limit: 20, orderBy: "breakout_margin_ascending", strategy: { type: "year_decline_close_breakout" }, universe: { ...DEFAULT_STRATEGY_MARKET_BOARDS } },
       id: "system-year-decline-breakout",
       isSystem: true,
       name: "多年下跌后首次突破",
@@ -175,6 +221,10 @@ class SimulatorRuntimeService {
     }
     for (const strategy of this.strategies.values()) {
       if (strategy.archived) continue;
+      if (strategy.isSystem && !strategy.config?.universe) {
+        strategy.config = { ...strategy.config, universe: { ...DEFAULT_STRATEGY_MARKET_BOARDS } };
+        this.repository?.saveStrategy(strategy);
+      }
       if (strategy.isSystem && Object.hasOwn(strategy.config?.strategy ?? {}, "requireBollMiddleCross")) {
         const { requireBollMiddleCross, ...rule } = strategy.config.strategy;
         void requireBollMiddleCross;
@@ -237,9 +287,17 @@ class SimulatorRuntimeService {
     const stored = this.repository.getSession(profile.accountId);
     const state = stored?.state;
     if (state?.runtimeVersion !== 1) return;
-    const aliases = new CandidateAliasRegistry().restore(state.aliases ?? []);
+    const aliases = new CandidateAliasRegistry({ identityResolver: (security) => this.identityDirectory.lookup(security) })
+      .restore(state.aliases ?? []);
+    const candidateSnapshot = {
+      ...state.session.candidateSnapshot,
+      candidates: Object.freeze((state.session.candidateSnapshot?.candidates ?? []).map((candidate) => {
+        const security = aliases.resolve(candidate.candidateId);
+        return security ? { ...candidate, ...aliases.publicForSecurity(security) } : candidate;
+      })),
+    };
     const session = new SimulatorSession({
-      candidateSnapshot: state.session.candidateSnapshot,
+      candidateSnapshot,
       dates: state.dates,
       id: state.session.id,
       mode: state.session.mode,
@@ -322,7 +380,7 @@ class SimulatorRuntimeService {
     if (!calendar.has(startDate) || calendar.dates.length < 2) {
       throw httpError("data_gate_failed", "The selected range does not contain enough trading dates.", 422, ["insufficient_trading_calendar"]);
     }
-    const aliases = new CandidateAliasRegistry();
+    const aliases = new CandidateAliasRegistry({ identityResolver: (security) => this.identityDirectory.lookup(security) });
     const dataVersion = input.dataVersion ?? "existing-data-current";
     if (input.prepareSelection !== false) {
       await this.selectionPipeline.prepare?.({ dates: calendar.dates, config: input.selection ?? {}, dataVersion });
@@ -413,7 +471,7 @@ class SimulatorRuntimeService {
     const identity = entry.aliases.publicForSecurity(security);
     const endDate = entry.session.clock.currentDate;
     const [dailyHistory, yearlyHistory] = await Promise.all([
-      this.klineRepository.getLegacyHistory({ ...security, endDate, limit: 39, period: "daily" }),
+      this.klineRepository.getLegacyHistory({ ...security, endDate, period: "daily" }),
       this.klineRepository.getLegacyHistory({ ...security, endDate, period: "yearly" }),
     ]);
     const watchlistItem = this.#watchlistItem(entry, candidateId);
@@ -427,8 +485,8 @@ class SimulatorRuntimeService {
         strategyId: entry.profile?.strategyId ?? null,
       }
       : watchlistItem;
-    const daily = dailyChartWindow(dailyHistory.bars, signal?.signalDate);
-    const yearly = yearlyHistory.bars.map((bar) => ({ ...bar, year: Number(bar.date.slice(0, 4)) }));
+    const daily = dailyChartWindow(dailyHistory.bars, signal?.signalDate, 240);
+    const yearly = yearlyChartWindow(yearlyHistory.bars, dailyHistory.bars, endDate);
     const latestBar = daily.at(-1);
     const signalIndex = signal?.signalDate ? entry.session.clock.dates.indexOf(signal.signalDate) : -1;
     const signalClose = Number(signal?.signalClose);
@@ -518,11 +576,53 @@ class SimulatorRuntimeService {
     return this.dataStatusService.get({ refresh });
   }
 
+  getProxyQuality() { return { job: this.proxyQualityService.status() }; }
+
+  refreshProxyQuality() { return { job: this.proxyQualityService.start() }; }
+
+  listStrategySyncs() {
+    return { jobs: this.strategySyncOrchestrator.list() };
+  }
+
+  getStrategySync(strategyId) {
+    if (!this.strategies.has(strategyId)) throw httpError("strategy_not_found", "Strategy was not found.", 404);
+    return { job: this.strategySyncOrchestrator.latest(strategyId) };
+  }
+
+  startStrategySync(strategyId) {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy || strategy.archived) throw httpError("strategy_not_found", "Strategy was not found.", 404);
+    if (strategy.status !== "ready") throw httpError("strategy_not_ready", "Strategy index must be ready before syncing data.", 409);
+    const downTransitions = strategy.config?.strategy?.downTransitions ?? 3;
+    const marketBoards = Object.entries(normalizeMarketBoards(strategy.config?.universe))
+      .filter(([, enabled]) => enabled)
+      .map(([board]) => board);
+    return { job: this.strategySyncOrchestrator.start({
+      strategyId,
+      downTransitions,
+      marketBoards,
+      afterSync: async ({ updatedCodes = [] } = {}) => {
+        if (updatedCodes.length > 0) {
+          await this.#queueStrategyBuild(strategyId, { force: true, updatedCodes });
+        }
+        this.dataStatusService.invalidate();
+      },
+    }) };
+  }
+
   saveStrategy(input, id = randomUUID()) {
     const previous = this.strategies.get(id);
     if (previous?.isSystem) throw httpError("system_strategy_immutable", "System strategies cannot be edited.", 409);
     const normalizedRule = normalizeYearDeclineConfig(input.config?.strategy);
-    const config = { ...input.config, strategy: { ...input.config?.strategy, ...normalizedRule, type: "year_decline_close_breakout" } };
+    const universe = normalizeMarketBoards(input.config?.universe, DEFAULT_STRATEGY_MARKET_BOARDS);
+    if (!Object.values(universe).some(Boolean)) {
+      throw httpError("empty_strategy_universe", "At least one market board must be enabled.", 422);
+    }
+    const config = {
+      ...input.config,
+      strategy: { ...input.config?.strategy, ...normalizedRule, type: "year_decline_close_breakout" },
+      universe,
+    };
     const strategy = { config, dataVersion: "existing-data-current", failureReason: null,
       id, isSystem: false, name: input.name.trim(), status: "building", version: (previous?.version ?? 0) + 1 };
     this.strategies.set(id, strategy);
@@ -531,10 +631,11 @@ class SimulatorRuntimeService {
     return strategy;
   }
 
-  async #startStrategyBuild(strategyId, { force = false } = {}) {
+  async #startStrategyBuild(strategyId, { force = false, updatedCodes = null } = {}) {
     const strategy = this.strategies.get(strategyId);
     if (!strategy) throw httpError("strategy_not_found", "Strategy was not found.", 404);
-    void force;
+    const previousIndex = this.strategyIndexes.get(strategyId);
+    const incremental = force && Array.isArray(updatedCodes) && previousIndex instanceof Map;
     const build = { algorithmVersion: STRATEGY_ALGORITHM_VERSION, completed: 0, dataVersion: "existing-data-current", failureReason: null,
       id: randomUUID(), phase: "queued", signalCount: 0, status: "building",
       strategyId, strategyVersion: strategy.version, total: 0 };
@@ -547,11 +648,16 @@ class SimulatorRuntimeService {
       const index = await this.selectionPipeline.buildAll({
         config: strategy.config,
         dataVersion: build.dataVersion,
+        securityCodes: incremental ? updatedCodes : null,
         onProgress: (progress) => {
           Object.assign(build, progress);
           this.repository?.saveStrategyBuild?.(build);
         },
       });
+      if (incremental) {
+        index.byDate = mergeStrategySignals(previousIndex, index.byDate, updatedCodes);
+        index.signalCount = [...index.byDate.values()].reduce((sum, items) => sum + items.length, 0);
+      }
       build.status = "ready";
       build.phase = "completed";
       build.signalCount = index.signalCount;
@@ -581,10 +687,14 @@ class SimulatorRuntimeService {
     }
   }
 
+  #queueStrategyBuild(strategyId, options = {}) {
+    const task = this.strategyBuildQueue.then(() => this.#startStrategyBuild(strategyId, options));
+    this.strategyBuildQueue = task.catch(() => null);
+    return task;
+  }
+
   #enqueueStrategyBuild(strategyId, options = {}) {
-    this.strategyBuildQueue = this.strategyBuildQueue
-      .then(() => this.#startStrategyBuild(strategyId, options))
-      .catch(() => null);
+    void this.#queueStrategyBuild(strategyId, options);
     return this.getStrategyBuild(strategyId);
   }
 
@@ -1001,7 +1111,7 @@ class SimulatorRuntimeService {
     parent.session.assertVersion(expectedVersion);
     const startDate = parent.session.clock.currentDate;
     const dates = parent.session.clock.dates.slice(parent.session.clock.index);
-    const aliases = new CandidateAliasRegistry();
+    const aliases = new CandidateAliasRegistry({ identityResolver: (security) => this.identityDirectory.lookup(security) });
     const identities = aliases.register(parent.session.candidateSnapshot.candidates.map((candidate) => {
       const security = parent.aliases.resolve(candidate.candidateId);
       if (!security) throw httpError("unknown_candidate", "A parent candidate mapping is unavailable.", 422);
@@ -1111,5 +1221,7 @@ module.exports = {
   orderDto,
   positionCycleOpenDates,
   prioritizeHeldWatchlist,
+  mergeStrategySignals,
   reservationLimitRate,
+  yearlyChartWindow,
 };

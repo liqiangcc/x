@@ -6,7 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { Account } = require("../src/simulator/core/account");
-const { SimulatorRuntimeService } = require("../src/simulator/application/runtime_service");
+const { SimulatorRuntimeService, mergeStrategySignals } = require("../src/simulator/application/runtime_service");
 const { CandidateAliasRegistry } = require("../src/simulator/selection/aliases");
 const { OrderApplicationService } = require("../src/simulator/application/orders");
 const { SimulatorSession } = require("../src/simulator/core/session");
@@ -41,7 +41,7 @@ function makeRuntime(saltByte, id) {
   return { identity, order, runtime };
 }
 
-test("session, candidates, portfolio, orders, fills and events use anonymous whitelists", async (t) => {
+test("session, candidates, portfolio and report retain identity for presentation toggles", async (t) => {
   const { identity, runtime } = makeRuntime(11, "audit");
   const app = buildServer({ runtime });
   t.after(() => app.close());
@@ -51,19 +51,18 @@ test("session, candidates, portfolio, orders, fills and events use anonymous whi
     app.inject({ method: "GET", url: "/api/sessions/audit/portfolio" }),
     app.inject({ method: "GET", url: "/api/sessions/audit/report" }),
   ]);
-  for (const response of responses) {
-    assert.equal(response.statusCode, 200);
-    assertAnonymous(response.body);
-  }
+  for (const response of responses) assert.equal(response.statusCode, 200);
   assert.equal(responses[0].json().candidateSnapshot.candidates[0].candidateId, identity.candidateId);
+  assert.deepEqual(responses[0].json().candidateSnapshot.candidates[0].security, SECURITY);
+  assert.deepEqual(responses[2].json().positions[0].security, SECURITY);
 });
 
-test("anonymous export and errors do not disclose nested source identity", async (t) => {
+test("export retains real identity while errors do not disclose nested identity", async (t) => {
   const { runtime } = makeRuntime(12, "export-audit");
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-anonymous-export-"));
   t.after(() => fs.rm(root, { force: true, recursive: true }));
   const result = await runtime.exportSession("export-audit", { exportRoot: root });
-  assertAnonymous(await fs.readFile(result.filePath, "utf8"));
+  assert.equal((await fs.readFile(result.filePath, "utf8")).includes("600001"), true);
   assertAnonymous(errorBody(Object.assign(new Error("Candidate was not found in this session."), { code: "unknown_candidate" })));
 });
 
@@ -77,4 +76,13 @@ test("independent sessions cannot correlate candidate IDs or aliases", () => {
     { alias: firstCandidate.alias, candidateId: firstCandidate.candidateId },
     { alias: secondCandidate.alias, candidateId: secondCandidate.candidateId },
   );
+});
+
+test("incremental strategy signals replace only changed securities and preserve ranking", () => {
+  const candidate = (code, margin) => ({ code, evidence: { breakout_margin_pct: margin }, securityKey: `1.${code}` });
+  const current = new Map([["2026-07-01", [candidate("600001", 3), candidate("600002", 2)]]]);
+  const changed = new Map([["2026-07-01", [candidate("600001", 1)]]]);
+  const merged = mergeStrategySignals(current, changed, ["600001"]);
+  assert.deepEqual(merged.get("2026-07-01").map((item) => item.code), ["600001", "600002"]);
+  assert.equal(merged.get("2026-07-01")[0].evidence.breakout_margin_pct, 1);
 });

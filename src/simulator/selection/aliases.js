@@ -23,7 +23,8 @@ class CandidateAliasRegistry {
   #bySecurityKey = new Map();
   #salt;
 
-  constructor({ salt = crypto.randomBytes(32) } = {}) {
+  constructor({ identityResolver = (security) => ({ ...security }), salt = crypto.randomBytes(32) } = {}) {
+    this.identityResolver = identityResolver;
     this.#salt = Buffer.from(salt);
   }
 
@@ -51,7 +52,11 @@ class CandidateAliasRegistry {
 
   publicForSecurity(security) {
     const record = this.#bySecurityKey.get(securityKey(normalizeSecurityId(security)));
-    return record ? { alias: record.alias, candidateId: record.candidateId } : null;
+    return record ? {
+      alias: record.alias,
+      candidateId: record.candidateId,
+      security: this.identityResolver({ ...record.security }),
+    } : null;
   }
 
   resolve(candidateId) {

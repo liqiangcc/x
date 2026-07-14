@@ -38,7 +38,10 @@ async function accountRoutes(app, { runtime }) {
   app.get("/accounts/:accountId/stocks/:candidateId/chart", async (request) => runtime.getChart(request.params.accountId, request.params.candidateId));
 
   app.get("/strategies", async () => runtime.listStrategies());
+  app.get("/strategy-syncs", async () => runtime.listStrategySyncs());
   app.get("/strategies/:strategyId/build", async (request) => runtime.getStrategyBuild(request.params.strategyId));
+  app.get("/strategies/:strategyId/sync", async (request) => runtime.getStrategySync(request.params.strategyId));
+  app.post("/strategies/:strategyId/sync", async (request, reply) => reply.code(202).send(runtime.startStrategySync(request.params.strategyId)));
   app.post("/strategies/:strategyId/rebuild", async (request) => runtime.rebuildStrategy(request.params.strategyId));
   app.post("/strategies", {
     schema: { body: { additionalProperties: false, properties: { config: { type: "object" }, name: { minLength: 1, type: "string" } }, required: ["config", "name"], type: "object" } },

@@ -10,9 +10,10 @@ import StrategiesPage from "./pages/StrategiesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import DataPage from "./pages/DataPage.jsx";
 import { useSession } from "./state/SessionContext.jsx";
+import { accountLabel, tradingDayLabel } from "./utils/securityDisplay.js";
 
 function Layout() {
-  const { busy, client, run, session, setSession } = useSession();
+  const { busy, client, run, session, setSession, settings } = useSession();
   const location = useLocation();
   const stockDetailMode = location.pathname.includes("/stocks/");
   const advancing = useRef(false);
@@ -39,7 +40,7 @@ function Layout() {
           <NavLink to="/settings">设置</NavLink>
           <NavLink to="/data">数据</NavLink>
         </nav>
-        {session && location.pathname !== "/watchlist" && <div className="global-clock"><strong>{session.name}</strong><span>第 {session.dayIndex ?? 1} 个交易日</span><button className="primary-button" disabled={busy || !session.clock.nextDate} onClick={advance}>{busy ? "推进中…" : "下一交易日"}</button></div>}
+        {session && location.pathname !== "/watchlist" && <div className="global-clock"><strong>{accountLabel(session, settings.anonymousMode)}</strong><span>{tradingDayLabel({ anonymousMode: settings.anonymousMode, date: session.clock.currentDate, dayIndex: session.dayIndex ?? 1 })}</span><button className="primary-button" disabled={busy || !session.clock.nextDate} onClick={advance}>{busy ? "推进中…" : "下一交易日"}</button></div>}
       </header>
       <main className="page-shell">
         <Routes>

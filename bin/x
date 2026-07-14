@@ -27,6 +27,7 @@ const {
 } = require("../src/aws/latency");
 const { dataCommitMessage } = require("../src/core/data_commit");
 const { dataCommitPathspecs } = require("../src/core/data_paths");
+const { formatMarketDate } = require("../src/core/date");
 const { existingPathspecs, stagedFiles } = require("../src/core/git");
 const { isStageLogEnabled, stageLog, withStage } = require("../src/core/stage_log");
 const { generateDailyReport } = require("../src/reports/daily");
@@ -47,8 +48,10 @@ const {
   shouldReuseMarketUniverse,
 } = require("../src/jobs/universe");
 const { inferSecid } = require("../src/core/secid");
-const { getKlines, validateKlinePath } = require("../fetch/check_kline_empty");
-const { STRATEGY_ID, buildStrategyUniverse } = require("../src/kline/strategy_universe");
+const { getKlines, inspectFile, validateKlinePath } = require("../fetch/check_kline_empty");
+const { aggregateYearlyFromDaily } = require("../src/kline/aggregate_yearly");
+const { STRATEGY_ID, buildYearDeclineUniverse } = require("../src/strategies/year_decline_sync");
+const { DEFAULT_CN_FAST_THRESHOLD, selectStrategySyncEngine } = require("../src/kline/engine_selection");
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -78,14 +81,15 @@ function printUsage() {
   x stocks fetch [--latest|--date YYYYMMDD] [--market hs-a] [--output-dir data/universe]
   x codes build <pool_dir>
   x kline fetch <code_or_secid> [--period daily|yearly] [--policy name|--engine engine] [--proxy-pool-url url] [--proxy-max-attempts N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file]
-  x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--refresh-mode incremental|full] [--limit N] [--batch-size N] [--proxy-preflight] [--proxy-min-available N] [--proxy-min-success-rate 0..1] [--concurrency N|auto] [--checkpoint-every N] [--retry-attempts N] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
+  x kline sync <input_dir|codes.json> [--period daily|yearly] [--policy name|--engine engine] [--refresh-mode incremental|full] [--limit N] [--batch-size N] [--proxy-preflight] [--proxy-min-available N] [--proxy-min-success-rate 0..1] [--proxy-max-p95-ms N] [--concurrency N|auto] [--checkpoint-every N] [--retry-attempts N] [--expected-latest-date YYYYMMDD] [--freshness-codes codes.json]
+  x kline aggregate-yearly <input_dir|codes.json> --date YYYYMMDD [--concurrency N]
   x kline retry <summary.json|failures.json> [--period daily|yearly] [--engine auto|local|aws|aws-router|huaweicloud] [--concurrency N] [--retry-attempts N] [--retry-concurrency N] [--huaweicloud-region all|r1,r2] [--huaweicloud-targets file.json]
   x kline retry-queue <queue.json> [--policy proxy-only] [--concurrency 2]
   x kline sync-status [--period daily|yearly]
   x kline unlock --period daily|yearly [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--strategy-only|--all-codes] [--strategy-down-transitions N] [--force-strategy-codes] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--strategy-only|--all-codes] [--strategy-id id] [--strategy-down-transitions N] [--strategy-boards mainBoard,chiNext,starMarket,beijingExchange] [--force-strategy-codes] [--cn-fast-threshold N] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -101,6 +105,7 @@ function printUsage() {
   x proxy pool warmup [--duration 30m] [--samples 20] [--concurrency 4]
   x proxy pool benchmark [--samples 100] [--concurrency 4] [--json]
   x proxy pool diagnose [--samples 100] [--concurrency 16] [--timeout-ms 3000] [--json]
+  x proxy pool refresh-github [--repository owner/name] [--ref main] [--path file] [--timeout-ms 5000]
   x proxy pool probe [--duration 10m] [--interval 30s] [--samples 20] [--concurrency 2] [--hard-deadline-ms 5000]
   x proxy pool select [--min-samples 5] [--min-success-rate 0.8] [--max-p95-ms 3000] [--limit 5] [--output file]
   x benchmark proxy-sync --codes codes.json [--period daily|yearly] [--samples 100] [--expected-latest-date YYYYMMDD] [--json]
@@ -780,6 +785,7 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.noProxyPreflight) args.push("--no-proxy-preflight");
   if (options.proxyMinAvailable) args.push("--proxy-min-available", String(options.proxyMinAvailable));
   if (options.proxyMinSuccessRate) args.push("--proxy-min-success-rate", String(options.proxyMinSuccessRate));
+  if (options.proxyMaxP95Ms) args.push("--proxy-max-p95-ms", String(options.proxyMaxP95Ms));
   if (options.proxyPreflightConcurrency) args.push("--proxy-preflight-concurrency", String(options.proxyPreflightConcurrency));
   if (options.proxyPreflightTimeoutMs) args.push("--proxy-preflight-timeout-ms", String(options.proxyPreflightTimeoutMs));
   if (options.failureQueue) args.push("--failure-queue", options.failureQueue);
@@ -931,6 +937,30 @@ async function commandKlineSync(argv) {
   const { stdout, stderr } = await runNode("fetch/query_pool_klines.js", args);
   process.stdout.write(stdout);
   process.stderr.write(stderr);
+}
+
+async function loadCodesInput(inputPath) {
+  const target = rootPath(inputPath);
+  const stat = await fs.stat(target);
+  if (stat.isDirectory()) return loadCodesJson(target);
+  const payload = await readJson(target);
+  if (!Array.isArray(payload?.codes)) throw new Error(`Missing codes array: ${rel(target)}`);
+  return uniqueCodes(payload.codes);
+}
+
+async function commandKlineAggregateYearly(argv) {
+  const options = parseOptions(argv, { concurrency: "16" });
+  const inputPath = options._[0];
+  if (!inputPath) throw new Error("kline aggregate-yearly requires <input_dir|codes.json>.");
+  if (!options.date) throw new Error("kline aggregate-yearly requires --date YYYYMMDD.");
+  const result = await aggregateYearlyFromDaily({
+    codes: await loadCodesInput(inputPath),
+    concurrency: parsePositiveIntegerOption(options.concurrency, 16),
+    klineRoot: DEFAULT_KLINE_DIR,
+    targetDate: options.date,
+  });
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (result.failed > 0) process.exitCode = 1;
 }
 
 function extractRetryCodes(payload) {
@@ -1160,13 +1190,48 @@ async function buildQuality(runId, validateResult, period) {
   };
 }
 
-async function cleanupInvalidKlineFiles(period) {
+async function inspectKlineCodes(period, codes) {
+  const files = uniqueCodes(codes).flatMap((code) => [
+    shardedKlinePath(period, code),
+    legacyKlinePath(period, code),
+  ]);
+  const issues = [];
+  let cursor = 0;
+  let totalFiles = 0;
+
+  await Promise.all(Array.from({ length: Math.min(16, files.length) }, async () => {
+    while (cursor < files.length) {
+      const file = files[cursor++];
+      try {
+        await fs.access(file);
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw error;
+      }
+      totalFiles += 1;
+      const issue = await inspectFile(file);
+      if (issue) issues.push(issue);
+    }
+  }));
+
+  return {
+    target_path: path.join(DEFAULT_KLINE_DIR, period),
+    total_files: totalFiles,
+    empty_count: issues.length,
+    issue_count: issues.length,
+    status: issues.length > 0 ? "failed" : "ok",
+    issues,
+  };
+}
+
+async function cleanupInvalidKlineFiles(period, codes = null) {
   let summary;
   try {
-    summary = await validateKlinePath({
-      targetPath: DEFAULT_KLINE_DIR,
-      period,
-    });
+    if (Array.isArray(codes)) {
+      summary = await inspectKlineCodes(period, codes);
+    } else {
+      summary = await validateKlinePath({ targetPath: DEFAULT_KLINE_DIR, period });
+    }
   } catch (error) {
     if (error?.code !== "ENOENT") {
       throw error;
@@ -1250,17 +1315,21 @@ async function readFreshnessCodesFromMarketUniverse(inputDir) {
   }
 }
 
-async function buildKlineFreshnessContext({ date, inputDir, options, runDir }) {
+async function buildKlineFreshnessContext({ date, inputDir, marketUniverseDir, options, runDir }) {
   if (!["daily", "yearly"].includes(options.period)) {
     return null;
   }
 
   const expectedLatestDate = formatExpectedLatestDate(date);
   const marketCodes = options.universe === "market"
-    ? await readFreshnessCodesFromMarketUniverse(inputDir)
+    ? await readFreshnessCodesFromMarketUniverse(marketUniverseDir ?? inputDir)
     : null;
   const source = marketCodes ? "market_quote_available" : (options.strategyCodesApplied ? "strategy_codes" : "pool_codes");
-  const codes = marketCodes ?? await loadCodesJson(inputDir);
+  const inputCodes = await loadCodesJson(inputDir);
+  const inputCodeSet = new Set(inputCodes);
+  const codes = marketCodes
+    ? marketCodes.filter((code) => inputCodeSet.has(code))
+    : inputCodes;
 
   if (!codes || codes.length === 0) {
     return {
@@ -1307,6 +1376,7 @@ async function findStaleKlineCodes({ expectedLatestDate, freshnessCodes, period 
     try {
       payload = await readJson(filePath);
     } catch {
+      staleCodes.push(code);
       continue;
     }
 
@@ -1455,6 +1525,7 @@ async function prepareDailyJobProgress(options, { date, inputDir, preselectFaile
 async function commandDaily(argv) {
   const options = parseOptions(argv, {
     engine: "auto",
+    cnFastThreshold: String(DEFAULT_CN_FAST_THRESHOLD),
     market: "hs-a",
     period: "daily",
     poolEngine: "curl",
@@ -1522,6 +1593,18 @@ async function commandDaily(argv) {
     output_dir: options.outputDir,
     force_pool: Boolean(options.forcePool),
   }, async () => {
+    if (!date && options.latest && !options.forcePool) {
+      const cachedSummary = await readJson(path.join(ROOT, options.outputDir, "summary.json"), {});
+      const cachedDate = cachedSummary?.requested_date ? normalizeDate(cachedSummary.requested_date) : null;
+      if (cachedDate === formatMarketDate() && await hasCompletePoolSnapshot(cachedDate, options.outputDir)) {
+        date = cachedDate;
+        return {
+          stdout: `Using today's pool snapshot: ${rel(path.join(ROOT, options.outputDir, cachedDate))}\n`,
+          stderr: "",
+          exitCode: 0,
+        };
+      }
+    }
     if (date && !options.forcePool && (await hasCompletePoolSnapshot(date, options.outputDir))) {
       return {
         stdout: `Using existing pool snapshot: ${rel(path.join(ROOT, options.outputDir, date))}\n`,
@@ -1610,14 +1693,18 @@ async function commandDaily(argv) {
         exitCode: 0,
       };
     } else {
-      return runNodeAllowFailure("fetch/fetch_market_stocks.js", [
+      const result = await runNodeAllowFailure("fetch/fetch_market_stocks.js", [
         "--date",
         date,
         "--market",
         options.market,
         "--output-dir",
-        rel(privateUniverseRoot),
+        rel(sharedUniverseDir),
       ], { streamOutput });
+      if (result.exitCode === 0 && await hasCompleteMarketUniverse(date, sharedUniverseDir, options.market)) {
+        await copyMarketUniverseSnapshot(date, sharedUniverseDir, privateUniverseRoot);
+      }
+      return result;
     }
   });
   universeSummary = options.universe === "market"
@@ -1634,20 +1721,24 @@ async function commandDaily(argv) {
   let strategyUniverse = null;
   if (options.strategyOnly && !options.allCodes) {
     const sourceCodes = await loadCodesJson(inputDir);
-    const strategyDir = path.join(ROOT, "data", "strategy-universe", date.slice(0, 4), STRATEGY_ID);
+    const strategySyncId = options.strategyId ?? STRATEGY_ID;
+    if (!/^[A-Za-z0-9._-]+$/.test(strategySyncId)) throw new Error("--strategy-id contains unsupported characters.");
+    const strategyDir = path.join(ROOT, "data", "strategy-universe", date.slice(0, 4), strategySyncId);
     const strategyCodesPath = path.join(strategyDir, "codes.json");
     strategyUniverse = await withStage("strategy_universe", {
       date,
       source_codes: sourceCodes.length,
       strategy_id: STRATEGY_ID,
-    }, () => buildStrategyUniverse({
+    }, () => buildYearDeclineUniverse({
       asOfDate: date,
       codes: sourceCodes,
       concurrency: parsePositiveIntegerOption(options.concurrency, 32),
       downTransitions: parsePositiveIntegerOption(options.strategyDownTransitions, 3),
       force: Boolean(options.forceStrategyCodes),
       klineRoot: DEFAULT_KLINE_DIR,
+      marketBoards: options.strategyBoards ? String(options.strategyBoards).split(",").filter(Boolean) : null,
       outputFile: strategyCodesPath,
+      strategyId: strategySyncId,
     }));
     inputDir = strategyDir;
     options.strategyCodesApplied = true;
@@ -1658,6 +1749,39 @@ async function commandDaily(argv) {
       reused: strategyUniverse.reused,
       source_codes: strategyUniverse.source_code_count,
     });
+    if (!options.policy) {
+      const engineSelection = await withStage("strategy_sync_engine_probe", {
+        requested_engine: options.engine,
+        selected_codes: strategyUniverse.total_codes,
+        threshold: options.cnFastThreshold,
+      }, () => selectStrategySyncEngine({
+        codes: strategyUniverse.codes,
+        period: options.period,
+        requestedEngine: options.engine,
+        selectedCodeCount: strategyUniverse.total_codes,
+        threshold: options.cnFastThreshold,
+      }));
+      options.engine = engineSelection.engine;
+      if (engineSelection.policy) {
+        options.policy = engineSelection.policy;
+        options.proxyPreflight = true;
+        options.proxyMinAvailable ??= Math.min(3, parsePositiveIntegerOption(options.concurrency, 4));
+        options.proxyMinSuccessRate ??= 0.02;
+        options.proxyMaxP95Ms ??= 2000;
+        options.proxyPreflightConcurrency ??= 16;
+        options.proxyPreflightTimeoutMs ??= 2000;
+        options.proxyMaxAttempts ??= 2;
+      }
+      stageLog("end", "strategy_sync_engine_selection", {
+        engine: engineSelection.engine,
+        local_probe: engineSelection.localProbe,
+        policy: engineSelection.policy,
+        reason: engineSelection.reason,
+        requested_engine: engineSelection.requestedEngine,
+        selected_codes: engineSelection.selectedCodeCount,
+        threshold: engineSelection.threshold,
+      });
+    }
   }
 
   const freshnessContext = await withStage("freshness_context", {
@@ -1667,6 +1791,7 @@ async function commandDaily(argv) {
   }, () => buildKlineFreshnessContext({
     date,
     inputDir,
+    marketUniverseDir: options.universe === "market" ? universeInputDir : null,
     options,
     runDir,
   }));
@@ -1689,6 +1814,14 @@ async function commandDaily(argv) {
     period: options.period,
   }));
   stageLog("end", "stale_scan_result", { stale_codes: staleCodes.length });
+  const staleCodesPath = path.join(runDir, "stale-codes.json");
+  await writeJson(staleCodesPath, {
+    date,
+    expected_latest_date: freshnessContext?.expectedLatestDate ?? null,
+    period: options.period,
+    total_codes: staleCodes.length,
+    codes: staleCodes,
+  });
   const jobContext = await withStage("prepare_job_progress", {
     date,
     period: options.period,
@@ -1711,9 +1844,12 @@ async function commandDaily(argv) {
     progress_counts: progress?.counts ?? null,
     progress_file: jobContext ? rel(jobContext.progressPath) : null,
   });
+  const cleanupCodes = jobContext?.selection.codes
+    ?? (freshnessContext ? staleCodes : (strategyUniverse?.codes ?? await loadCodesJson(inputDir)));
   const cleanupSummary = await withStage("cleanup_invalid_kline", {
     period: options.period,
-  }, () => cleanupInvalidKlineFiles(options.period));
+    scoped_codes: cleanupCodes.length,
+  }, () => cleanupInvalidKlineFiles(options.period, cleanupCodes));
   if (cleanupSummary.removed_codes.length > 0) {
     console.error(
       `Removed ${cleanupSummary.removed_codes.length} invalid ${options.period} kline file(s) before sync.`
@@ -1724,9 +1860,12 @@ async function commandDaily(argv) {
     }
   }
   stageLog("end", "cleanup_invalid_kline_result", {
+    checked_files: cleanupSummary.total_files,
     removed_codes: cleanupSummary.removed_codes.length,
   });
-  const klineInputPath = jobContext ? jobContext.batchCodesPath : inputDir;
+  const klineInputPath = jobContext
+    ? jobContext.batchCodesPath
+    : (freshnessContext ? staleCodesPath : inputDir);
   const klineOptions = jobContext
     ? { ...options, batchSize: null, limit: null, offset: null }
     : options;
@@ -1766,6 +1905,16 @@ async function commandDaily(argv) {
   const klineSummary = emittedSummaryPath
     ? await readJson(summaryPath, emptyKlineSummary)
     : emptyKlineSummary;
+  const updatedCodes = uniqueCodes(Object.entries(klineSummary.files ?? {})
+    .filter(([, file]) => file?.status === "success")
+    .map(([code]) => code));
+  const updatedCodesPath = path.join(runDir, "updated-codes.json");
+  await writeJson(updatedCodesPath, {
+    date,
+    period: options.period,
+    total_codes: updatedCodes.length,
+    codes: updatedCodes,
+  });
   stageLog("end", "kline_summary_read", {
     summary_path: rel(summaryPath),
     emitted_summary: Boolean(emittedSummaryPath),
@@ -1775,6 +1924,26 @@ async function commandDaily(argv) {
     skipped_existing: klineSummary.skipped_existing ?? null,
     status: klineSummary.status ?? null,
   });
+
+  let yearlyAggregation = null;
+  if (options.period === "daily") {
+    yearlyAggregation = await withStage("aggregate_yearly", {
+      date,
+      updated_codes: updatedCodes.length,
+    }, async () => aggregateYearlyFromDaily({
+      codes: updatedCodes,
+      concurrency: parsePositiveIntegerOption(options.concurrency, 16),
+      klineRoot: DEFAULT_KLINE_DIR,
+      targetDate: date,
+    }));
+    await writeJson(path.join(runDir, "yearly-aggregation.json"), yearlyAggregation);
+    stageLog("end", "aggregate_yearly_result", {
+      failed: yearlyAggregation.failed,
+      skipped: yearlyAggregation.skipped,
+      total: yearlyAggregation.total,
+      updated: yearlyAggregation.updated,
+    });
+  }
 
   if (jobContext) {
     progress = await withStage("apply_progress", {
@@ -1794,12 +1963,15 @@ async function commandDaily(argv) {
 
   const validateResult = await withStage("validate_kline", {
     period: options.period,
-  }, () => runNodeAllowFailure("fetch/check_kline_empty.js", [
-    "data/kline",
-    "--period",
-    options.period,
-    "--json",
-  ], { streamOutput }));
+    scoped_codes: updatedCodes.length,
+  }, async () => {
+    const summary = await inspectKlineCodes(options.period, updatedCodes);
+    return {
+      exitCode: summary.issue_count > 0 ? 1 : 0,
+      stderr: "",
+      stdout: JSON.stringify(summary),
+    };
+  });
   const quality = await buildQuality(runId, validateResult, options.period);
   stageLog("end", "validate_kline_result", {
     exit_code: validateResult.exitCode,
@@ -1829,6 +2001,7 @@ async function commandDaily(argv) {
     quality.status === "failed" ||
     unexpectedKlineFailure ||
     hardKlineFailure ||
+    (yearlyAggregation?.failed ?? 0) > 0 ||
     progressBlocked;
   const failed =
     klineFailed +
@@ -1878,6 +2051,11 @@ async function commandDaily(argv) {
     strategy_source_codes: strategyUniverse?.source_code_count ?? null,
     strategy_codes: strategyUniverse?.total_codes ?? null,
     strategy_missing_yearly_codes: strategyUniverse?.missing_yearly_count ?? null,
+    yearly_aggregation_total: yearlyAggregation?.total ?? null,
+    yearly_aggregation_updated: yearlyAggregation?.updated ?? null,
+    yearly_aggregation_skipped: yearlyAggregation?.skipped ?? null,
+    yearly_aggregation_failed: yearlyAggregation?.failed ?? null,
+    updated_codes: updatedCodes.length,
     input: rel(path.join(inputDir, "codes.json")),
     kline_input: rel(klineInputPath),
     status,
@@ -1916,6 +2094,9 @@ async function commandDaily(argv) {
       pool_dir: rel(poolDir),
       universe_dir: options.universe === "market" ? rel(universeInputDir) : null,
       strategy_codes: strategyUniverse ? rel(path.join(inputDir, "codes.json")) : null,
+      yearly_aggregation: yearlyAggregation ? rel(path.join(runDir, "yearly-aggregation.json")) : null,
+      updated_codes: rel(updatedCodesPath),
+      stale_codes: rel(staleCodesPath),
       job_progress: jobContext ? rel(jobContext.progressPath) : null,
       job_batch_codes: jobContext ? rel(jobContext.batchCodesPath) : null,
       kline_dir: rel(path.join(DEFAULT_KLINE_DIR, options.period)),
@@ -2208,6 +2389,19 @@ async function commandProxyPool(argv) {
       printJson({ ok: false, error: error.message, cn_candidates: 0 });
       process.exitCode = 1;
     }
+    return;
+  }
+
+  if (action === "refresh-github") {
+    const { GithubProxyRepositoryProvider } = require("./../src/proxy/providers/github_repository");
+    const provider = new GithubProxyRepositoryProvider({
+      filePath: options.path,
+      ref: options.ref,
+      repository: options.repository,
+      timeoutMs: parsePositiveOption(options.timeoutMs, "--timeout-ms", 5000),
+    });
+    const proxies = await provider.listCandidates();
+    printJson({ ok: true, ...provider.lastReport, candidate_count: proxies.length });
     return;
   }
 
@@ -2588,6 +2782,10 @@ async function main() {
   }
   if (command === "kline" && subcommand === "sync") {
     await commandKlineSync(rest);
+    return;
+  }
+  if (command === "kline" && subcommand === "aggregate-yearly") {
+    await commandKlineAggregateYearly(rest);
     return;
   }
   if (command === "kline" && subcommand === "retry") {

@@ -100,10 +100,10 @@ async function latestStrategyUniverse(strategyRoot) {
   return {
     strategyId: latest.strategy_id,
     asOfDate: latest.as_of_date,
-    targetYear: latest.target_year,
+    targetYear: latest.target_year ?? latest.selector?.targetYear,
     sourceCodeCount: latest.source_code_count,
     codeCount: latest.total_codes,
-    missingYearlyCount: latest.missing_yearly_count,
+    missingYearlyCount: latest.missing_yearly_count ?? latest.excluded_counts?.missing_yearly ?? 0,
     generatedAt: latest.generated_at,
     codes: latest.codes,
   };
@@ -139,6 +139,10 @@ class DataStatusService {
       this.inFlight = null;
     });
     return this.inFlight;
+  }
+
+  invalidate() {
+    this.cached = null;
   }
 }
 

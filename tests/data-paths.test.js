@@ -11,10 +11,12 @@ test("dataCommitPathspecs limits daily commits to run-owned paths", () => {
       job_id: "20260701-daily-market-hs-a",
       period: "daily",
       run_id: "20260701T000000Z_daily",
+      yearly_aggregation_updated: 2,
       artifacts: { strategy_codes: "data/strategy-universe/2026/year-decline-close-breakout/codes.json" },
     }),
     [
       "data/kline/daily",
+      "data/kline/yearly",
       "data/jobs/20260701/daily/20260701-daily-market-hs-a",
       "runs/20260701T000000Z_daily",
       "data/strategy-universe/2026/year-decline-close-breakout/codes.json",

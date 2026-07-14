@@ -49,7 +49,7 @@ test("ordinary anonymous session reveals explicitly and records an event", async
   t.after(() => app.close());
   const response = await app.inject({ method: "POST", payload: { expectedVersion: 1 }, url: "/api/sessions/manual/reveal" });
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.json().identities[0], { alias: "候选A", candidateId: response.json().identities[0].candidateId, code: "600001", market: 1 });
+  assert.deepEqual(response.json().identities[0], { alias: "候选A", candidateId: response.json().identities[0].candidateId, security: { code: "600001", market: 1 } });
   const report = await app.inject({ method: "GET", url: "/api/sessions/manual/report" });
   assert.equal(report.json().events.at(-1).type, "IdentityRevealed");
 });

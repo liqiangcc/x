@@ -21,7 +21,7 @@ function assertNoIdentityLeak(value) {
   }
 }
 
-test("candidate identities are stable inside a session and unlinkable across salts", () => {
+test("candidate aliases stay stable while carrying real display identity", () => {
   const first = new CandidateAliasRegistry({ salt: Buffer.alloc(32, 1) });
   const second = new CandidateAliasRegistry({ salt: Buffer.alloc(32, 2) });
   const firstView = first.register(SECURITIES);
@@ -30,7 +30,7 @@ test("candidate identities are stable inside a session and unlinkable across sal
   assert.notDeepEqual(secondView.map((item) => item.candidateId), firstView.map((item) => item.candidateId));
   assert.deepEqual(first.resolve(firstView[0].candidateId), SECURITIES[0]);
   assert.equal(second.resolve(firstView[0].candidateId), null);
-  assertNoIdentityLeak(firstView);
+  assert.deepEqual(firstView[0].security, SECURITIES[0]);
 });
 
 test("candidate aliases scale beyond one alphabet", () => {
@@ -39,8 +39,8 @@ test("candidate aliases scale beyond one alphabet", () => {
   assert.equal(aliasSuffix(26), "AA");
 });
 
-test("anonymous candidate DTO whitelists evidence and excludes source identity", () => {
-  const identity = { alias: "候选A", candidateId: "cand_safe" };
+test("candidate DTO sanitizes evidence and carries the registered display identity", () => {
+  const identity = { alias: "候选A", candidateId: "cand_safe", security: { code: "600001", market: 1, name: "真实名称" } };
   const dto = candidateDto({
     code: "600001",
     market: 1,
@@ -53,8 +53,9 @@ test("anonymous candidate DTO whitelists evidence and excludes source identity",
       code: "600001",
     },
   }, identity);
-  assert.deepEqual(Object.keys(dto), ["alias", "candidateId", "evidence", "qualityIssues", "rank"]);
-  assertNoIdentityLeak(dto);
+  assert.deepEqual(Object.keys(dto), ["alias", "candidateId", "evidence", "qualityIssues", "rank", "security"]);
+  assert.deepEqual(dto.security, identity.security);
+  assert.equal(JSON.stringify(dto.evidence).includes("600001"), false);
 });
 
 test("chart and holding DTOs expose only anonymous whitelisted fields", () => {

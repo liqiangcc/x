@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useEChart from "./useEChart.js";
 
 function dailyTooltip(rows, params = []) {
@@ -18,15 +18,15 @@ function dailyTooltip(rows, params = []) {
   ].join("<br/>");
 }
 
-export function buildDailyOption(rows = [], { showBoll = true, showVolume = true } = {}) {
-  const dates = rows.map((_row, index) => index === rows.length - 1 ? "D0" : `D-${rows.length - 1 - index}`);
+export function buildDailyOption(rows = [], { anonymousMode = true, showBoll = true, showVolume = true, windowEnd = rows.length - 1, windowStart = 0 } = {}) {
+  const dates = rows.map((row, index) => anonymousMode ? (index === rows.length - 1 ? "D0" : `D-${rows.length - 1 - index}`) : row.date);
   const breakout = rows.find((row) => row.signal || row.breakout);
   const previousYearHigh = rows.find((row) => Number.isFinite(row.previousYearHigh))?.previousYearHigh;
   return {
     animation: false,
     axisPointer: { label: { backgroundColor: "#3f4945" }, link: [{ xAxisIndex: "all" }], snap: true },
     backgroundColor: "#fffdf8",
-    dataZoom: [{ end: 100, start: 0, type: "inside" }, { bottom: 2, borderColor: "transparent", end: 100, fillerColor: "rgba(11,107,80,.12)", height: 18, start: 0, type: "slider" }],
+    dataZoom: [{ endValue: windowEnd, startValue: windowStart, type: "inside" }, { bottom: 2, borderColor: "transparent", endValue: windowEnd, fillerColor: "rgba(11,107,80,.12)", height: 18, startValue: windowStart, type: "slider" }],
     grid: [
       { bottom: showVolume ? "29%" : 42, left: 48, right: 12, top: 18 },
       { bottom: 32, height: showVolume ? "16%" : 0, left: 48, right: 12 },
@@ -57,8 +57,13 @@ export function buildDailyOption(rows = [], { showBoll = true, showVolume = true
   };
 }
 
-export default function DailyChart({ rows = [], showBoll = true, showVolume = true }) {
-  const option = useMemo(() => buildDailyOption(rows, { showBoll, showVolume }), [rows, showBoll, showVolume]);
+export default function DailyChart({ anonymousMode = true, rows = [], showBoll = true, showVolume = true }) {
+  const windowSize = 20;
+  const maxStart = Math.max(0, rows.length - windowSize);
+  const [windowStart, setWindowStart] = useState(maxStart);
+  useEffect(() => setWindowStart(maxStart), [maxStart, rows]);
+  const windowEnd = Math.min(rows.length - 1, windowStart + windowSize - 1);
+  const option = useMemo(() => buildDailyOption(rows, { anonymousMode, showBoll, showVolume, windowEnd, windowStart }), [anonymousMode, rows, showBoll, showVolume, windowEnd, windowStart]);
   const ref = useEChart(option);
-  return <div aria-label="日线及 BOLL 图表" className="chart-canvas" ref={ref} role="img" />;
+  return <div className="kline-navigator"><div aria-label="日线及 BOLL 图表" className="chart-canvas" ref={ref} role="img" /><div className="kline-move-buttons"><button aria-label="向左查看更早日K" disabled={windowStart === 0} onClick={() => setWindowStart((value) => Math.max(0, value - 1))} type="button">←</button><span>{rows.length === 0 ? "0/0" : `${windowStart + 1}-${windowEnd + 1}/${rows.length}`}</span><button aria-label="向右查看更新日K" disabled={windowStart >= maxStart} onClick={() => setWindowStart((value) => Math.min(maxStart, value + 1))} type="button">→</button></div></div>;
 }

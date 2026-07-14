@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api } from "../api/client.js";
 
 const SessionContext = createContext(null);
-const DEFAULT_SETTINGS = Object.freeze({ defaultBuyAmount: 10000, defaultBuyReason: "符合策略，按计划买入", defaultSellReturnPct: 10 });
+const DEFAULT_SETTINGS = Object.freeze({ anonymousMode: true, defaultBuyAmount: 10000, defaultBuyReason: "符合策略，按计划买入", defaultSellReturnPct: 10, includeBeijingExchange: false, includeStarMarket: false });
 
 function loadSettings() {
   try {
@@ -10,9 +10,12 @@ function loadSettings() {
     const defaultBuyAmount = Number(stored.defaultBuyAmount);
     const defaultSellReturnPct = Number(stored.defaultSellReturnPct);
     return {
+      anonymousMode: typeof stored.anonymousMode === "boolean" ? stored.anonymousMode : DEFAULT_SETTINGS.anonymousMode,
       defaultBuyAmount: Number.isFinite(defaultBuyAmount) && defaultBuyAmount > 0 ? defaultBuyAmount : DEFAULT_SETTINGS.defaultBuyAmount,
       defaultBuyReason: typeof stored.defaultBuyReason === "string" ? stored.defaultBuyReason : DEFAULT_SETTINGS.defaultBuyReason,
       defaultSellReturnPct: Number.isFinite(defaultSellReturnPct) && defaultSellReturnPct >= 0 ? defaultSellReturnPct : DEFAULT_SETTINGS.defaultSellReturnPct,
+      includeBeijingExchange: typeof stored.includeBeijingExchange === "boolean" ? stored.includeBeijingExchange : DEFAULT_SETTINGS.includeBeijingExchange,
+      includeStarMarket: typeof stored.includeStarMarket === "boolean" ? stored.includeStarMarket : DEFAULT_SETTINGS.includeStarMarket,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

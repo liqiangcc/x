@@ -3,6 +3,8 @@
 const crypto = require("node:crypto");
 const { stableStringify } = require("../data/data_manifest");
 const { evaluateYearDeclineCloseBreakout } = require("../../signals/signals/year_decline_close_breakout");
+const { hasEligibleYear } = require("../../strategies/year_decline");
+const { marketBoardAllowed } = require("../../core/market_board");
 
 const DEFAULT_PAGE_SIZE = 20;
 const DEFAULT_SCAN_CONCURRENCY = 16;
@@ -67,14 +69,11 @@ async function mapConcurrent(items, concurrency, worker) {
   return results;
 }
 
-function hasEligibleYear(yearlyBars, targetYears, downTransitions = 3) {
-  const byYear = new Map(yearlyBars.map((bar) => [Number(bar.date.slice(0, 4)), bar]));
-  return targetYears.some((year) => {
-    const requiredYears = downTransitions + 1;
-    const points = Array.from({ length: requiredYears }, (_item, index) => byYear.get(year - requiredYears + index));
-    return points.every((point) => Number.isFinite(point?.close) && Number.isFinite(point?.high))
-      && points.slice(1).every((point, index) => point.close < points[index].close);
-  });
+function applyMarketScope(universe, config = {}) {
+  return {
+    ...universe,
+    securities: universe.securities.filter((security) => marketBoardAllowed(security, config.universe)),
+  };
 }
 
 class CandidateSelectionPipeline {
@@ -101,10 +100,10 @@ class CandidateSelectionPipeline {
     const endDate = normalizedDates.at(-1);
     const targetYears = [...new Set(normalizedDates.map((date) => Number(date.slice(0, 4))))];
     const targetSet = new Set(normalizedDates);
-    const universe = await this.historicalUniverse.list({
+    const universe = applyMarketScope(await this.historicalUniverse.list({
       asOfDate: endDate,
       excludeSpecialTreatment: config.excludeSpecialTreatment !== false,
-    });
+    }), config);
     const qualityIssues = new Set(universe.qualityIssues);
     const concurrency = Math.max(1, Number(process.env.SIMULATOR_SCAN_CONCURRENCY ?? DEFAULT_SCAN_CONCURRENCY));
     const yearlyRows = await mapConcurrent(universe.securities, concurrency, async (security) => {
@@ -159,14 +158,18 @@ class CandidateSelectionPipeline {
     }
   }
 
-  async buildAll({ config = {}, dataVersion = "legacy-current", endDate = "9999-12-31", onProgress = () => {} }) {
+  async buildAll({ config = {}, dataVersion = "legacy-current", endDate = "9999-12-31", onProgress = () => {}, securityCodes = null }) {
     const strategyConfig = config.strategy ?? {};
     const downTransitions = strategyConfig.downTransitions ?? 3;
     const requiredYears = downTransitions + 1;
-    const universe = await this.historicalUniverse.list({
+    const fullUniverse = applyMarketScope(await this.historicalUniverse.list({
       asOfDate: endDate,
       excludeSpecialTreatment: config.excludeSpecialTreatment !== false,
-    });
+    }), config);
+    const requestedCodes = Array.isArray(securityCodes) ? new Set(securityCodes.map(String)) : null;
+    const universe = requestedCodes
+      ? { ...fullUniverse, securities: fullUniverse.securities.filter((security) => requestedCodes.has(String(security.code))) }
+      : fullUniverse;
     const qualityIssues = new Set(universe.qualityIssues);
     const concurrency = Math.max(1, Number(process.env.SIMULATOR_SCAN_CONCURRENCY ?? DEFAULT_SCAN_CONCURRENCY));
     onProgress({ completed: 0, phase: "yearly_prefilter", total: universe.securities.length });
@@ -245,10 +248,10 @@ class CandidateSelectionPipeline {
     if (prepared) {
       return { ...prepared, candidates: undefined, pagination: paginate(prepared.candidates, pagination) };
     }
-    const universe = await this.historicalUniverse.list({
+    const universe = applyMarketScope(await this.historicalUniverse.list({
       asOfDate,
       excludeSpecialTreatment: config.excludeSpecialTreatment !== false,
-    });
+    }), config);
     const cacheKey = digest({ asOfDate, configHash, dataVersion, universeSource: universe.source });
     let snapshot = this.cache.get(cacheKey);
 
@@ -296,6 +299,7 @@ class CandidateSelectionPipeline {
 
 module.exports = {
   CandidateSelectionPipeline,
+  applyMarketScope,
   DEFAULT_SCAN_CONCURRENCY,
   DEFAULT_PAGE_SIZE,
   compareCandidate,

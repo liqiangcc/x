@@ -111,11 +111,9 @@ function detectBenchmark(paths = [
 
 function identityRows(entry) {
   if (!entry.session.revealedAt) return [];
-  return entry.session.candidateSnapshot.candidates.map((candidate) => ({
-    alias: candidate.alias,
-    candidateId: candidate.candidateId,
-    ...entry.aliases.resolve(candidate.candidateId),
-  }));
+  return entry.session.candidateSnapshot.candidates.map((candidate) => entry.aliases.publicForSecurity(
+    entry.aliases.resolve(candidate.candidateId),
+  ));
 }
 
 function reconstructStockCycles(entry) {
@@ -182,10 +180,13 @@ async function stockCycleReviews(entry, quoteFor = async () => null) {
       currentPrice: quote?.close ?? null,
       remainingQuantity: cycle.quantity,
       returnPct: cycle.buyCost > 0 && (cycle.status === "closed" || Number.isFinite(quote?.close)) ? metric((totalPnl / cycle.buyCost) * 100) : null,
+      security: identity?.security ?? null,
       sellProceeds: metric(cycle.sellProceeds),
+      startDate: cycle.startDate,
       startDayIndex: startIndex < 0 ? null : startIndex + 1,
       status: cycle.status,
       totalPnl: cycle.status === "closed" || Number.isFinite(quote?.close) ? metric(totalPnl) : null,
+      valuationDate,
     };
   }));
 }
@@ -195,7 +196,8 @@ async function buildSessionReport(entry, { quoteFor } = {}) {
   const candidates = entry.session.candidateSnapshot.candidates;
   const orders = entry.orderService ? [...entry.orderService.orders.values()].map((order) => ({
     candidateId: order.candidateId,
-    candidateSnapshot: candidates.find((candidate) => candidate.candidateId === order.candidateId) ?? null,
+    candidateSnapshot: candidates.find((candidate) => candidate.candidateId === order.candidateId)
+      ?? (order.security ? entry.aliases.publicForSecurity(order.security) : null),
     estimatedFees: order.estimatedFees,
     estimatedPrice: order.estimatedPrice,
     id: order.id,
@@ -204,6 +206,7 @@ async function buildSessionReport(entry, { quoteFor } = {}) {
     rejectionReason: order.rejectionReason,
     side: order.side,
     status: order.status,
+    dayIndex: entry.session.clock.dates.indexOf(order.tradingDate) + 1 || null,
     tradingDate: order.tradingDate,
   })) : [];
   return {
@@ -219,7 +222,10 @@ async function buildSessionReport(entry, { quoteFor } = {}) {
       realizedPnl: snapshot.realizedPnl,
       unrealizedPnl: snapshot.unrealizedPnl,
     })),
-    fills: (entry.engine?.fills ?? []).map(fillDto),
+    fills: (entry.engine?.fills ?? []).map((fill) => ({
+      ...fillDto(fill),
+      dayIndex: entry.session.clock.dates.indexOf(fill.date) + 1 || null,
+    })),
     identities: identityRows(entry),
     lineage: entry.lineage ?? null,
     orders,

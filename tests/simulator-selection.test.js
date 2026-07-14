@@ -6,7 +6,7 @@ const {
   calculateBollSeries,
   calculateBollWindow,
 } = require("../src/signals/indicators/boll");
-const { dailyChartWindow, justCrossedBollMiddle, positionCycleOpenDates, prioritizeHeldWatchlist } = require("../src/simulator/application/runtime_service");
+const { dailyChartWindow, justCrossedBollMiddle, positionCycleOpenDates, prioritizeHeldWatchlist, yearlyChartWindow } = require("../src/simulator/application/runtime_service");
 const {
   evaluateYearDeclineCloseBreakout,
 } = require("../src/signals/signals/year_decline_close_breakout");
@@ -14,9 +14,23 @@ const {
   HistoricalUniverse,
 } = require("../src/simulator/selection/historical_universe");
 const {
+  applyMarketScope,
   CandidateSelectionPipeline,
   paginate,
 } = require("../src/simulator/selection/pipeline");
+
+test("strategy market scope filters boards before reading K-line history", () => {
+  const universe = { securities: [
+    { code: "600001", market: 1 },
+    { code: "300001", market: 0 },
+    { code: "688001", market: 1 },
+    { code: "920001", market: 0 },
+  ] };
+  const scoped = applyMarketScope(universe, { universe: {
+    beijingExchange: false, chiNext: true, mainBoard: true, starMarket: false,
+  } });
+  assert.deepEqual(scoped.securities.map((item) => item.code), ["600001", "300001"]);
+});
 
 function candidateContext({
   closes = [20, 18, 16, 14],
@@ -97,6 +111,28 @@ test("detail chart warms BOLL with 19 hidden bars and returns 20 visible bars", 
   assert.equal(visible[0].date, "d26");
   assert.equal(visible[0].bollMiddle, 16.5);
   assert.equal(visible.filter((bar) => bar.signal).length, 1);
+});
+
+test("detail chart can return a larger navigable window while preserving 20-day BOLL", () => {
+  const bars = Array.from({ length: 300 }, (_item, index) => ({ close: index + 1, date: `d${index + 1}`, high: index + 1, low: index + 1, open: index + 1 }));
+  const visible = dailyChartWindow(bars, null, 240);
+  assert.equal(visible.length, 240);
+  assert.equal(visible[0].date, "d61");
+  assert.equal(visible[0].bollMiddle, 51.5);
+});
+
+test("detail chart aggregates the current year only from daily bars available by the simulated date", () => {
+  const yearly = yearlyChartWindow([
+    { close: 9, date: "2025-12-31", high: 11, low: 7, open: 10, volume: 100, amount: 900 },
+    { close: 99, date: "2026-07-13", high: 100, low: 1, open: 9, volume: 999, amount: 9999 },
+  ], [
+    { amount: 1000, close: 10, date: "2026-01-05", high: 11, low: 8, open: 9, volume: 100 },
+    { amount: 1500, close: 12, date: "2026-03-02", high: 13, low: 9, open: 10, volume: 150 },
+  ], "2026-03-02");
+  assert.deepEqual(yearly, [
+    { close: 9, date: "2025-12-31", high: 11, low: 7, open: 10, volume: 100, amount: 900, year: 2025 },
+    { amount: 2500, close: 12, high: 13, low: 8, open: 9, volume: 250, year: 2026 },
+  ]);
 });
 
 test("watchlist BOLL cross requires yesterday at or below and today above the middle line", () => {
@@ -299,6 +335,26 @@ test("full strategy index finds the same first-breakout occurrence in one histor
   assert.equal(reads, 2);
   assert.equal(index.signalCount, 1);
   assert.equal(index.byDate.get("2026-07-01")[0].code, "600001");
+});
+
+test("strategy index can rebuild only explicitly changed securities", async () => {
+  const reads = [];
+  const bars = new Map([["600001", repositoryBars(2)], ["600002", repositoryBars(2)]]);
+  const pipeline = new CandidateSelectionPipeline({
+    historicalUniverse: new HistoricalUniverse({ repository: { async listAvailableCodes() {
+      return { qualityIssues: [], securities: [
+        { code: "600001", market: 1, status: "normal" },
+        { code: "600002", market: 1, status: "normal" },
+      ], source: "fixture" };
+    } } }),
+    klineRepository: { async getLegacyHistory({ code, period }) {
+      reads.push(`${code}:${period}`);
+      return { bars: bars.get(code)[period], qualityIssues: [] };
+    } },
+  });
+  const index = await pipeline.buildAll({ dataVersion: "index-v1", securityCodes: ["600002"] });
+  assert.deepEqual(reads, ["600002:yearly", "600002:daily"]);
+  assert.equal(index.byDate.get("2026-07-01")[0].code, "600002");
 });
 
 test("candidate pagination defaults to 20 and validates input", () => {

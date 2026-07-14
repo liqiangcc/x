@@ -27,6 +27,8 @@ function dataCommitMessage(run, quality) {
     `strategy_only: ${run.strategy_only ?? false}`,
     `strategy_codes: ${run.strategy_codes ?? "n/a"}`,
     `strategy_missing_yearly_codes: ${run.strategy_missing_yearly_codes ?? "n/a"}`,
+    `yearly_aggregation_updated: ${run.yearly_aggregation_updated ?? "n/a"}`,
+    `yearly_aggregation_failed: ${run.yearly_aggregation_failed ?? "n/a"}`,
     `period: ${period}`,
     `engine: ${run.engine}`,
     `total: ${run.total}`,

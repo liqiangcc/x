@@ -7,6 +7,7 @@ const path = require("node:path");
 const test = require("node:test");
 const {
   classifyProxyError,
+  cooldownMs,
   fetchAllProxyCandidates,
   fetchProxyCandidates,
   getKlineViaProxyPool,
@@ -23,6 +24,13 @@ test("parseProxyList accepts unique valid IPv4 proxies", () => {
     parseProxyList("1.2.3.4:80\n1.2.3.4:80 bad 999.2.3.4:80 5.6.7.8:65536\n8.8.8.8:8080"),
     ["1.2.3.4:80", "8.8.8.8:8080"]
   );
+});
+
+test("transient proxy failures use a short cooldown", () => {
+  assert.equal(cooldownMs("network_error"), 1000);
+  assert.equal(cooldownMs("body_timeout"), 1000);
+  assert.equal(cooldownMs("proxy_connect_timeout"), 5000);
+  assert.equal(cooldownMs("forbidden"), 2 * 60 * 60 * 1000);
 });
 
 test("fetchProxyCandidates requests CN proxies with API authentication", async () => {

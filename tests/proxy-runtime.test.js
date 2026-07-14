@@ -22,6 +22,7 @@ test("batch runtime preflights once and exposes the reusable available set", asy
   const report = await runtime.prepare({ concurrency: 2, minAvailable: 2, minSuccessRate: 1 });
   assert.equal(report.available_count, 2);
   assert.equal(runtime.listCandidates().length, 2);
+  assert.equal(report.sources[0].available_count, 2);
   await runtime.close();
   assert.equal(destroyed, 2);
 });

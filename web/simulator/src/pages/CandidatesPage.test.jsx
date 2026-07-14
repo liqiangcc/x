@@ -29,7 +29,7 @@ describe("CandidatesPage", () => {
     renderPage(client);
     expect(await screen.findByRole("heading", { name: "候选A" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "计算当前日期" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "全部加入自选" }));
+    fireEvent.click(screen.getByRole("button", { name: "当前筛选全部加入" }));
     await waitFor(() => expect(client.addWatchlistBulk).toHaveBeenCalledWith("a1", ["cand_a"]));
   });
 
