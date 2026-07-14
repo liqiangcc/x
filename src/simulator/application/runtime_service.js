@@ -840,12 +840,23 @@ class SimulatorRuntimeService {
     if (!shadowBuild) this.repository?.saveStrategy?.(strategy);
     this.repository?.saveStrategyBuild?.(build);
     try {
+      let verificationIndex = null;
+      if (verifySignals) {
+        verificationIndex = await this.selectionPipeline.buildAll({
+          config: previousStrategy.config,
+          dataVersion: build.dataVersion,
+          onProgress: (progress) => {
+            Object.assign(build, progress, { phase: `v2_${progress.phase}` });
+            this.repository?.saveStrategyBuild?.(build);
+          },
+        });
+      }
       const index = await this.selectionPipeline.buildAll({
         config: strategy.config,
         dataVersion: build.dataVersion,
         securityCodes: incremental ? updatedCodes : null,
         onProgress: (progress) => {
-          Object.assign(build, progress);
+          Object.assign(build, progress, { phase: verifySignals ? `v3_${progress.phase}` : progress.phase });
           this.repository?.saveStrategyBuild?.(build);
         },
       });
@@ -853,7 +864,7 @@ class SimulatorRuntimeService {
         index.byDate = mergeStrategySignals(previousIndex, index.byDate, updatedCodes);
         index.signalCount = [...index.byDate.values()].reduce((sum, items) => sum + items.length, 0);
       }
-      if (verifySignals && previousIndex instanceof Map && signalIdentity(previousIndex) !== signalIdentity(index.byDate)) {
+      if (verifySignals && signalIdentity(verificationIndex.byDate) !== signalIdentity(index.byDate)) {
         throw httpError("strategy_migration_mismatch", "V3 shadow build produced different signal identities; the V2 revision remains active.", 409);
       }
       build.status = "ready";
