@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const Database = require("better-sqlite3");
+const crypto = require("node:crypto");
 const { migrate } = require("./migrate");
 
 const DEFAULT_DATABASE_PATH = path.join("var", "simulator", "simulator.db");
@@ -154,23 +155,81 @@ class SimulatorRepository {
   }
 
   saveStrategy(strategy) {
-    this.db.prepare(`INSERT INTO strategies (id, name, version, is_system, config_json, status, data_version, failure_reason, archived)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    this.db.prepare(`INSERT INTO strategies (id, name, version, is_system, config_json, status, data_version, failure_reason, archived, active_revision)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET name=excluded.name, version=excluded.version,
         config_json=excluded.config_json, status=excluded.status, data_version=excluded.data_version,
-        failure_reason=excluded.failure_reason, archived=excluded.archived, updated_at=CURRENT_TIMESTAMP`)
+        failure_reason=excluded.failure_reason, archived=excluded.archived, active_revision=excluded.active_revision, updated_at=CURRENT_TIMESTAMP`)
       .run(strategy.id, strategy.name, strategy.version, strategy.isSystem ? 1 : 0, json(strategy.config),
-        strategy.status ?? "draft", strategy.dataVersion ?? null, strategy.failureReason ?? null, strategy.archived ? 1 : 0);
+        strategy.status ?? "draft", strategy.dataVersion ?? null, strategy.failureReason ?? null, strategy.archived ? 1 : 0,
+        strategy.activeRevision ?? strategy.version ?? 1);
   }
 
   listStrategies() {
     return this.db.prepare("SELECT * FROM strategies ORDER BY is_system DESC, created_at")
       .all().map((row) => ({ archived: row.archived === 1, config: parse(row.config_json), dataVersion: row.data_version, failureReason: row.failure_reason,
-        id: row.id, isSystem: row.is_system === 1, name: row.name, status: row.status, version: row.version }));
+        activeRevision: row.active_revision, id: row.id, isSystem: row.is_system === 1, name: row.name, status: row.status, version: row.version }));
   }
 
   deleteStrategy(id) {
     return this.db.prepare("DELETE FROM strategies WHERE id = ? AND is_system = 0").run(id).changes === 1;
+  }
+
+  saveStrategyTemplate(template) {
+    this.db.prepare(`INSERT INTO strategy_templates
+      (id, name, description, version, is_system, definition_json, archived, current_revision)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET name=excluded.name, description=excluded.description,
+        version=excluded.version, definition_json=excluded.definition_json,
+        archived=excluded.archived, current_revision=excluded.current_revision, updated_at=CURRENT_TIMESTAMP`)
+      .run(template.id, template.name, template.description ?? null, template.version, template.isSystem ? 1 : 0,
+        json(template.definition), template.archived ? 1 : 0, template.currentRevision ?? template.version ?? 1);
+  }
+
+  listStrategyTemplates() {
+    return this.db.prepare("SELECT * FROM strategy_templates ORDER BY is_system DESC, created_at")
+      .all().map((row) => ({
+        archived: row.archived === 1,
+        currentRevision: row.current_revision,
+        definition: parse(row.definition_json),
+        description: row.description,
+        id: row.id,
+        isSystem: row.is_system === 1,
+        name: row.name,
+        version: row.version,
+      }));
+  }
+
+  saveStrategyRevision(revision) {
+    this.db.prepare(`INSERT INTO strategy_revisions
+      (strategy_id, revision, schema_version, config_json, status, template_id, template_revision, failure_reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(strategy_id, revision) DO UPDATE SET status=excluded.status, failure_reason=excluded.failure_reason`)
+      .run(revision.strategyId, revision.revision, revision.schemaVersion, json(revision.config), revision.status,
+        revision.templateId ?? null, revision.templateRevision ?? null, revision.failureReason ?? null);
+  }
+
+  listStrategyRevisions(strategyId) {
+    return this.db.prepare("SELECT * FROM strategy_revisions WHERE strategy_id = ? ORDER BY revision DESC").all(strategyId).map((row) => ({
+      config: parse(row.config_json), failureReason: row.failure_reason, revision: row.revision,
+      schemaVersion: row.schema_version, status: row.status, strategyId: row.strategy_id,
+      templateId: row.template_id, templateRevision: row.template_revision,
+    }));
+  }
+
+  saveStrategyTemplateRevision(template) {
+    const definition = json(template.definition);
+    const hash = crypto.createHash("sha256").update(definition).digest("hex");
+    this.db.prepare(`INSERT OR IGNORE INTO strategy_template_revisions
+      (template_id, revision, definition_json, description, content_hash) VALUES (?, ?, ?, ?, ?)`)
+      .run(template.id, template.currentRevision ?? template.version, definition, template.description ?? null, hash);
+  }
+
+  listStrategyTemplateRevisions(templateId) {
+    return this.db.prepare("SELECT * FROM strategy_template_revisions WHERE template_id = ? ORDER BY revision DESC").all(templateId).map((row) => ({
+      contentHash: row.content_hash, definition: parse(row.definition_json), description: row.description,
+      revision: row.revision, templateId: row.template_id,
+    }));
   }
 
   saveAccountProfile(profile) {

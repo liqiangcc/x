@@ -2,8 +2,8 @@
 
 const crypto = require("node:crypto");
 const { stableStringify } = require("../data/data_manifest");
-const { evaluateYearDeclineCloseBreakout } = require("../../signals/signals/year_decline_close_breakout");
 const { hasEligibleYear } = require("../../strategies/year_decline");
+const { compileStrategy } = require("../../strategies/strategy_builder");
 const { marketBoardAllowed } = require("../../core/market_board");
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -17,7 +17,7 @@ function yearBar(bar) {
   return { ...bar, year: Number(bar.date.slice(0, 4)) };
 }
 
-function signalContext({ asOfDate, dailyHistory, yearlyHistory }) {
+function signalContext({ asOfDate, dailyHistory, security = null, yearlyHistory }) {
   const isoDate = String(asOfDate).replace(
     /^(\d{4})(\d{2})(\d{2})$/,
     "$1-$2-$3",
@@ -30,16 +30,26 @@ function signalContext({ asOfDate, dailyHistory, yearlyHistory }) {
     dailyRows,
     features: {
       completedYears: yearlyRows,
+      currentYearBeforeToday: dailyRows.filter((bar) => bar.date.startsWith(`${isoDate.slice(0, 4)}-`) && bar.date < isoDate),
       today: dailyRows.find((bar) => bar.date === isoDate) ?? null,
     },
     isoDate,
+    security,
   };
 }
 
 function compareCandidate(left, right) {
-  const marginDiff = left.evidence.breakout_margin_pct - right.evidence.breakout_margin_pct;
+  const leftMargin = Number.isFinite(left.evidence.breakout_margin_pct) ? left.evidence.breakout_margin_pct : Number.POSITIVE_INFINITY;
+  const rightMargin = Number.isFinite(right.evidence.breakout_margin_pct) ? right.evidence.breakout_margin_pct : Number.POSITIVE_INFINITY;
+  const marginDiff = leftMargin - rightMargin;
   if (marginDiff !== 0) return marginDiff;
   return left.securityKey.localeCompare(right.securityKey);
+}
+
+function candidateComparator(compiled) {
+  return typeof compiled?.compareCandidates === "function"
+    ? compiled.compareCandidates
+    : compareCandidate;
 }
 
 function paginate(candidates, { page = 1, pageSize = DEFAULT_PAGE_SIZE, viewAll = false } = {}) {
@@ -111,8 +121,10 @@ class CandidateSelectionPipeline {
       history.qualityIssues.forEach((issue) => qualityIssues.add(issue));
       return { history, security };
     });
-    const downTransitions = config.strategy?.downTransitions ?? 3;
-    const shortlisted = yearlyRows.filter(({ history }) => hasEligibleYear(history.bars, targetYears, downTransitions));
+    const compiled = compileStrategy(config.strategy);
+    const shortlisted = yearlyRows.filter(({ history }) => !compiled.hasYearlyPrefilter || targetYears.some((targetYear) => compiled.yearlyPrefilter(
+      history.bars.filter((bar) => Number(bar.date.slice(0, 4)) < targetYear).map(yearBar),
+    )));
     const candidatesByDate = new Map(normalizedDates.map((date) => [date, []]));
 
     await mapConcurrent(shortlisted, concurrency, async ({ history: yearlyHistory, security }) => {
@@ -124,19 +136,21 @@ class CandidateSelectionPipeline {
         dailyRows.push(bar);
         if (!targetSet.has(bar.date)) continue;
         const year = Number(bar.date.slice(0, 4));
-        const result = evaluateYearDeclineCloseBreakout({
+        const result = compiled.evaluate({
           dailyRows,
           features: {
             completedYears: completedYears.filter((point) => point.year < year),
             today: bar,
           },
           isoDate: bar.date,
-        }, config.strategy);
+          security,
+        });
         result.qualityIssues.forEach((issue) => qualityIssues.add(issue));
         if (result.ok) candidatesByDate.get(bar.date).push({
           code: security.code,
           evidence: result.evidence,
           market: security.market,
+          rankingValues: result.rankingValues,
           securityKey: `${security.market}.${security.code}`,
         });
       }
@@ -145,7 +159,7 @@ class CandidateSelectionPipeline {
     const issues = Object.freeze([...qualityIssues].sort());
     for (const asOfDate of normalizedDates) {
       const candidates = candidatesByDate.get(asOfDate);
-      candidates.sort(compareCandidate);
+      candidates.sort(candidateComparator(compiled));
       this.prepared.set(digest({ asOfDate, configHash, dataVersion }), Object.freeze({
         asOfDate,
         candidates: Object.freeze(candidates),
@@ -159,9 +173,7 @@ class CandidateSelectionPipeline {
   }
 
   async buildAll({ config = {}, dataVersion = "legacy-current", endDate = "9999-12-31", onProgress = () => {}, securityCodes = null }) {
-    const strategyConfig = config.strategy ?? {};
-    const downTransitions = strategyConfig.downTransitions ?? 3;
-    const requiredYears = downTransitions + 1;
+    const compiled = compileStrategy(config.strategy);
     const fullUniverse = applyMarketScope(await this.historicalUniverse.list({
       asOfDate: endDate,
       excludeSpecialTreatment: config.excludeSpecialTreatment !== false,
@@ -183,55 +195,57 @@ class CandidateSelectionPipeline {
       }
       return { history, security };
     });
-    const shortlisted = yearlyRows.filter(({ history }) => {
-      const years = history.bars.map((bar) => Number(bar.date.slice(0, 4)) + 1);
-      return hasEligibleYear(history.bars, years, downTransitions);
-    });
+    const shortlisted = yearlyRows.filter(({ history }) => !compiled.hasYearlyPrefilter || history.bars.some((bar) => {
+      const targetYear = Number(bar.date.slice(0, 4)) + 1;
+      return compiled.yearlyPrefilter(history.bars.filter((point) => Number(point.date.slice(0, 4)) < targetYear).map(yearBar));
+    }));
     const byDate = new Map();
     let dailyCompleted = 0;
     onProgress({ completed: 0, phase: "daily_scan", total: shortlisted.length });
     await mapConcurrent(shortlisted, concurrency, async ({ history: yearlyHistory, security }) => {
       const dailyHistory = await this.klineRepository.getLegacyHistory({ ...security, endDate, period: "daily" });
       dailyHistory.qualityIssues.forEach((issue) => qualityIssues.add(issue));
-      const byYear = new Map(yearlyHistory.bars.map((bar) => [Number(bar.date.slice(0, 4)), yearBar(bar)]));
-      const maxCloseByYear = new Map();
-      for (const [index, bar] of dailyHistory.bars.entries()) {
+      const completedYears = yearlyHistory.bars.map(yearBar);
+      const accumulatedDaily = [];
+      const evaluationState = compiled.createEvaluationState?.() ?? null;
+      let currentDailyYear = null;
+      let currentYearBeforeToday = [];
+      for (const bar of dailyHistory.bars) {
         const year = Number(bar.date.slice(0, 4));
-        const points = Array.from({ length: requiredYears }, (_item, index) => byYear.get(year - requiredYears + index));
-        const previousHigh = points.at(-1)?.high;
-        const previousMax = maxCloseByYear.get(year) ?? null;
-        const consecutiveDecline = points.every((point) => Number.isFinite(point?.close) && Number.isFinite(point?.high))
-          && points.slice(1).every((point, index) => point.close < points[index].close);
-        if (consecutiveDecline && Number.isFinite(bar.close) && Number.isFinite(previousHigh)
-          && (previousMax === null || previousMax <= previousHigh) && bar.close > previousHigh) {
-          const candidate = {
-            code: security.code,
-            evidence: {
-              annual_points: points.map((point) => ({ close: point.close, high: point.high, year: point.year })),
-              breakout_margin: bar.close - previousHigh,
-              breakout_margin_pct: ((bar.close - previousHigh) / previousHigh) * 100,
-              max_previous_current_year_close: previousMax,
-              previous_year_high: previousHigh,
-              down_transitions: downTransitions,
-              required_complete_years: requiredYears,
-              rule_summary: `${requiredYears}个完整年度收盘逐年降低，当前年度首次收盘突破去年最高价`,
-              today_close: bar.close,
-              today_date: bar.date,
-            },
-            market: security.market,
-            securityKey: `${security.market}.${security.code}`,
-          };
-          if (!byDate.has(bar.date)) byDate.set(bar.date, []);
-          byDate.get(bar.date).push(candidate);
+        if (currentDailyYear !== year) {
+          currentDailyYear = year;
+          currentYearBeforeToday = [];
         }
-        if (Number.isFinite(bar.close)) maxCloseByYear.set(year, Math.max(previousMax ?? -Infinity, bar.close));
+        accumulatedDaily.push(bar);
+        const applicableYears = completedYears.filter((point) => point.year < year);
+        if (compiled.yearlyPrefilter(applicableYears)) {
+          const result = compiled.evaluate({
+            dailyRows: accumulatedDaily,
+            features: { completedYears: applicableYears, currentYearBeforeToday, today: bar },
+            isoDate: bar.date,
+            security,
+          }, evaluationState);
+          result.qualityIssues.forEach((issue) => qualityIssues.add(issue));
+          if (result.ok) {
+            const candidate = {
+              code: security.code,
+              evidence: result.evidence,
+              market: security.market,
+              rankingValues: result.rankingValues,
+              securityKey: `${security.market}.${security.code}`,
+            };
+            if (!byDate.has(bar.date)) byDate.set(bar.date, []);
+            byDate.get(bar.date).push(candidate);
+          }
+        }
+        currentYearBeforeToday.push(bar);
       }
       dailyCompleted += 1;
       if (dailyCompleted % 25 === 0 || dailyCompleted === shortlisted.length) {
         onProgress({ completed: dailyCompleted, phase: "daily_scan", total: shortlisted.length });
       }
     });
-    for (const candidates of byDate.values()) candidates.sort(compareCandidate);
+    for (const candidates of byDate.values()) candidates.sort(candidateComparator(compiled));
     return {
       byDate,
       configHash: digest(config),
@@ -256,6 +270,7 @@ class CandidateSelectionPipeline {
     let snapshot = this.cache.get(cacheKey);
 
     if (!snapshot) {
+      const compiled = compileStrategy(config.strategy);
       const candidates = [];
       const qualityIssues = new Set(universe.qualityIssues);
       for (const security of universe.securities) {
@@ -265,17 +280,18 @@ class CandidateSelectionPipeline {
         ]);
         dailyHistory.qualityIssues.forEach((issue) => qualityIssues.add(issue));
         yearlyHistory.qualityIssues.forEach((issue) => qualityIssues.add(issue));
-        const result = evaluateYearDeclineCloseBreakout(signalContext({ asOfDate, dailyHistory, yearlyHistory }), config.strategy);
+        const result = compiled.evaluate(signalContext({ asOfDate, dailyHistory, security, yearlyHistory }));
         result.qualityIssues.forEach((issue) => qualityIssues.add(issue));
         if (!result.ok) continue;
         candidates.push({
           evidence: result.evidence,
           market: security.market,
           code: security.code,
+          rankingValues: result.rankingValues,
           securityKey: `${security.market}.${security.code}`,
         });
       }
-      candidates.sort(compareCandidate);
+      candidates.sort(candidateComparator(compiled));
       snapshot = Object.freeze({
         asOfDate,
         cacheKey,
@@ -303,6 +319,7 @@ module.exports = {
   DEFAULT_SCAN_CONCURRENCY,
   DEFAULT_PAGE_SIZE,
   compareCandidate,
+  candidateComparator,
   digest,
   hasEligibleYear,
   mapConcurrent,

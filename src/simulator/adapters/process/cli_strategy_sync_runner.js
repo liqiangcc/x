@@ -40,8 +40,16 @@ class CliStrategySyncRunner {
     this.spawnImpl = spawnImpl;
   }
 
-  run({ downTransitions = 3, marketBoards = null, onStage = () => {}, strategyId }) {
+  async run({ downTransitions = 3, marketBoards = null, onStage = () => {}, strategyDefinition = null, strategyId }) {
     const marketBoardArgs = Array.isArray(marketBoards) ? ["--strategy-boards", marketBoards.join(",")] : [];
+    let definitionPath = null;
+    if (strategyDefinition) {
+      const directory = path.join(this.root, "var", "simulator", "strategy-sync");
+      await fs.mkdir(directory, { recursive: true });
+      definitionPath = path.join(directory, `${String(strategyId).replace(/[^A-Za-z0-9._-]/g, "_")}-${Date.now()}-${process.pid}.json`);
+      await fs.writeFile(definitionPath, `${JSON.stringify(strategyDefinition)}\n`, { flag: "wx" });
+    }
+    const definitionArgs = definitionPath ? ["--strategy-definition", definitionPath] : [];
     const args = [
       path.join(this.root, "bin", "x"),
       "daily",
@@ -49,6 +57,7 @@ class CliStrategySyncRunner {
       "--period", "daily",
       "--strategy-id", strategyId,
       "--strategy-down-transitions", String(downTransitions),
+      ...definitionArgs,
       ...marketBoardArgs,
       "--engine", this.engine,
       "--cn-fast-threshold", String(this.cnFastThreshold),
@@ -77,7 +86,10 @@ class CliStrategySyncRunner {
       const stderrLines = splitLines(consume);
       child.stdout.on("data", (chunk) => stdoutLines.push(chunk));
       child.stderr.on("data", (chunk) => stderrLines.push(chunk));
-      child.on("error", reject);
+      child.on("error", async (error) => {
+        if (definitionPath) await fs.rm(definitionPath, { force: true });
+        reject(error);
+      });
       child.on("close", async (exitCode) => {
         stdoutLines.flush();
         stderrLines.flush();
@@ -88,6 +100,7 @@ class CliStrategySyncRunner {
             updatedCodes = Array.isArray(payload?.codes) ? payload.codes.map(String) : [];
           } catch {}
         }
+        if (definitionPath) await fs.rm(definitionPath, { force: true });
         resolve({ exitCode: exitCode ?? 1, output: stdout.slice(-20), runId, updatedCodes });
       });
     });

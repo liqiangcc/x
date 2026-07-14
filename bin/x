@@ -50,7 +50,7 @@ const {
 const { inferSecid } = require("../src/core/secid");
 const { getKlines, inspectFile, validateKlinePath } = require("../fetch/check_kline_empty");
 const { aggregateYearlyFromDaily } = require("../src/kline/aggregate_yearly");
-const { STRATEGY_ID, buildYearDeclineUniverse } = require("../src/strategies/year_decline_sync");
+const { STRATEGY_ID, buildStrategyUniverse } = require("../src/strategies/year_decline_sync");
 const { DEFAULT_CN_FAST_THRESHOLD, selectStrategySyncEngine } = require("../src/kline/engine_selection");
 
 const execFileAsync = promisify(execFile);
@@ -89,7 +89,7 @@ function printUsage() {
   x kline unlock --period daily|yearly [--force]
   x kline validate [target_path] [--period daily|yearly] [--json]
   x kline freshness [target_path] --period daily|yearly --codes codes.json [--expected-latest-date YYYYMMDD] [--repair-output codes.json] [--json]
-  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--strategy-only|--all-codes] [--strategy-id id] [--strategy-down-transitions N] [--strategy-boards mainBoard,chiNext,starMarket,beijingExchange] [--force-strategy-codes] [--cn-fast-threshold N] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
+  x daily [--latest|--date YYYYMMDD] [--universe market|pool] [--strategy-only|--all-codes] [--strategy-id id] [--strategy-definition file.json] [--strategy-down-transitions N] [--strategy-boards mainBoard,chiNext,starMarket,beijingExchange] [--force-strategy-codes] [--cn-fast-threshold N] [--limit N] [--batch-size N] [--offset N] [--period daily|yearly] [--policy name|--engine engine] [--force] [--force-pool] [--force-universe] [--commit] [--allow-partial] [--concurrency N] [--retry-attempts N] [--retry-delay-ms N] [--retry-concurrency N] [--aws-region r1,r2] [--router-region auto|all|r1,r2] [--router-probe true|false] [--router-probe-attempts N] [--router-probe-lmt N] [--router-probe-secid secid] [--huaweicloud-region all|r1,r2] [--huaweicloud-region-start-index N] [--huaweicloud-targets file.json] [--lambda-name name] [--config file] [--min-success-rate 0..1] [--job-mode batch|single] [--job-id id] [--chain-depth N] [--max-chain-depth N]
   x db init [--db db/stocks.db] [--schema db/database_schema.sql]
   x db query --sql <sql> [--db db/stocks.db]
   x stats yearly-positive --metric-column c4 [--stock-code 000001] [--db mydb.db]
@@ -1725,19 +1725,23 @@ async function commandDaily(argv) {
     if (!/^[A-Za-z0-9._-]+$/.test(strategySyncId)) throw new Error("--strategy-id contains unsupported characters.");
     const strategyDir = path.join(ROOT, "data", "strategy-universe", date.slice(0, 4), strategySyncId);
     const strategyCodesPath = path.join(strategyDir, "codes.json");
+    const strategyDefinition = options.strategyDefinition
+      ? await readJson(rootPath(options.strategyDefinition), null)
+      : { downTransitions: parsePositiveIntegerOption(options.strategyDownTransitions, 3), type: "year_decline_close_breakout" };
+    if (!strategyDefinition) throw new Error("Unable to read --strategy-definition.");
     strategyUniverse = await withStage("strategy_universe", {
       date,
       source_codes: sourceCodes.length,
       strategy_id: STRATEGY_ID,
-    }, () => buildYearDeclineUniverse({
+    }, () => buildStrategyUniverse({
       asOfDate: date,
       codes: sourceCodes,
       concurrency: parsePositiveIntegerOption(options.concurrency, 32),
-      downTransitions: parsePositiveIntegerOption(options.strategyDownTransitions, 3),
       force: Boolean(options.forceStrategyCodes),
       klineRoot: DEFAULT_KLINE_DIR,
       marketBoards: options.strategyBoards ? String(options.strategyBoards).split(",").filter(Boolean) : null,
       outputFile: strategyCodesPath,
+      strategyDefinition,
       strategyId: strategySyncId,
     }));
     inputDir = strategyDir;

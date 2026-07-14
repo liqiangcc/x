@@ -22,15 +22,26 @@ const { TradingSessionEngine } = require("./sessions");
 const { digest } = require("../selection/pipeline");
 const { buildSessionReport, identityRows, reconstructStockCycles } = require("./reports");
 const { accountDto, sessionDto } = require("../adapters/http/dto");
-const { normalizeYearDeclineConfig } = require("../../signals/signals/year_decline_close_breakout");
 const { DataStatusService } = require("../../kline/data_status");
 const { ProxyQualityService } = require("./proxy_quality_service");
 const { StrategySyncOrchestrator } = require("./strategy_sync_orchestrator");
 const { calculateFees, cents } = require("../mechanisms/fee_model");
 const { OrderSide, OrderStatus } = require("../core/enums");
 const { DEFAULT_STRATEGY_MARKET_BOARDS, normalizeMarketBoards } = require("../../core/market_board");
+const { STRATEGY_BUILDER_CATALOG, compileStrategy, defaultCompositeStrategy, toV3Definition } = require("../../strategies/strategy_builder");
 
-const STRATEGY_ALGORITHM_VERSION = 5;
+const DEFAULT_STRATEGY_ID = "system-three-year-decline-breakout-v2";
+
+function strategyAlgorithmVersion(strategy) {
+  return compileStrategy(strategy?.config?.strategy).engineVersion;
+}
+
+function signalIdentity(index) {
+  return JSON.stringify([...index.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([date, candidates]) => [
+    date,
+    candidates.map((candidate) => candidate.securityKey).sort(),
+  ]));
+}
 
 function httpError(code, message, statusCode = 422, issues = []) {
   const error = new Error(message);
@@ -64,6 +75,10 @@ function reservationLimitRate({ code }) {
   if (/^(300|301|688|689)/.test(code)) return 0.20;
   if (/^\d{6}$/.test(code)) return 0.10;
   return 0.30;
+}
+
+function securityFromCode(code) {
+  return { code: String(code), market: /^6/.test(String(code)) ? 1 : 0 };
 }
 
 function positionCycleOpenDates({ fills = [], orders = new Map() } = {}) {
@@ -180,7 +195,7 @@ class SimulatorRuntimeService {
   constructor({
     dataStatusService = new DataStatusService(),
     proxyQualityService = new ProxyQualityService(),
-    klineRepository = new ExistingKlineRepository(),
+    klineRepository = new ExistingKlineRepository({ cacheSize: Number(process.env.SIMULATOR_KLINE_CACHE_SIZE ?? 64) }),
     identityDirectory = new SecurityIdentityDirectory(),
     onPerformance = null,
     repository = null,
@@ -202,22 +217,59 @@ class SimulatorRuntimeService {
     this.entries = new Map();
     this.accountProfiles = new Map();
     this.strategies = new Map();
+    this.strategyTemplates = new Map();
     this.strategyBuilds = new Map();
     this.strategyIndexes = new Map();
     this.strategyBuildQueue = Promise.resolve();
-    const defaultStrategy = {
+    const systemTemplates = STRATEGY_BUILDER_CATALOG.templates.map((template) => ({
+      definition: JSON.parse(JSON.stringify(template.defaultDefinition)),
+      description: template.description,
+      id: template.id,
+      isSystem: true,
+      name: template.label,
+      version: 1,
+    }));
+    for (const template of (this.repository?.listStrategyTemplates?.() ?? systemTemplates)) this.strategyTemplates.set(template.id, template);
+    for (const template of systemTemplates) {
+      const existing = this.strategyTemplates.get(template.id);
+      if (existing?.definition?.schemaVersion === 3) continue;
+      const next = existing ? { ...template, currentRevision: (existing.currentRevision ?? existing.version) + 1, version: existing.version + 1 } : { ...template, currentRevision: 1 };
+      this.strategyTemplates.set(template.id, next);
+      this.repository?.saveStrategyTemplate?.(next);
+      this.repository?.saveStrategyTemplateRevision?.(next);
+    }
+    const legacyDefaultStrategy = {
+      activeRevision: 1,
       config: { excludeSpecialTreatment: true, limit: 20, orderBy: "breakout_margin_ascending", strategy: { type: "year_decline_close_breakout" }, universe: { ...DEFAULT_STRATEGY_MARKET_BOARDS } },
       id: "system-year-decline-breakout",
       isSystem: true,
-      name: "多年下跌后首次突破",
+      name: "旧版兼容：连续下跌后首次突破",
       status: "building",
       version: 1,
     };
+    const defaultStrategy = {
+      activeRevision: 1,
+      config: { excludeSpecialTreatment: true, limit: 20, orderBy: "price_ascending", strategy: toV3Definition(defaultCompositeStrategy()), universe: { ...DEFAULT_STRATEGY_MARKET_BOARDS } },
+      id: DEFAULT_STRATEGY_ID,
+      isSystem: true,
+      name: "连续下跌3年后首次突破",
+      status: "building",
+      version: 1,
+    };
+    const systemStrategies = [defaultStrategy, legacyDefaultStrategy];
     const storedStrategies = this.repository?.listStrategies?.() ?? [];
-    for (const strategy of (storedStrategies.length > 0 ? storedStrategies : [defaultStrategy])) this.strategies.set(strategy.id, strategy);
-    if (!this.strategies.has(defaultStrategy.id)) {
-      this.strategies.set(defaultStrategy.id, defaultStrategy);
-      this.repository?.saveStrategy?.(defaultStrategy);
+    for (const strategy of storedStrategies) this.strategies.set(strategy.id, strategy);
+    for (const systemStrategy of systemStrategies) {
+      if (this.strategies.has(systemStrategy.id)) continue;
+      this.strategies.set(systemStrategy.id, systemStrategy);
+      this.repository?.saveStrategy?.(systemStrategy);
+      this.repository?.saveStrategyRevision?.({
+        config: systemStrategy.config,
+        revision: 1,
+        schemaVersion: systemStrategy.config.strategy?.schemaVersion ?? 1,
+        status: systemStrategy.status,
+        strategyId: systemStrategy.id,
+      });
     }
     for (const strategy of this.strategies.values()) {
       if (strategy.archived) continue;
@@ -233,8 +285,26 @@ class SimulatorRuntimeService {
       }
       const build = this.repository?.latestStrategyBuild?.(strategy.id);
       if (build) this.strategyBuilds.set(strategy.id, build);
-      if (strategy.status === "ready" && build?.status === "ready" && build.algorithmVersion === STRATEGY_ALGORITHM_VERSION) {
+      if (strategy.status === "ready" && build?.status === "ready" && build.algorithmVersion === strategyAlgorithmVersion(strategy)) {
         this.strategyIndexes.set(strategy.id, this.repository.loadStrategySignals(build.id));
+        if (strategy.config?.strategy?.schemaVersion !== 3) {
+          const revision = (strategy.activeRevision ?? strategy.version) + 1;
+          const candidateStrategy = {
+            ...strategy,
+            activeRevision: revision,
+            config: { ...strategy.config, strategy: toV3Definition(strategy.config.strategy, { orderBy: strategy.config.orderBy }) },
+            status: "building",
+            version: strategy.version + 1,
+          };
+          this.repository.saveStrategyRevision?.({
+            config: candidateStrategy.config,
+            revision,
+            schemaVersion: 3,
+            status: "building",
+            strategyId: strategy.id,
+          });
+          this.#enqueueStrategyBuild(strategy.id, { candidateStrategy, verifySignals: true });
+        }
       } else if (this.repository) {
         strategy.status = "building";
         this.repository.saveStrategy(strategy);
@@ -244,7 +314,7 @@ class SimulatorRuntimeService {
     for (const profile of this.repository?.listAccountProfiles?.() ?? []) {
       this.#restoreAccount(profile);
       const build = this.strategyBuilds.get(profile.strategyId);
-      if (build?.algorithmVersion === STRATEGY_ALGORITHM_VERSION) {
+      if (build?.algorithmVersion === strategyAlgorithmVersion(this.strategies.get(profile.strategyId))) {
         profile.calculatedDate = null;
         const entry = this.entries.get(profile.accountId);
         if (entry) entry.profile.calculatedDate = null;
@@ -569,11 +639,120 @@ class SimulatorRuntimeService {
     return { strategies: [...this.strategies.values()].map((strategy) => ({
       ...strategy,
       buildProgress: this.strategyBuilds.get(strategy.id) ?? null,
+      description: compileStrategy(strategy.config?.strategy).description,
+      isDefault: strategy.id === DEFAULT_STRATEGY_ID,
     })) };
   }
 
-  getDataStatus({ refresh = false } = {}) {
-    return this.dataStatusService.get({ refresh });
+  getStrategyBuilderCatalog() {
+    const { templates, ...catalog } = STRATEGY_BUILDER_CATALOG;
+    void templates;
+    return catalog;
+  }
+
+  validateStrategy(input) {
+    const compiled = compileStrategy(input?.strategy ?? input);
+    return { definition: compiled.definition, description: compiled.description, requirements: compiled.requirements };
+  }
+
+  listStrategyTemplates() {
+    return { templates: [...this.strategyTemplates.values()].filter((template) => !template.archived) };
+  }
+
+  listStrategyTemplateRevisions(templateId) {
+    if (!this.strategyTemplates.has(templateId)) throw httpError("strategy_template_not_found", "Strategy template was not found.", 404);
+    return { revisions: this.repository?.listStrategyTemplateRevisions?.(templateId) ?? [] };
+  }
+
+  listStrategyRevisions(strategyId) {
+    if (!this.strategies.has(strategyId)) throw httpError("strategy_not_found", "Strategy was not found.", 404);
+    return { revisions: this.repository?.listStrategyRevisions?.(strategyId) ?? [] };
+  }
+
+  saveStrategyTemplate(input, id = randomUUID()) {
+    const previous = this.strategyTemplates.get(id);
+    if (previous?.isSystem) throw httpError("system_strategy_template_immutable", "System strategy templates cannot be edited.", 409);
+    const compiled = compileStrategy(input.definition);
+    if (compiled.definition.type !== "composite") throw httpError("invalid_strategy_template", "Custom templates must use the V3 composite format.", 422);
+    const template = {
+      archived: false,
+      definition: compiled.definition,
+      description: input.description?.trim() || compiled.description,
+      id,
+      isSystem: false,
+      name: input.name.trim(),
+      version: (previous?.version ?? 0) + 1,
+      currentRevision: (previous?.currentRevision ?? previous?.version ?? 0) + 1,
+    };
+    this.strategyTemplates.set(id, template);
+    this.repository?.transaction(() => {
+      this.repository.saveStrategyTemplate(template);
+      this.repository.saveStrategyTemplateRevision?.(template);
+    });
+    return template;
+  }
+
+  deleteStrategyTemplate(id) {
+    const template = this.strategyTemplates.get(id);
+    if (!template) throw httpError("strategy_template_not_found", "Strategy template was not found.", 404);
+    if (template.isSystem) throw httpError("system_strategy_template_immutable", "System strategy templates cannot be deleted.", 409);
+    template.archived = true;
+    this.repository?.saveStrategyTemplate?.(template);
+  }
+
+  async getDataStatus({ refresh = false } = {}) {
+    const status = await this.dataStatusService.get({ refresh });
+    const strategyUniverse = status.strategyUniverse
+      ? {
+        ...status.strategyUniverse,
+        securities: (status.strategyUniverse.codes ?? []).map((code) => this.identityDirectory.lookup(securityFromCode(code))),
+      }
+      : null;
+    return { ...status, strategyUniverse };
+  }
+
+  async getDataStatusDetails(options) {
+    const detail = await this.dataStatusService.getDetails(options);
+    return {
+      ...detail,
+      items: detail.items.map((item) => ({
+        ...item,
+        name: this.identityDirectory.lookup(securityFromCode(item.code)).name,
+      })),
+    };
+  }
+
+  async getDataStockChart(code) {
+    const normalizedCode = String(code ?? "").trim();
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      throw httpError("invalid_security_code", "Security code must contain 6 digits.", 400);
+    }
+    const security = securityFromCode(normalizedCode);
+    const [dailyHistory, yearlyHistory] = await Promise.all([
+      this.klineRepository.getLegacyHistory({ ...security, endDate: "9999-12-31", period: "daily" }),
+      this.klineRepository.getLegacyHistory({ ...security, endDate: "9999-12-31", period: "yearly" }),
+    ]);
+    if (dailyHistory.bars.length === 0 && yearlyHistory.bars.length === 0) {
+      throw httpError("stock_data_not_found", "No kline data was found for this security.", 404);
+    }
+    const latestDate = dailyHistory.bars.at(-1)?.date ?? yearlyHistory.bars.at(-1)?.date;
+    const identity = this.identityDirectory.lookup(security);
+    const daily = dailyChartWindow(dailyHistory.bars, null, 240);
+    const yearly = yearlyChartWindow(yearlyHistory.bars, dailyHistory.bars, latestDate);
+    return {
+      ...chartDto({
+        alias: identity.name ?? identity.code,
+        candidateId: null,
+        daily,
+        security: identity,
+        yearly,
+      }),
+      qualityIssues: [...new Set([...dailyHistory.qualityIssues, ...yearlyHistory.qualityIssues])],
+      range: {
+        daily: { count: dailyHistory.bars.length, end: dailyHistory.bars.at(-1)?.date ?? null, start: dailyHistory.bars[0]?.date ?? null },
+        yearly: { count: yearlyHistory.bars.length, end: yearlyHistory.bars.at(-1)?.date ?? null, start: yearlyHistory.bars[0]?.date ?? null },
+      },
+    };
   }
 
   getProxyQuality() { return { job: this.proxyQualityService.status() }; }
@@ -593,12 +772,14 @@ class SimulatorRuntimeService {
     const strategy = this.strategies.get(strategyId);
     if (!strategy || strategy.archived) throw httpError("strategy_not_found", "Strategy was not found.", 404);
     if (strategy.status !== "ready") throw httpError("strategy_not_ready", "Strategy index must be ready before syncing data.", 409);
-    const downTransitions = strategy.config?.strategy?.downTransitions ?? 3;
+    const compiled = compileStrategy(strategy.config?.strategy);
+    const downTransitions = strategy.config?.strategy?.downTransitions ?? strategy.config?.strategy?.rules?.find((rule) => rule.type === "sequence_compare")?.params?.transitions ?? 3;
     const marketBoards = Object.entries(normalizeMarketBoards(strategy.config?.universe))
       .filter(([, enabled]) => enabled)
       .map(([board]) => board);
     return { job: this.strategySyncOrchestrator.start({
       strategyId,
+      strategyDefinition: compiled.definition,
       downTransitions,
       marketBoards,
       afterSync: async ({ updatedCodes = [] } = {}) => {
@@ -613,36 +794,50 @@ class SimulatorRuntimeService {
   saveStrategy(input, id = randomUUID()) {
     const previous = this.strategies.get(id);
     if (previous?.isSystem) throw httpError("system_strategy_immutable", "System strategies cannot be edited.", 409);
-    const normalizedRule = normalizeYearDeclineConfig(input.config?.strategy);
+    const compiled = compileStrategy(input.config?.strategy);
     const universe = normalizeMarketBoards(input.config?.universe, DEFAULT_STRATEGY_MARKET_BOARDS);
     if (!Object.values(universe).some(Boolean)) {
       throw httpError("empty_strategy_universe", "At least one market board must be enabled.", 422);
     }
     const config = {
       ...input.config,
-      strategy: { ...input.config?.strategy, ...normalizedRule, type: "year_decline_close_breakout" },
+      strategy: compiled.definition,
       universe,
     };
-    const strategy = { config, dataVersion: "existing-data-current", failureReason: null,
+    const revision = (previous?.activeRevision ?? previous?.version ?? 0) + 1;
+    const strategy = { activeRevision: revision, config, dataVersion: "existing-data-current", failureReason: null,
       id, isSystem: false, name: input.name.trim(), status: "building", version: (previous?.version ?? 0) + 1 };
-    this.strategies.set(id, strategy);
-    this.repository?.saveStrategy?.(strategy);
-    this.#enqueueStrategyBuild(id);
+    if (!previous) {
+      this.strategies.set(id, strategy);
+      this.repository?.saveStrategy?.(strategy);
+    }
+    this.repository?.saveStrategyRevision?.({
+      config,
+      revision,
+      schemaVersion: compiled.definition.schemaVersion ?? 1,
+      status: "building",
+      strategyId: id,
+      templateId: input.config?.templateOrigin?.id,
+      templateRevision: input.config?.templateOrigin?.revision,
+    });
+    this.#enqueueStrategyBuild(id, previous ? { candidateStrategy: strategy } : {});
     return strategy;
   }
 
-  async #startStrategyBuild(strategyId, { force = false, updatedCodes = null } = {}) {
-    const strategy = this.strategies.get(strategyId);
+  async #startStrategyBuild(strategyId, { candidateStrategy = null, force = false, updatedCodes = null, verifySignals = false } = {}) {
+    const previousStrategy = this.strategies.get(strategyId);
+    const strategy = candidateStrategy ?? previousStrategy;
     if (!strategy) throw httpError("strategy_not_found", "Strategy was not found.", 404);
+    const shadowBuild = candidateStrategy !== null && previousStrategy !== undefined;
     const previousIndex = this.strategyIndexes.get(strategyId);
     const incremental = force && Array.isArray(updatedCodes) && previousIndex instanceof Map;
-    const build = { algorithmVersion: STRATEGY_ALGORITHM_VERSION, completed: 0, dataVersion: "existing-data-current", failureReason: null,
+    const build = { algorithmVersion: strategyAlgorithmVersion(strategy), completed: 0, dataVersion: "existing-data-current", failureReason: null,
       id: randomUUID(), phase: "queued", signalCount: 0, status: "building",
       strategyId, strategyVersion: strategy.version, total: 0 };
     strategy.status = "building";
     strategy.failureReason = null;
     this.strategyBuilds.set(strategyId, build);
-    this.repository?.saveStrategy?.(strategy);
+    if (!shadowBuild) this.repository?.saveStrategy?.(strategy);
     this.repository?.saveStrategyBuild?.(build);
     try {
       const index = await this.selectionPipeline.buildAll({
@@ -658,6 +853,9 @@ class SimulatorRuntimeService {
         index.byDate = mergeStrategySignals(previousIndex, index.byDate, updatedCodes);
         index.signalCount = [...index.byDate.values()].reduce((sum, items) => sum + items.length, 0);
       }
+      if (verifySignals && previousIndex instanceof Map && signalIdentity(previousIndex) !== signalIdentity(index.byDate)) {
+        throw httpError("strategy_migration_mismatch", "V3 shadow build produced different signal identities; the V2 revision remains active.", 409);
+      }
       build.status = "ready";
       build.phase = "completed";
       build.signalCount = index.signalCount;
@@ -668,7 +866,15 @@ class SimulatorRuntimeService {
       this.strategyIndexes.set(strategyId, index.byDate);
       strategy.status = "ready";
       strategy.dataVersion = build.dataVersion;
+      this.strategies.set(strategyId, strategy);
       this.repository?.saveStrategy?.(strategy);
+      this.repository?.saveStrategyRevision?.({
+        config: strategy.config,
+        revision: strategy.activeRevision ?? strategy.version,
+        schemaVersion: strategy.config.strategy?.schemaVersion ?? 1,
+        status: "ready",
+        strategyId,
+      });
       for (const profile of this.accountProfiles.values()) {
         if (profile.strategyId !== strategyId) continue;
         profile.calculatedDate = null;
@@ -682,7 +888,15 @@ class SimulatorRuntimeService {
       strategy.status = "failed";
       strategy.failureReason = error.message;
       this.repository?.saveStrategyBuild?.(build);
-      this.repository?.saveStrategy?.(strategy);
+      if (!shadowBuild) this.repository?.saveStrategy?.(strategy);
+      this.repository?.saveStrategyRevision?.({
+        config: strategy.config,
+        failureReason: error.message,
+        revision: strategy.activeRevision ?? strategy.version,
+        schemaVersion: strategy.config.strategy?.schemaVersion ?? 1,
+        status: "failed",
+        strategyId,
+      });
       throw error;
     }
   }
@@ -736,7 +950,7 @@ class SimulatorRuntimeService {
     } else {
       startIndex = randomInt(earliestIndex, latestStartIndex + 1);
     }
-    const strategy = this.strategies.get(input.strategyId ?? "system-year-decline-breakout");
+    const strategy = this.strategies.get(input.strategyId ?? DEFAULT_STRATEGY_ID);
     if (!strategy) throw httpError("strategy_not_found", "Strategy was not found.", 404);
     if (strategy.status !== "ready" || !this.strategyIndexes.has(strategy.id)) {
       throw httpError("strategy_index_not_ready", "The selected strategy index is not ready.", 409);

@@ -56,6 +56,12 @@ function evaluateYearDeclineCloseBreakout(context, inputConfig = {}) {
   const maxPreviousCurrentYearClose = previousCurrentYearCloses.length > 0
     ? Math.max(...previousCurrentYearCloses)
     : null;
+  const previousDaily = (context?.dailyRows ?? [])
+    .filter((bar) => bar?.date < today?.date && finite(bar.close))
+    .at(-1);
+  const todayChangePct = finite(previousDaily?.close) && previousDaily.close !== 0 && finite(today?.close)
+    ? ((today.close - previousDaily.close) / previousDaily.close) * 100
+    : null;
 
   const consecutiveDecline = annualPoints.length === requiredCompleteYears
     && annualPoints.every(Boolean)
@@ -81,6 +87,7 @@ function evaluateYearDeclineCloseBreakout(context, inputConfig = {}) {
       required_complete_years: requiredCompleteYears,
       rule_summary: `${requiredCompleteYears}个完整年度收盘逐年降低，当前年度首次收盘突破去年最高价`,
       today_close: today?.close ?? null,
+      today_change_pct: todayChangePct,
       today_date: today?.date ?? null,
     },
     ok: qualityIssues.length === 0 && consecutiveDecline && neverClosedAbove && breakout,

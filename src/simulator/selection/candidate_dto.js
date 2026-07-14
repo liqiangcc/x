@@ -8,8 +8,10 @@ const EVIDENCE_FIELDS = [
   "max_previous_current_year_close",
   "previous_year_high",
   "required_complete_years",
+  "rules",
   "rule_summary",
   "today_close",
+  "today_change_pct",
   "today_date",
 ];
 
@@ -21,6 +23,13 @@ function evidenceDto(evidence) {
   const dto = pick(evidence, EVIDENCE_FIELDS);
   if (Array.isArray(dto.annual_points)) {
     dto.annual_points = dto.annual_points.map((point) => pick(point, ["close", "high", "year"]));
+  }
+  if (Array.isArray(dto.rules)) {
+    dto.rules = dto.rules.map((rule) => pick(rule, [
+      "actual", "baseline", "category", "comparisons", "count", "current", "direction", "expected", "feature", "historyCount", "key", "left", "limitState", "lookback",
+      "ok", "operator", "previousExtreme", "previousLeft", "previousRight", "priorMatchCount",
+      "qualityIssues", "requiredPoints", "right", "threshold", "minimum", "type",
+    ]));
   }
   return dto;
 }

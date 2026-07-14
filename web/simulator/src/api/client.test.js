@@ -49,4 +49,37 @@ describe("API client", () => {
       method: "POST",
     }));
   });
+
+  it("queries paginated data status details on demand", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ json: async () => ({ items: [] }), ok: true, status: 200 });
+    const client = createApiClient({ fetchImpl });
+    await client.getDataStatusDetails({ category: "date", date: "2026-07-13", page: 2, pageSize: 50, period: "daily" });
+    expect(fetchImpl).toHaveBeenCalledWith("/api/data/status/details?category=date&page=2&pageSize=50&period=daily&date=2026-07-13", expect.any(Object));
+  });
+
+  it("loads a raw-data stock chart by code", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ json: async () => ({ daily: [] }), ok: true, status: 200 });
+    const client = createApiClient({ fetchImpl });
+    await client.getDataStockChart("600001");
+    expect(fetchImpl).toHaveBeenCalledWith("/api/data/stocks/600001/chart", expect.any(Object));
+  });
+
+  it("supports strategy builder catalog, validation, and custom template CRUD", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ json: async () => ({}), ok: true, status: 200 });
+    const client = createApiClient({ fetchImpl });
+    await client.getStrategyBuilderCatalog();
+    await client.getStrategyTemplates();
+    await client.validateStrategy({ rules: [] });
+    await client.createStrategyTemplate({ definition: {}, name: "模板" });
+    await client.updateStrategyTemplate("template-a", { definition: {}, name: "新版" });
+    await client.deleteStrategyTemplate("template-a");
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      "/api/strategy-builder/catalog",
+      "/api/strategy-templates",
+      "/api/strategies/validate",
+      "/api/strategy-templates",
+      "/api/strategy-templates/template-a",
+      "/api/strategy-templates/template-a",
+    ]);
+  });
 });

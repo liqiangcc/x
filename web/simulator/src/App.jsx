@@ -9,6 +9,7 @@ import WatchlistPage from "./pages/WatchlistPage.jsx";
 import StrategiesPage from "./pages/StrategiesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import DataPage from "./pages/DataPage.jsx";
+import DataStockPage from "./pages/DataStockPage.jsx";
 import { useSession } from "./state/SessionContext.jsx";
 import { accountLabel, tradingDayLabel } from "./utils/securityDisplay.js";
 
@@ -53,6 +54,7 @@ function Layout() {
           <Route element={<ReviewPage />} path="/review" />
           <Route element={<SettingsPage />} path="/settings" />
           <Route element={<DataPage />} path="/data" />
+          <Route element={<DataStockPage />} path="/data/stocks/:code" />
           <Route element={<Navigate replace to="/accounts/new" />} path="*" />
         </Routes>
       </main>

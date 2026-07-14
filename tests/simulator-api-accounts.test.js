@@ -14,11 +14,16 @@ function runtime() {
     getAccount: (id) => ({ id }),
     getAccountCandidates: () => ({ calculated: false, pagination: { items: [] } }),
     getChart: (_id, candidateId) => ({ candidateId, daily: [], yearly: [] }),
+    getStrategyBuilderCatalog: () => ({ indicators: [], rules: [] }),
     listAccounts: () => ({ accounts: [{ id: "account-1" }] }),
     listStrategies: () => ({ strategies: [{ id: "default" }] }),
+    listStrategyTemplates: () => ({ templates: [{ id: "preset" }] }),
     listWatchlist: () => ({ items: [] }),
     removeWatchlist: () => ({ items: [] }),
     saveStrategy: (body, id = "strategy-1") => ({ ...body, id }),
+    saveStrategyTemplate: (body, id = "template-1") => ({ ...body, id }),
+    deleteStrategyTemplate: () => null,
+    validateStrategy: () => ({ description: "有效策略" }),
   };
 }
 
@@ -44,4 +49,10 @@ test("strategy template API supports create, list, update and delete", async (t)
   assert.equal(created.statusCode, 201);
   assert.equal((await app.inject({ method: "PUT", payload: { config: {}, name: "新版" }, url: "/api/strategies/strategy-1" })).json().name, "新版");
   assert.equal((await app.inject({ method: "DELETE", url: "/api/strategies/strategy-1" })).statusCode, 204);
+  assert.equal((await app.inject({ method: "GET", url: "/api/strategy-builder/catalog" })).statusCode, 200);
+  assert.equal((await app.inject({ method: "POST", payload: { strategy: {} }, url: "/api/strategies/validate" })).json().description, "有效策略");
+  assert.equal((await app.inject({ method: "GET", url: "/api/strategy-templates" })).json().templates.length, 1);
+  assert.equal((await app.inject({ method: "POST", payload: { definition: {}, name: "模板" }, url: "/api/strategy-templates" })).statusCode, 201);
+  assert.equal((await app.inject({ method: "PUT", payload: { definition: {}, name: "新版模板" }, url: "/api/strategy-templates/template-1" })).json().name, "新版模板");
+  assert.equal((await app.inject({ method: "DELETE", url: "/api/strategy-templates/template-1" })).statusCode, 204);
 });

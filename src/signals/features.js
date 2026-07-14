@@ -24,6 +24,7 @@ function parseKlineRow(row) {
   }
 
   const parsed = {
+    changePct: fields.length > 8 ? parseNumber(fields[8]) : null,
     date: fields[0],
     open: parseNumber(fields[1]),
     close: parseNumber(fields[2]),

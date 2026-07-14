@@ -171,13 +171,14 @@ test("watchlist sorts held stocks by return and keeps unavailable returns stable
   assert.deepEqual(prioritizeHeldWatchlist(items).map((item) => item.candidateId), ["d", "b", "a", "c"]);
 });
 
-test("default composite candidate requires four consecutive declining complete years", () => {
+test("default composite candidate requires three consecutive annual close declines", () => {
   const result = evaluateYearDeclineCloseBreakout(candidateContext());
   assert.equal(result.ok, true);
   assert.deepEqual(result.evidence.annual_points.map((point) => point.year), [2022, 2023, 2024, 2025]);
   assert.equal(result.evidence.previous_year_high, 17);
   assert.equal(result.evidence.max_previous_current_year_close, 16.8);
   assert.ok(result.evidence.breakout_margin_pct > 1.17);
+  assert.ok(Math.abs(result.evidence.today_change_pct - ((17.2 - 16.8) / 16.8) * 100) < 1e-10);
 
   assert.equal(evaluateYearDeclineCloseBreakout(candidateContext({
     closes: [20, 18, 19, 14],

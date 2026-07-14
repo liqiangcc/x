@@ -50,12 +50,14 @@ test("candidate DTO sanitizes evidence and carries the registered display identi
     evidence: {
       annual_points: [{ close: 14, high: 17, year: 2025, code: "600001" }],
       breakout_margin_pct: 1.2,
+      today_change_pct: 2.5,
       code: "600001",
     },
   }, identity);
   assert.deepEqual(Object.keys(dto), ["alias", "candidateId", "evidence", "qualityIssues", "rank", "security"]);
   assert.deepEqual(dto.security, identity.security);
   assert.equal(JSON.stringify(dto.evidence).includes("600001"), false);
+  assert.equal(dto.evidence.today_change_pct, 2.5);
 });
 
 test("chart and holding DTOs expose only anonymous whitelisted fields", () => {

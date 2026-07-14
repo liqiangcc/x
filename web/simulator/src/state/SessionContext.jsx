@@ -49,9 +49,7 @@ export function SessionProvider({ children, client = api }) {
     if (activeRuns.current === 1) setBusy(true);
     setError(null);
     try {
-      const result = await action();
-      if (result?.id && result?.version) setSession(result);
-      return result;
+      return await action();
     } catch (caught) {
       setError(caught);
       throw caught;

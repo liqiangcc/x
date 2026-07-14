@@ -60,20 +60,25 @@ async function inspectPeriod(root, period) {
   const distribution = new Map();
   let emptyCount = 0;
   let invalidCount = 0;
+  const records = [];
   await mapConcurrent(files, 64, async (filePath) => {
+    const code = path.basename(filePath, ".json");
     try {
       const date = await latestDateFromFile(filePath);
       if (!date) {
         emptyCount += 1;
+        records.push({ code, date: null, status: "empty" });
         return;
       }
+      records.push({ code, date, status: "ok" });
       distribution.set(date, (distribution.get(date) ?? 0) + 1);
     } catch {
       invalidCount += 1;
+      records.push({ code, date: null, status: "invalid" });
     }
   });
   const recentDates = [...distribution.entries()].sort(([left], [right]) => right.localeCompare(left));
-  return {
+  const result = {
     period,
     codeCount: files.length,
     readableCount: files.length - invalidCount,
@@ -83,6 +88,9 @@ async function inspectPeriod(root, period) {
     latestDateCodeCount: recentDates[0]?.[1] ?? 0,
     recentDateDistribution: recentDates.slice(0, 5).map(([date, count]) => ({ count, date })),
   };
+  records.sort((left, right) => left.code.localeCompare(right.code));
+  Object.defineProperty(result, "records", { enumerable: false, value: records });
+  return result;
 }
 
 async function latestStrategyUniverse(strategyRoot) {
@@ -139,6 +147,33 @@ class DataStatusService {
       this.inFlight = null;
     });
     return this.inFlight;
+  }
+
+  async getDetails({ category = "all", date = null, page = 1, pageSize = 100, period }) {
+    if (!new Set(["daily", "yearly"]).has(period)) throw new TypeError("period must be daily or yearly.");
+    if (!new Set(["all", "latest", "date", "empty", "invalid"]).has(category)) throw new TypeError("Unsupported data status category.");
+    if (!Number.isInteger(page) || page < 1) throw new TypeError("page must be a positive integer.");
+    if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 200) throw new TypeError("pageSize must be between 1 and 200.");
+    const status = await this.get();
+    const summary = status.periods[period];
+    const targetDate = category === "latest" ? summary.latestDate : date;
+    if (category === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(targetDate ?? "")) throw new TypeError("date is required for date details.");
+    const records = summary.records.filter((record) => {
+      if (category === "all") return true;
+      if (category === "latest" || category === "date") return record.status === "ok" && record.date === targetDate;
+      return record.status === category;
+    });
+    const start = (page - 1) * pageSize;
+    return {
+      category,
+      date: targetDate ?? null,
+      items: records.slice(start, start + pageSize),
+      page,
+      pageSize,
+      period,
+      total: records.length,
+      totalPages: Math.ceil(records.length / pageSize),
+    };
   }
 
   invalidate() {

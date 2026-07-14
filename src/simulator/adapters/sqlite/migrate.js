@@ -8,6 +8,8 @@ const migrations = [
   require("./migrations/005_strategy_archive"),
   require("./migrations/006_strategy_algorithm"),
   require("./migrations/007_watchlist_signals"),
+  require("./migrations/008_strategy_templates"),
+  require("./migrations/009_strategy_revisions"),
 ];
 
 function migrate(db) {

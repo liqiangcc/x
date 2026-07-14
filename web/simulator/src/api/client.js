@@ -45,7 +45,21 @@ export function createApiClient({ fetchImpl = fetch, prefix = "/api" } = {}) {
     calculateCandidates: (accountId, body) => request(`/accounts/${accountId}/candidate-calculations`, { body, method: "POST" }),
     getAccountCandidates: (accountId, query = "") => request(`/accounts/${accountId}/candidates${query}`),
     getStrategies: () => request("/strategies"),
+    getStrategyBuilderCatalog: () => request("/strategy-builder/catalog"),
+    validateStrategy: (strategy) => request("/strategies/validate", { body: { strategy }, method: "POST" }),
+    getStrategyTemplates: () => request("/strategy-templates"),
+    getStrategyTemplateRevisions: (templateId) => request(`/strategy-templates/${templateId}/revisions`),
+    getStrategyRevisions: (strategyId) => request(`/strategies/${strategyId}/revisions`),
+    createStrategyTemplate: (body) => request("/strategy-templates", { body, method: "POST" }),
+    updateStrategyTemplate: (templateId, body) => request(`/strategy-templates/${templateId}`, { body, method: "PUT" }),
+    deleteStrategyTemplate: (templateId) => request(`/strategy-templates/${templateId}`, { method: "DELETE" }),
     getDataStatus: (refresh = false) => request(`/data/status${refresh ? "?refresh=true" : ""}`),
+    getDataStatusDetails: ({ category, date, page = 1, pageSize = 100, period }) => {
+      const query = new URLSearchParams({ category, page: String(page), pageSize: String(pageSize), period });
+      if (date) query.set("date", date);
+      return request(`/data/status/details?${query}`);
+    },
+    getDataStockChart: (code) => request(`/data/stocks/${code}/chart`),
     getProxyQuality: () => request("/data/proxy-quality"),
     refreshProxyQuality: () => request("/data/proxy-quality/refresh", { body: {}, method: "POST" }),
     getStrategyBuild: (strategyId) => request(`/strategies/${strategyId}/build`),

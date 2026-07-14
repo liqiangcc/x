@@ -11,7 +11,10 @@ function conflict(code, message) {
 }
 
 function publicJob(job) {
-  return job ? JSON.parse(JSON.stringify(job)) : null;
+  if (!job) return null;
+  const { strategyDefinition, ...visible } = job;
+  void strategyDefinition;
+  return JSON.parse(JSON.stringify(visible));
 }
 
 class StrategySyncOrchestrator {
@@ -30,12 +33,13 @@ class StrategySyncOrchestrator {
     return publicJob(this.jobs.get(this.latestByStrategy.get(strategyId)));
   }
 
-  start({ afterSync = async () => {}, downTransitions = 3, marketBoards = null, strategyId }) {
+  start({ afterSync = async () => {}, downTransitions = 3, marketBoards = null, strategyDefinition = null, strategyId }) {
     if (this.runningJobId) throw conflict("strategy_sync_running", "Another strategy data sync is already running.");
     const now = new Date().toISOString();
     const job = {
       id: randomUUID(),
       strategyId,
+      strategyDefinition,
       downTransitions,
       marketBoards,
       status: "queued",
@@ -65,6 +69,7 @@ class StrategySyncOrchestrator {
         downTransitions: job.downTransitions,
         marketBoards: job.marketBoards,
         strategyId: job.strategyId,
+        strategyDefinition: job.strategyDefinition,
         onStage: (line) => {
           job.stages.push(line);
           job.stages = job.stages.slice(-12);

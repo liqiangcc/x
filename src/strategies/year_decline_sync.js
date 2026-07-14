@@ -4,8 +4,8 @@ const path = require("node:path");
 const { buildCodeUniverse, normalizeDate } = require("../kline/code_universe");
 const { splitSecid } = require("../core/secid");
 const { ExistingKlineRepository } = require("../simulator/adapters/ledger/existing_kline_repository");
-const { hasEligibleYear } = require("./year_decline");
 const { marketBoardAllowed, marketBoardsFromList } = require("../core/market_board");
+const { compileStrategy } = require("./strategy_builder");
 
 const STRATEGY_ID = "year-decline-close-breakout";
 
@@ -20,8 +20,33 @@ async function buildYearDeclineUniverse({
   outputFile = null,
   strategyId = STRATEGY_ID,
 } = {}) {
+  return buildStrategyUniverse({
+    asOfDate,
+    codes,
+    concurrency,
+    force,
+    klineRoot,
+    marketBoards,
+    outputFile,
+    strategyDefinition: { downTransitions, type: "year_decline_close_breakout" },
+    strategyId,
+  });
+}
+
+async function buildStrategyUniverse({
+  asOfDate,
+  codes,
+  concurrency = 32,
+  force = false,
+  klineRoot = path.join("data", "kline"),
+  marketBoards = null,
+  outputFile = null,
+  strategyDefinition,
+  strategyId = STRATEGY_ID,
+} = {}) {
   const date = normalizeDate(asOfDate);
   const targetYear = Number(date.slice(0, 4));
+  const compiled = compileStrategy(strategyDefinition);
   const repository = new ExistingKlineRepository({ cacheSize: Math.max(256, concurrency * 2), klineRoot });
   const marketScope = marketBoards === null ? null : marketBoardsFromList(marketBoards);
   const result = await buildCodeUniverse({
@@ -30,7 +55,7 @@ async function buildYearDeclineUniverse({
     concurrency,
     force,
     outputFile,
-    selector: { algorithm: STRATEGY_ID, id: strategyId, downTransitions, marketBoards: marketScope, targetYear },
+    selector: { algorithm: "compiled-strategy-prefilter", definition: compiled.definition, id: strategyId, marketBoards: marketScope, targetYear },
     evaluateCode: async (inputCode) => {
       let security;
       try {
@@ -41,6 +66,7 @@ async function buildYearDeclineUniverse({
       if (marketScope && !marketBoardAllowed(security, marketScope)) {
         return { eligible: false, reason: "market_scope_excluded" };
       }
+      if (!compiled.hasYearlyPrefilter) return { eligible: true };
       const history = await repository.getLegacyHistory({
         ...security,
         endDate: `${targetYear - 1}-12-31`,
@@ -48,18 +74,22 @@ async function buildYearDeclineUniverse({
       });
       if (history.bars.length === 0) return { eligible: false, reason: "missing_yearly" };
       return {
-        eligible: hasEligibleYear(history.bars, [targetYear], downTransitions),
-        reason: "year_decline_not_matched",
+        eligible: compiled.yearlyPrefilter(history.bars.map((bar) => ({ ...bar, year: Number(bar.date.slice(0, 4)) }))),
+        reason: "strategy_prefilter_not_matched",
       };
     },
   });
   const missingYearlyCodes = result.excluded_codes.missing_yearly ?? [];
   const invalidCodes = result.excluded_codes.invalid_code ?? [];
+  const downTransitions = strategyDefinition?.downTransitions
+    ?? strategyDefinition?.rules?.find((rule) => rule.type === "sequence_compare")?.params?.transitions
+    ?? null;
   return {
     ...result,
     target_year: targetYear,
+    strategy_description: compiled.description,
     down_transitions: downTransitions,
-    required_completed_years: downTransitions + 1,
+    required_completed_years: Number.isInteger(downTransitions) ? downTransitions + 1 : null,
     missing_yearly_count: missingYearlyCodes.length,
     invalid_code_count: invalidCodes.length,
     missing_yearly_codes: missingYearlyCodes,
@@ -72,5 +102,6 @@ async function buildYearDeclineUniverse({
 
 module.exports = {
   STRATEGY_ID,
+  buildStrategyUniverse,
   buildYearDeclineUniverse,
 };

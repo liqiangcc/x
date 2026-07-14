@@ -44,6 +44,12 @@ test("data status reports latest coverage and strategy sync universe", async (co
   const service = new DataStatusService({ cacheTtlMs: 60000, klineRoot: path.join(root, "kline") });
   const cached = await service.get();
   assert.equal(cached, await service.get());
+  const allDetails = await service.getDetails({ category: "all", page: 1, pageSize: 100, period: "daily" });
+  assert.deepEqual(allDetails.items.map((item) => item.code), ["000001", "600001"]);
+  const latestDetails = await service.getDetails({ category: "latest", page: 1, pageSize: 100, period: "daily" });
+  assert.deepEqual(latestDetails.items, [{ code: "600001", date: "2026-07-13", status: "ok" }]);
+  const dateDetails = await service.getDetails({ category: "date", date: "2026-07-10", page: 1, pageSize: 100, period: "daily" });
+  assert.deepEqual(dateDetails.items.map((item) => item.code), ["000001"]);
   service.invalidate();
   assert.notEqual(cached, await service.get());
 });

@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { EventEmitter } = require("node:events");
 const fs = require("node:fs/promises");
+const fsSync = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { PassThrough } = require("node:stream");
@@ -100,4 +101,28 @@ test("CLI strategy runner returns the run's updated code artifact", async (t) =>
   const result = await new CliStrategySyncRunner({ root, spawnImpl }).run({ strategyId: "strategy-a" });
   assert.equal(result.runId, runId);
   assert.deepEqual(result.updatedCodes, ["000001", "600519"]);
+});
+
+test("CLI strategy runner passes a V2 definition through an ephemeral file", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-strategy-definition-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  let definitionPath;
+  let writtenDefinition;
+  const spawnImpl = (_command, args) => {
+    definitionPath = args[args.indexOf("--strategy-definition") + 1];
+    writtenDefinition = JSON.parse(fsSync.readFileSync(definitionPath, "utf8"));
+    const child = new EventEmitter();
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    process.nextTick(() => {
+      child.stdout.end();
+      child.stderr.end();
+      child.emit("close", 0);
+    });
+    return child;
+  };
+  const strategyDefinition = { indicators: [], operator: "all", rules: [], schemaVersion: 2, type: "capability_composite" };
+  await new CliStrategySyncRunner({ root, spawnImpl }).run({ strategyDefinition, strategyId: "strategy-v2" });
+  assert.deepEqual(writtenDefinition, strategyDefinition);
+  assert.equal(fsSync.existsSync(definitionPath), false);
 });

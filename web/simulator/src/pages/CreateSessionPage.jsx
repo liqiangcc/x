@@ -8,7 +8,17 @@ const DEFAULT_SELECTION = {
   excludeSpecialTreatment: true,
   limit: 20,
   orderBy: "breakout_margin_ascending",
-  strategy: { type: "year_decline_close_breakout" },
+  strategy: {
+    indicators: [],
+    operator: "all",
+    rules: [
+      { key: "three_year_decline", params: { comparator: "lt", continuity: "calendar_year", field: "close", selection: "latest", source: "yearly.completed", transitions: 3 }, type: "sequence_compare" },
+      { key: "first_breakout", params: { baseline: "yearly.previous.high", comparator: "gt", current: "daily.today.close", historyField: "close", historySource: "daily.current_year_before_today" }, type: "first_occurrence" },
+    ],
+    schemaVersion: 2,
+    templateId: "three_year_decline_breakout",
+    type: "capability_composite",
+  },
   universe: { beijingExchange: false, chiNext: true, mainBoard: true, starMarket: false },
 };
 
@@ -20,7 +30,7 @@ export default function CreateSessionPage() {
     name: "练习账号",
     startDate: "",
     startMode: "random",
-    strategyId: "system-year-decline-breakout",
+    strategyId: "system-three-year-decline-breakout-v2",
   });
   const [accounts, setAccounts] = useState([]);
   const [strategies, setStrategies] = useState([]);
@@ -29,7 +39,8 @@ export default function CreateSessionPage() {
     Promise.all([client.getAccounts(), client.getStrategies()]).then(([accountResult, strategyResult]) => {
       setAccounts(accountResult.accounts);
       setStrategies(strategyResult.strategies);
-      const ready = strategyResult.strategies.find((strategy) => strategy.status === "ready" && !strategy.archived);
+      const ready = strategyResult.strategies.find((strategy) => strategy.isDefault && strategy.status === "ready" && !strategy.archived)
+        ?? strategyResult.strategies.find((strategy) => strategy.status === "ready" && !strategy.archived);
       if (ready) setForm((current) => ({ ...current, strategyId: ready.id }));
     }).catch(() => {});
   }, [client]);

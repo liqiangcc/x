@@ -38,6 +38,19 @@ async function accountRoutes(app, { runtime }) {
   app.get("/accounts/:accountId/stocks/:candidateId/chart", async (request) => runtime.getChart(request.params.accountId, request.params.candidateId));
 
   app.get("/strategies", async () => runtime.listStrategies());
+  app.get("/strategy-builder/catalog", async () => runtime.getStrategyBuilderCatalog());
+  app.post("/strategies/validate", async (request) => runtime.validateStrategy(request.body));
+  app.get("/strategy-templates", async () => runtime.listStrategyTemplates());
+  app.get("/strategy-templates/:templateId/revisions", async (request) => runtime.listStrategyTemplateRevisions(request.params.templateId));
+  app.get("/strategies/:strategyId/revisions", async (request) => runtime.listStrategyRevisions(request.params.strategyId));
+  app.post("/strategy-templates", {
+    schema: { body: { additionalProperties: false, properties: { definition: { type: "object" }, description: { type: "string" }, name: { minLength: 1, type: "string" } }, required: ["definition", "name"], type: "object" } },
+  }, async (request, reply) => reply.code(201).send(runtime.saveStrategyTemplate(request.body)));
+  app.put("/strategy-templates/:templateId", async (request) => runtime.saveStrategyTemplate(request.body, request.params.templateId));
+  app.delete("/strategy-templates/:templateId", async (request, reply) => {
+    runtime.deleteStrategyTemplate(request.params.templateId);
+    return reply.code(204).send();
+  });
   app.get("/strategy-syncs", async () => runtime.listStrategySyncs());
   app.get("/strategies/:strategyId/build", async (request) => runtime.getStrategyBuild(request.params.strategyId));
   app.get("/strategies/:strategyId/sync", async (request) => runtime.getStrategySync(request.params.strategyId));
