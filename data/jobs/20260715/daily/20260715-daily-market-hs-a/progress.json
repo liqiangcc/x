@@ -8,7 +8,7 @@
   "status": "running",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 6,
+  "chain_depth": 7,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -620,6 +620,7 @@
     "603658",
     "603669",
     "603707",
+    "603719",
     "603801",
     "603806",
     "603819",
@@ -811,7 +812,6 @@
     "603056",
     "603369",
     "603603",
-    "603719",
     "603963",
     "688086"
   ],
@@ -933,7 +933,6 @@
     "600286",
     "600297",
     "600321",
-    "600325",
     "600387",
     "600401",
     "600432",
@@ -971,61 +970,40 @@
     "600978",
     "601268",
     "601558",
-    "601568",
-    "601865",
     "603056",
-    "603209",
-    "603255",
-    "603279",
-    "603318",
     "603369",
-    "603392",
-    "603517",
-    "603567",
-    "603595",
-    "603599",
     "603603",
-    "603669",
     "603719",
-    "603806",
-    "603819",
-    "603883",
-    "603896",
     "603963",
-    "688086",
-    "688599"
+    "688086"
   ],
   "last_batch_source": "failed",
   "last_summary": {
     "status": "failed_success_rate",
-    "total_codes": 20,
-    "success": 18,
+    "total_codes": 2,
+    "success": 1,
     "migrated_existing": 0,
     "skipped_existing": 0,
-    "failed": 2,
-    "success_rate": 0.9,
+    "failed": 1,
+    "success_rate": 0.5,
     "failure_reasons": [
       "failed_items",
       "success_rate_below_minimum"
     ],
     "engine_counts": {
-      "aws-router": 17,
-      "local": 1
+      "aws-router": 1
     },
     "region_counts": {
-      "us-east-2": 10,
-      "ap-south-1": 4,
-      "ca-central-1": 1,
-      "us-west-1": 2
+      "us-east-1": 1
     }
   },
   "created_at": "2026-07-15T09:16:15Z",
-  "updated_at": "2026-07-15T16:43:05Z",
+  "updated_at": "2026-07-15T16:45:43Z",
   "counts": {
     "pending": 0,
-    "completed": 240,
-    "failed": 159,
+    "completed": 241,
+    "failed": 158,
     "blocked": 0,
-    "remaining": 159
+    "remaining": 158
   }
 }
