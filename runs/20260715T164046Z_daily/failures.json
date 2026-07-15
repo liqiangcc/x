@@ -1,0 +1,22 @@
+{
+  "run_id": "20260715T164046Z_daily",
+  "failed": 2,
+  "items": [
+    {
+      "target": "1.603369",
+      "code": "603369",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603719",
+      "code": "603719",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    }
+  ]
+}
