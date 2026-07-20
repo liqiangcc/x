@@ -1,0 +1,144 @@
+{
+  "targetDate": "2026-07-20",
+  "total": 27,
+  "updated": 27,
+  "skipped": 0,
+  "failed": 0,
+  "items": [
+    {
+      "code": "300957",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300957.json",
+      "status": "updated"
+    },
+    {
+      "code": "600138",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600138.json",
+      "status": "updated"
+    },
+    {
+      "code": "600238",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600238.json",
+      "status": "updated"
+    },
+    {
+      "code": "600313",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600313.json",
+      "status": "updated"
+    },
+    {
+      "code": "600395",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600395.json",
+      "status": "updated"
+    },
+    {
+      "code": "600400",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600400.json",
+      "status": "updated"
+    },
+    {
+      "code": "600500",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600500.json",
+      "status": "updated"
+    },
+    {
+      "code": "600559",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600559.json",
+      "status": "updated"
+    },
+    {
+      "code": "600576",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600576.json",
+      "status": "updated"
+    },
+    {
+      "code": "600606",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600606.json",
+      "status": "updated"
+    },
+    {
+      "code": "600613",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600613.json",
+      "status": "updated"
+    },
+    {
+      "code": "600616",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600616.json",
+      "status": "updated"
+    },
+    {
+      "code": "600702",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600702.json",
+      "status": "updated"
+    },
+    {
+      "code": "600740",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600740.json",
+      "status": "updated"
+    },
+    {
+      "code": "600745",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600745.json",
+      "status": "updated"
+    },
+    {
+      "code": "600746",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600746.json",
+      "status": "updated"
+    },
+    {
+      "code": "600754",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600754.json",
+      "status": "updated"
+    },
+    {
+      "code": "600809",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600809.json",
+      "status": "updated"
+    },
+    {
+      "code": "600818",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600818.json",
+      "status": "updated"
+    },
+    {
+      "code": "601366",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/601/601366.json",
+      "status": "updated"
+    },
+    {
+      "code": "601828",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/601/601828.json",
+      "status": "updated"
+    },
+    {
+      "code": "605369",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/605/605369.json",
+      "status": "updated"
+    },
+    {
+      "code": "688050",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688050.json",
+      "status": "updated"
+    },
+    {
+      "code": "688139",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688139.json",
+      "status": "updated"
+    },
+    {
+      "code": "688184",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688184.json",
+      "status": "updated"
+    },
+    {
+      "code": "688198",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688198.json",
+      "status": "updated"
+    },
+    {
+      "code": "688533",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688533.json",
+      "status": "updated"
+    }
+  ]
+}
