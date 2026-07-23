@@ -2,7 +2,7 @@
   "job_id": "20260723-daily-market-hs-a",
   "date": "20260723",
   "period": "daily",
-  "chain_depth": 7,
+  "chain_depth": 8,
   "batch_size": 300,
   "selection_source": "failed",
   "codes": [
@@ -161,10 +161,8 @@
     "601268",
     "601558",
     "603056",
-    "603209",
     "603603",
     "603963",
-    "688086",
-    "688599"
+    "688086"
   ]
 }
