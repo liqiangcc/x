@@ -5,10 +5,10 @@
   "period": "daily",
   "universe": "market",
   "market": "hs-a",
-  "status": "running",
+  "status": "completed",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 7,
+  "chain_depth": 8,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -971,55 +971,31 @@
     "600978",
     "601268",
     "601558",
-    "601865",
     "603056",
     "603369",
-    "603595",
     "603603",
-    "603658",
-    "603669",
-    "603719",
-    "603801",
-    "603806",
-    "603866",
-    "603883",
-    "603896",
-    "603899",
-    "603939",
     "603963",
-    "603970",
-    "605108",
-    "605266",
-    "605300",
-    "605369",
     "688050",
-    "688086",
-    "688271",
-    "688320",
-    "688337"
+    "688086"
   ],
   "last_batch_source": "failed",
   "last_summary": {
     "status": "failed_success_rate",
-    "total_codes": 22,
-    "success": 20,
+    "total_codes": 2,
+    "success": 0,
     "migrated_existing": 0,
     "skipped_existing": 0,
     "failed": 2,
-    "success_rate": 0.9090909090909091,
+    "success_rate": 0,
     "failure_reasons": [
       "failed_items",
       "success_rate_below_minimum"
     ],
-    "engine_counts": {
-      "aws-router": 20
-    },
-    "region_counts": {
-      "ap-south-1": 20
-    }
+    "engine_counts": {},
+    "region_counts": {}
   },
   "created_at": "2026-07-27T09:47:01Z",
-  "updated_at": "2026-07-27T23:00:19Z",
+  "updated_at": "2026-07-27T23:01:52Z",
   "counts": {
     "pending": 0,
     "completed": 239,
