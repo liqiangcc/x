@@ -1,0 +1,13 @@
+{
+  "date": "20260729",
+  "market": "hs-a",
+  "source": "eastmoney_clist",
+  "generated_at": "2026-07-29T09:27:44.172Z",
+  "status": "completed",
+  "total_raw": 5542,
+  "total_stocks": 5542,
+  "total_codes": 5542,
+  "quote_available": 5194,
+  "quote_unavailable": 348,
+  "quote_unknown": 0
+}
