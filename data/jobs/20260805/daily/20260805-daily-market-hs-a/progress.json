@@ -8,7 +8,7 @@
   "status": "running",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 6,
+  "chain_depth": 7,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -636,6 +636,7 @@
     "605369",
     "688032",
     "688050",
+    "688105",
     "688107",
     "688139",
     "688184",
@@ -649,6 +650,8 @@
     "688320",
     "688337",
     "688363",
+    "688391",
+    "688533",
     "688599",
     "688793"
   ],
@@ -810,10 +813,7 @@
     "603056",
     "603603",
     "603963",
-    "688086",
-    "688105",
-    "688391",
-    "688533"
+    "688086"
   ],
   "blocked_codes": [],
   "last_batch_codes": [
@@ -972,64 +972,38 @@
     "601268",
     "601558",
     "603056",
-    "603348",
-    "603595",
-    "603599",
     "603603",
-    "603806",
-    "603819",
-    "603939",
     "603963",
-    "603970",
-    "605108",
-    "605266",
-    "605369",
-    "688032",
-    "688050",
     "688086",
     "688105",
-    "688107",
-    "688139",
-    "688198",
-    "688232",
-    "688247",
-    "688276",
-    "688320",
-    "688363",
     "688391",
     "688533"
   ],
   "last_batch_source": "failed",
   "last_summary": {
-    "status": "failed_success_rate",
-    "total_codes": 23,
-    "success": 20,
+    "status": "completed",
+    "total_codes": 3,
+    "success": 3,
     "migrated_existing": 0,
     "skipped_existing": 0,
-    "failed": 3,
-    "success_rate": 0.8695652173913043,
-    "failure_reasons": [
-      "failed_items",
-      "success_rate_below_minimum"
-    ],
+    "failed": 0,
+    "success_rate": 1,
+    "failure_reasons": [],
     "engine_counts": {
       "local": 2,
-      "aws-router": 18
+      "aws-router": 1
     },
     "region_counts": {
-      "ap-northeast-1": 10,
-      "us-west-2": 3,
-      "ap-northeast-3": 3,
-      "ap-northeast-2": 2
+      "ap-northeast-2": 1
     }
   },
   "created_at": "2026-08-05T09:26:00Z",
-  "updated_at": "2026-08-05T16:17:01Z",
+  "updated_at": "2026-08-05T16:30:44Z",
   "counts": {
     "pending": 0,
-    "completed": 238,
-    "failed": 161,
+    "completed": 241,
+    "failed": 158,
     "blocked": 0,
-    "remaining": 161
+    "remaining": 158
   }
 }
