@@ -1,0 +1,9 @@
+{
+  "run_id": "20260805T131836Z_daily",
+  "target": "/home/runner/work/x/x/data/kline/daily",
+  "period": "daily",
+  "total_files": 53,
+  "issue_count": 0,
+  "status": "ok",
+  "issues": []
+}
