@@ -1,0 +1,79 @@
+{
+  "targetDate": "2026-08-07",
+  "total": 14,
+  "updated": 14,
+  "skipped": 0,
+  "failed": 0,
+  "items": [
+    {
+      "code": "603589",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603589.json",
+      "status": "updated"
+    },
+    {
+      "code": "603801",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603801.json",
+      "status": "updated"
+    },
+    {
+      "code": "603866",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603866.json",
+      "status": "updated"
+    },
+    {
+      "code": "603883",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603883.json",
+      "status": "updated"
+    },
+    {
+      "code": "603896",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603896.json",
+      "status": "updated"
+    },
+    {
+      "code": "603970",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603970.json",
+      "status": "updated"
+    },
+    {
+      "code": "688032",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688032.json",
+      "status": "updated"
+    },
+    {
+      "code": "688050",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688050.json",
+      "status": "updated"
+    },
+    {
+      "code": "688105",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688105.json",
+      "status": "updated"
+    },
+    {
+      "code": "688107",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688107.json",
+      "status": "updated"
+    },
+    {
+      "code": "688184",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688184.json",
+      "status": "updated"
+    },
+    {
+      "code": "688198",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688198.json",
+      "status": "updated"
+    },
+    {
+      "code": "688223",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688223.json",
+      "status": "updated"
+    },
+    {
+      "code": "688271",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688271.json",
+      "status": "updated"
+    }
+  ]
+}
