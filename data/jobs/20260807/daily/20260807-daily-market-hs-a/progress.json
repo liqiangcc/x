@@ -8,7 +8,7 @@
   "status": "running",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 6,
+  "chain_depth": 7,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -622,6 +622,7 @@
     "603707",
     "603719",
     "603801",
+    "603806",
     "603819",
     "603866",
     "603883",
@@ -642,8 +643,16 @@
     "688198",
     "688223",
     "688232",
+    "688247",
     "688271",
+    "688276",
+    "688298",
+    "688320",
     "688337",
+    "688363",
+    "688391",
+    "688533",
+    "688599",
     "688793"
   ],
   "failed_codes": [
@@ -803,17 +812,8 @@
     "601558",
     "603056",
     "603603",
-    "603806",
     "603963",
-    "688086",
-    "688247",
-    "688276",
-    "688298",
-    "688320",
-    "688363",
-    "688391",
-    "688533",
-    "688599"
+    "688086"
   ],
   "blocked_codes": [],
   "last_batch_codes": [
@@ -972,25 +972,11 @@
     "601268",
     "601558",
     "603056",
-    "603589",
     "603603",
-    "603801",
     "603806",
-    "603866",
-    "603883",
-    "603896",
     "603963",
-    "603970",
-    "688032",
-    "688050",
     "688086",
-    "688105",
-    "688107",
-    "688184",
-    "688198",
-    "688223",
     "688247",
-    "688271",
     "688276",
     "688298",
     "688320",
@@ -1001,34 +987,29 @@
   ],
   "last_batch_source": "failed",
   "last_summary": {
-    "status": "failed_success_rate",
-    "total_codes": 23,
-    "success": 14,
+    "status": "completed",
+    "total_codes": 9,
+    "success": 9,
     "migrated_existing": 0,
     "skipped_existing": 0,
-    "failed": 9,
-    "success_rate": 0.6086956521739131,
-    "failure_reasons": [
-      "failed_items",
-      "success_rate_below_minimum"
-    ],
+    "failed": 0,
+    "success_rate": 1,
+    "failure_reasons": [],
     "engine_counts": {
-      "aws-router": 14
+      "aws-router": 9
     },
     "region_counts": {
-      "ap-northeast-3": 6,
-      "us-west-1": 6,
-      "ap-northeast-2": 1,
-      "eu-central-1": 1
+      "ap-southeast-1": 2,
+      "ap-northeast-1": 7
     }
   },
   "created_at": "2026-08-07T08:48:22Z",
-  "updated_at": "2026-08-07T16:17:29Z",
+  "updated_at": "2026-08-07T16:19:09Z",
   "counts": {
     "pending": 0,
-    "completed": 232,
-    "failed": 167,
+    "completed": 241,
+    "failed": 158,
     "blocked": 0,
-    "remaining": 167
+    "remaining": 158
   }
 }
