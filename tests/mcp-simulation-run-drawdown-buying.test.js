@@ -21,6 +21,7 @@ function useCaseResult() {
       priceField: "close",
       initialCapital: 100000,
       lotSize: 100,
+      executionModel: "legacy_a_share",
     },
     signals: [{
       index: 1,
@@ -88,7 +89,7 @@ function useCaseResult() {
   };
 }
 
-test("drawdown buying MCP definition is bounded, read-only, and explicit about realistic execution assumptions", () => {
+test("drawdown buying MCP definition is bounded, read-only, and exposes execution models without owning their implementation", () => {
   assert.equal(TOOL_DEFINITION.name, "simulation_run_drawdown_buying");
   assert.equal(TOOL_DEFINITION.inputSchema.type, "object");
   assert.equal(TOOL_DEFINITION.inputSchema.additionalProperties, false);
@@ -98,15 +99,17 @@ test("drawdown buying MCP definition is bounded, read-only, and explicit about r
   assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.default, 100);
   assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.minimum, 1);
   assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.priceField.enum, ["open", "close", "high", "low"]);
-  assert.match(TOOL_DEFINITION.description, /next trading-day open/);
-  assert.match(TOOL_DEFINITION.description, /slippage, and fee mechanisms/);
+  assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.executionModel.enum, ["legacy_a_share", "frictionless"]);
+  assert.equal(TOOL_DEFINITION.inputSchema.properties.executionModel.default, "legacy_a_share");
+  assert.match(TOOL_DEFINITION.description, /next-trading-day-open/);
+  assert.match(TOOL_DEFINITION.description, /frictionless/);
   assert.equal(TOOL_DEFINITION.annotations.readOnlyHint, true);
   assert.equal(TOOL_DEFINITION.annotations.destructiveHint, false);
   assert.equal(TOOL_DEFINITION.annotations.idempotentHint, true);
   assert.equal(TOOL_DEFINITION.annotations.openWorldHint, false);
 });
 
-test("drawdown buying MCP handler delegates unchanged input to the application use case", async () => {
+test("drawdown buying MCP handler delegates unchanged execution model selection to the application use case", async () => {
   const calls = [];
   const expected = useCaseResult();
   const tool = createSimulationRunDrawdownBuyingTool({
@@ -130,6 +133,7 @@ test("drawdown buying MCP handler delegates unchanged input to the application u
     maxPurchases: 8,
     lotSize: 100,
     priceField: "close",
+    executionModel: "frictionless",
   };
   const result = await tool.handler(input);
 
@@ -147,7 +151,7 @@ test("drawdown buying MCP handler maps application errors to stable tool errors"
   const tool = createSimulationRunDrawdownBuyingTool({
     useCase: {
       async execute() {
-        throw new TypeError("trancheFraction * maxPurchases must not exceed 1.");
+        throw new TypeError("executionModel must be one of: legacy_a_share, frictionless.");
       },
     },
   });
@@ -157,7 +161,7 @@ test("drawdown buying MCP handler maps application errors to stable tool errors"
   assert.deepEqual(result.structuredContent, {
     error: {
       code: "invalid_arguments",
-      message: "trancheFraction * maxPurchases must not exceed 1.",
+      message: "executionModel must be one of: legacy_a_share, frictionless.",
     },
   });
   assert.deepEqual(JSON.parse(result.content[0].text), result.structuredContent);
