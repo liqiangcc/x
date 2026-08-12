@@ -1,5 +1,9 @@
 "use strict";
 
+const {
+  BUY_EXECUTION_MODEL_IDS,
+  DEFAULT_BUY_EXECUTION_MODEL_ID,
+} = require("../../../ports/simulation/buy_execution_model_resolver");
 const { errorPayload, jsonResult } = require("../tool_result");
 
 const TOOL_NAME = "simulation_run_drawdown_buying";
@@ -73,13 +77,19 @@ const INPUT_SCHEMA = Object.freeze({
       minimum: 1,
       maximum: 1000000,
       default: 100,
-      description: "Minimum executable buy quantity multiple. The default follows the repository A-share legacy execution rules.",
+      description: "Minimum executable buy quantity multiple.",
     },
     priceField: {
       type: "string",
       enum: ["open", "close", "high", "low"],
       default: "close",
-      description: "Price field used for drawdown signals and final marking. Execution itself occurs at the next trading bar open through the execution model.",
+      description: "Price field used for drawdown signals and final marking. Execution itself occurs through the selected execution model.",
+    },
+    executionModel: {
+      type: "string",
+      enum: [...BUY_EXECUTION_MODEL_IDS],
+      default: DEFAULT_BUY_EXECUTION_MODEL_ID,
+      description: "Execution assumptions for the same business policy. legacy_a_share includes approximate A-share fees, slippage and market restrictions; frictionless keeps next-day-open timing but removes those frictions for comparison.",
     },
   },
   required: ["code", "market", "endDate"],
@@ -161,7 +171,7 @@ const OUTPUT_SCHEMA = Object.freeze({
 const TOOL_DEFINITION = Object.freeze({
   name: TOOL_NAME,
   title: "Simulate Drawdown Buying",
-  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. Signals are executed at the next trading-day open to avoid look-ahead, using the repository's shared A-share lot, market-restriction, slippage, and fee mechanisms. Historical market rules and fees remain approximate and are reported in result metadata. This is read-only analysis, not trade execution.",
+  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. The business policy is unchanged across execution models: legacy_a_share applies the repository's approximate A-share lot, market-restriction, slippage and fee mechanisms, while frictionless preserves next-trading-day-open timing but removes those frictions for comparison. This is read-only analysis, not trade execution.",
   inputSchema: INPUT_SCHEMA,
   outputSchema: OUTPUT_SCHEMA,
   annotations: Object.freeze({
