@@ -29,6 +29,7 @@
     "undici": "^7.28.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@playwright/test": "^1.61.1",
     "concurrently": "^10.0.3"
   }
