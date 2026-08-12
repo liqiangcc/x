@@ -1,16 +1,12 @@
 "use strict";
 
 const { roundMoney } = require("../../simulator/core/position");
-
-function positiveMoney(value, field) {
-  if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
-  return value;
-}
-
-function nonNegativeMoney(value, field) {
-  if (!Number.isFinite(value) || value < 0) throw new TypeError(`${field} must be non-negative.`);
-  return value;
-}
+const {
+  nonNegativeMoney,
+  normalizeExecutionBars,
+  positiveMoney,
+  skippedBuyExecutionResult,
+} = require("./execution_model_support");
 
 function normalizeLotSize(value) {
   const normalized = value ?? 100;
@@ -18,40 +14,6 @@ function normalizeLotSize(value) {
     throw new TypeError("lotSize must be a positive integer.");
   }
   return normalized;
-}
-
-function normalizeBars(bars) {
-  if (!Array.isArray(bars)) throw new TypeError("bars must be an array.");
-  let previousDate = null;
-  return bars.map((bar, index) => {
-    const date = String(bar?.date ?? "");
-    const open = Number(bar?.open);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TypeError(`bars[${index}].date must be an ISO date.`);
-    if (previousDate && date <= previousDate) throw new TypeError("bars must be strictly ordered by ascending date.");
-    if (!Number.isFinite(open) || open <= 0) throw new TypeError(`bars[${index}].open must be positive.`);
-    previousDate = date;
-    return bar;
-  });
-}
-
-function skippedResult({ status, reason, signalDate, executionDate = null, requestedBudget, effectiveBudget }) {
-  return Object.freeze({
-    status,
-    reason,
-    signalDate,
-    executionDate,
-    date: executionDate ?? signalDate,
-    requestedBudget,
-    effectiveBudget,
-    price: null,
-    quantity: 0,
-    grossAmount: 0,
-    feeAmount: 0,
-    fees: Object.freeze({ commission: 0, stampDuty: 0, total: 0 }),
-    slippageAmount: 0,
-    totalCost: 0,
-    availableDate: null,
-  });
 }
 
 function createFrictionlessBuyExecutionModel({ executionConfig = {} } = {}) {
@@ -87,7 +49,7 @@ function createFrictionlessBuyExecutionModel({ executionConfig = {} } = {}) {
       requestedBudget,
       cashAvailable,
     } = {}) {
-      const rows = normalizeBars(bars);
+      const rows = normalizeExecutionBars(bars);
       const budget = positiveMoney(Number(requestedBudget), "requestedBudget");
       const availableCash = nonNegativeMoney(Number(cashAvailable), "cashAvailable");
       const effectiveBudget = Math.min(budget, availableCash);
@@ -97,7 +59,7 @@ function createFrictionlessBuyExecutionModel({ executionConfig = {} } = {}) {
 
       const bar = rows[signalIndex + 1] ?? null;
       if (!bar) {
-        return skippedResult({
+        return skippedBuyExecutionResult({
           status: "skipped_no_execution_bar",
           reason: "no_next_trading_bar",
           signalDate: normalizedSignalDate,
@@ -109,7 +71,7 @@ function createFrictionlessBuyExecutionModel({ executionConfig = {} } = {}) {
       const price = Number(bar.open);
       const quantity = Math.floor((effectiveBudget + Number.EPSILON) / (price * lotSize)) * lotSize;
       if (quantity < lotSize) {
-        return skippedResult({
+        return skippedBuyExecutionResult({
           status: "skipped_insufficient_budget",
           reason: "budget_cannot_cover_one_lot",
           signalDate: normalizedSignalDate,
