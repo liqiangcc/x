@@ -6,11 +6,11 @@ const {
   assertBuyExecutionModel,
 } = require("../src/ports/simulation/buy_execution_model");
 const {
+  createBuyExecutionModelResolver,
+} = require("../src/simulation/execution/buy_execution_model_resolver");
+const {
   createFrictionlessBuyExecutionModel,
 } = require("../src/simulation/execution/frictionless_buy_execution_model");
-const {
-  createLegacyBuyExecutionModel,
-} = require("../src/simulation/execution/legacy_buy_execution_model");
 const {
   SimulateDrawdownBuyingUseCase,
 } = require("../src/application/simulation/simulate_drawdown_buying");
@@ -101,7 +101,7 @@ test("frictionless execution preserves lot sizing and does not fabricate a next 
   assert.equal(noNextBar.reason, "no_next_trading_bar");
 });
 
-test("the same drawdown policy can compare frictionless and legacy execution without changing business rules", async () => {
+test("one use case and resolver compare frictionless and legacy execution without changing business rules", async () => {
   const bars = [
     bar("2026-01-02", 10, 10),
     bar("2026-01-05", 9, 9),
@@ -120,17 +120,17 @@ test("the same drawdown policy can compare frictionless and legacy execution wit
     lotSize: 100,
     priceField: "close",
   };
+  const useCase = new SimulateDrawdownBuyingUseCase({
+    klineReader: readerFor(bars),
+    executionModelResolver: createBuyExecutionModelResolver(),
+  });
 
-  const frictionless = await new SimulateDrawdownBuyingUseCase({
-    klineReader: readerFor(bars),
-    createExecutionModel: createFrictionlessBuyExecutionModel,
-  }).execute(input);
-  const legacy = await new SimulateDrawdownBuyingUseCase({
-    klineReader: readerFor(bars),
-    createExecutionModel: createLegacyBuyExecutionModel,
-  }).execute(input);
+  const frictionless = await useCase.execute({ ...input, executionModel: "frictionless" });
+  const legacy = await useCase.execute({ ...input, executionModel: "legacy_a_share" });
 
   assert.deepEqual(frictionless.signals, legacy.signals);
+  assert.equal(frictionless.config.executionModel, "frictionless");
+  assert.equal(legacy.config.executionModel, "legacy_a_share");
   assert.equal(frictionless.meta.execution.kind, "frictionless_next_open");
   assert.equal(legacy.meta.execution.kind, "legacy_a_share_next_open");
   assert.equal(frictionless.summary.portfolio.quantity, legacy.summary.portfolio.quantity);
