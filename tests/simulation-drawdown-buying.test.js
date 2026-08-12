@@ -269,7 +269,7 @@ test("SimulateDrawdownBuyingUseCase rejects unknown execution models before read
       endDate: "2026-01-02",
       executionModel: "unknown",
     }),
-    /executionModel must be one of: legacy_a_share, domestic_stock_etf, frictionless/
+    /executionModel must be one of: legacy_a_share, domestic_stock_etf, t0_etf, frictionless/
   );
   assert.equal(readCount, 0);
 });
