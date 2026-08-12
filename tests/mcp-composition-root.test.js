@@ -61,11 +61,12 @@ test("MCP tool registry rejects malformed, duplicate, and unknown tools", async 
   );
 });
 
-test("MCP composition root shares one KlineReader across market and analytics use cases", async () => {
-  const calls = [];
+test("MCP composition root keeps KlineReader and StrategyReader as separate shared boundaries", async () => {
+  const klineCalls = [];
+  const strategyCalls = [];
   const klineReader = {
     async readRange(input) {
-      calls.push(input);
+      klineCalls.push(input);
       return {
         security: { code: "600001", market: 1 },
         period: "daily",
@@ -83,14 +84,35 @@ test("MCP composition root shares one KlineReader across market and analytics us
       };
     },
   };
+  const strategyReader = {
+    async listStrategies(input) {
+      strategyCalls.push(input);
+      return {
+        strategies: [{
+          id: "example",
+          name: "Example",
+          description: null,
+          isSystem: true,
+          archived: false,
+          status: "ready",
+          schemaVersion: 3,
+          type: "capability_composite",
+          indicatorCount: 0,
+          ruleCount: 1,
+        }],
+        source: { kind: "fake_strategy_catalog", schemaVersion: 3 },
+      };
+    },
+  };
 
-  const { registry } = createMcpCompositionRoot({ klineReader });
+  const { registry } = createMcpCompositionRoot({ klineReader, strategyReader });
   assert.deepEqual(registry.listDefinitions().map((definition) => definition.name), [
     "analytics_get_bollinger",
     "analytics_get_drawdowns",
     "analytics_get_recovery_periods",
     "market_get_kline",
     "market_get_summary",
+    "strategy_list",
   ]);
 
   const marketResult = await registry.invoke("market_get_kline", {
@@ -134,8 +156,9 @@ test("MCP composition root shares one KlineReader across market and analytics us
     minDrawdown: 0.2,
     priceField: "close",
   });
+  const strategyResult = await registry.invoke("strategy_list", { includeDefinition: false });
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(klineCalls, [
     {
       code: "600001",
       market: 1,
@@ -177,6 +200,7 @@ test("MCP composition root shares one KlineReader across market and analytics us
       limit: null,
     },
   ]);
+  assert.deepEqual(strategyCalls, [{ includeDefinition: false }]);
   assert.equal(marketResult.isError, undefined);
   assert.deepEqual(marketResult.structuredContent.bars.map((bar) => bar.date), ["2026-01-05", "2026-01-06"]);
   assert.equal(marketResult.structuredContent.page.hasMore, true);
@@ -196,20 +220,25 @@ test("MCP composition root shares one KlineReader across market and analytics us
   assert.equal(recoveryResult.structuredContent.periods[0].declineTradingDays, 1);
   assert.equal(recoveryResult.structuredContent.periods[0].recoveryTradingDays, 1);
   assert.equal(recoveryResult.structuredContent.periods[0].underwaterTradingDays, 2);
+  assert.equal(strategyResult.isError, undefined);
+  assert.equal(strategyResult.structuredContent.summary.count, 1);
+  assert.equal(strategyResult.structuredContent.strategies[0].id, "example");
 });
 
-test("MCP composition root accepts prebuilt tools without constructing business dependencies", async () => {
+test("MCP composition root accepts prebuilt tools without constructing domain dependencies", async () => {
   const bollingerTool = fakeTool("injected_bollinger", async () => ({ content: [], structuredContent: { ok: true } }));
   const drawdownsTool = fakeTool("injected_drawdowns", async () => ({ content: [], structuredContent: { ok: true } }));
   const recoveryPeriodsTool = fakeTool("injected_recovery", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
+  const strategyListTool = fakeTool("injected_strategy_list", async () => ({ content: [], structuredContent: { ok: true } }));
   const { registry } = createMcpCompositionRoot({
     bollingerTool,
     drawdownsTool,
     recoveryPeriodsTool,
     marketKlineTool,
     marketSummaryTool,
+    strategyListTool,
   });
 
   assert.deepEqual(registry.listDefinitions(), [
@@ -218,25 +247,19 @@ test("MCP composition root accepts prebuilt tools without constructing business 
     recoveryPeriodsTool.definition,
     marketKlineTool.definition,
     marketSummaryTool.definition,
+    strategyListTool.definition,
   ]);
-  assert.deepEqual(await registry.invoke("injected_bollinger"), {
-    content: [],
-    structuredContent: { ok: true },
-  });
-  assert.deepEqual(await registry.invoke("injected_drawdowns"), {
-    content: [],
-    structuredContent: { ok: true },
-  });
-  assert.deepEqual(await registry.invoke("injected_recovery"), {
-    content: [],
-    structuredContent: { ok: true },
-  });
-  assert.deepEqual(await registry.invoke("injected_kline"), {
-    content: [],
-    structuredContent: { ok: true },
-  });
-  assert.deepEqual(await registry.invoke("injected_summary"), {
-    content: [],
-    structuredContent: { ok: true },
-  });
+  for (const name of [
+    "injected_bollinger",
+    "injected_drawdowns",
+    "injected_recovery",
+    "injected_kline",
+    "injected_summary",
+    "injected_strategy_list",
+  ]) {
+    assert.deepEqual(await registry.invoke(name), {
+      content: [],
+      structuredContent: { ok: true },
+    });
+  }
 });
