@@ -1,6 +1,7 @@
 "use strict";
 
 const { LedgerKlineReader } = require("../ledger/ledger_kline_reader");
+const { LedgerSecurityMasterReader } = require("../ledger/ledger_security_master_reader");
 const { LedgerSecurityMetadataReader } = require("../ledger/ledger_security_metadata_reader");
 const { BuiltinStrategyReader } = require("../strategy/builtin_strategy_reader");
 const { ReadonlySqliteSignalReader } = require("../strategy/readonly_sqlite_signal_reader");
@@ -28,6 +29,7 @@ const { McpToolRegistry } = require("./tool_registry");
 
 function createMcpCompositionRoot({
   klineReader = null,
+  securityMasterReader = null,
   securityMetadataReader = null,
   strategyReader = null,
   signalReader = null,
@@ -65,10 +67,20 @@ function createMcpCompositionRoot({
     return resolvedKlineReader;
   };
 
+  let resolvedSecurityMasterReader = securityMasterReader;
+  const getSecurityMasterReader = () => {
+    if (!resolvedSecurityMasterReader) {
+      resolvedSecurityMasterReader = new LedgerSecurityMasterReader();
+    }
+    return resolvedSecurityMasterReader;
+  };
+
   let resolvedSecurityMetadataReader = securityMetadataReader;
   const getSecurityMetadataReader = () => {
     if (!resolvedSecurityMetadataReader) {
-      resolvedSecurityMetadataReader = new LedgerSecurityMetadataReader();
+      resolvedSecurityMetadataReader = new LedgerSecurityMetadataReader({
+        securityMasterReader: getSecurityMasterReader(),
+      });
     }
     return resolvedSecurityMetadataReader;
   };
