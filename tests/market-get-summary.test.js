@@ -124,7 +124,7 @@ test("get market summary validates adjustment before storage access and owns no 
     /ledger_default/
   );
   assert.equal(reads, 0);
-  assert.throws(() => new GetMarketSummaryUseCase(), /KlineReader/);
+  assert.throws(() => new GetMarketSummaryUseCase(), /klineReader implementation/);
   assert.throws(
     () => new GetMarketSummaryUseCase({ klineReader: { readRange() {} }, calculate: null }),
     /calculate/
