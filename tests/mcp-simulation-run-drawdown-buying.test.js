@@ -20,7 +20,7 @@ function useCaseResult() {
       maxPurchases: 10,
       priceField: "close",
       initialCapital: 100000,
-      lotSize: 1,
+      lotSize: 100,
     },
     signals: [{
       index: 1,
@@ -35,13 +35,17 @@ function useCaseResult() {
     }],
     trades: [{
       index: 1,
-      date: "2026-01-02",
+      signalDate: "2026-01-02",
+      executionDate: "2026-01-05",
+      date: "2026-01-05",
       status: "filled",
       requestedBudget: 10000,
       effectiveBudget: 10000,
-      price: 10,
-      quantity: 1000,
-      totalCost: 10000,
+      price: 10.01,
+      quantity: 900,
+      grossAmount: 9009,
+      feeAmount: 5,
+      totalCost: 9014,
       metadata: { signalIndex: 1 },
     }],
     summary: {
@@ -50,15 +54,18 @@ function useCaseResult() {
         initialCash: 100000,
         filledTradeCount: 1,
         skippedTradeCount: 0,
-        investedAmount: 10000,
-        remainingCash: 90000,
-        quantity: 1000,
-        averageCost: 10,
+        investedAmount: 9014,
+        grossAmount: 9009,
+        totalFees: 5,
+        totalSlippage: 9,
+        remainingCash: 90986,
+        quantity: 900,
+        averageCost: 10.015555555555556,
         finalPrice: 11,
-        marketValue: 11000,
-        equity: 101000,
-        unrealizedPnl: 1000,
-        totalReturn: 0.01,
+        marketValue: 9900,
+        equity: 100886,
+        unrealizedPnl: 886,
+        totalReturn: 0.00886,
       },
     },
     meta: {
@@ -67,25 +74,32 @@ function useCaseResult() {
       qualityIssues: [],
       source: { kind: "repo_ledger", contentHash: "hash", path: "data/kline/daily/600/600001.json" },
       execution: {
-        lotSize: 1,
+        kind: "legacy_a_share_next_open",
+        timing: "next_trading_day_open",
+        executionPriceField: "open",
+        lotSize: 100,
         priceField: "close",
-        feesIncluded: false,
-        slippageIncluded: false,
+        signalPriceField: "close",
+        feesIncluded: true,
+        slippageIncluded: true,
+        marketRestrictionsIncluded: true,
       },
     },
   };
 }
 
-test("drawdown buying MCP definition is bounded, read-only, and explicit about execution assumptions", () => {
+test("drawdown buying MCP definition is bounded, read-only, and explicit about realistic execution assumptions", () => {
   assert.equal(TOOL_DEFINITION.name, "simulation_run_drawdown_buying");
   assert.equal(TOOL_DEFINITION.inputSchema.type, "object");
   assert.equal(TOOL_DEFINITION.inputSchema.additionalProperties, false);
   assert.deepEqual(TOOL_DEFINITION.inputSchema.required, ["code", "market", "endDate"]);
   assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.period.enum, ["daily"]);
   assert.equal(TOOL_DEFINITION.inputSchema.properties.maxPurchases.maximum, 100);
+  assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.default, 100);
   assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.minimum, 1);
   assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.priceField.enum, ["open", "close", "high", "low"]);
-  assert.match(TOOL_DEFINITION.description, /excludes fees and slippage/);
+  assert.match(TOOL_DEFINITION.description, /next trading-day open/);
+  assert.match(TOOL_DEFINITION.description, /slippage, and fee mechanisms/);
   assert.equal(TOOL_DEFINITION.annotations.readOnlyHint, true);
   assert.equal(TOOL_DEFINITION.annotations.destructiveHint, false);
   assert.equal(TOOL_DEFINITION.annotations.idempotentHint, true);
@@ -123,8 +137,10 @@ test("drawdown buying MCP handler delegates unchanged input to the application u
   assert.deepEqual(result.structuredContent, expected);
   assert.deepEqual(JSON.parse(result.content[0].text), expected);
   assert.equal(result.isError, undefined);
-  assert.equal(result.structuredContent.meta.execution.feesIncluded, false);
-  assert.equal(result.structuredContent.meta.execution.slippageIncluded, false);
+  assert.equal(result.structuredContent.meta.execution.timing, "next_trading_day_open");
+  assert.equal(result.structuredContent.meta.execution.feesIncluded, true);
+  assert.equal(result.structuredContent.meta.execution.slippageIncluded, true);
+  assert.equal(result.structuredContent.meta.execution.marketRestrictionsIncluded, true);
 });
 
 test("drawdown buying MCP handler maps application errors to stable tool errors", async () => {
