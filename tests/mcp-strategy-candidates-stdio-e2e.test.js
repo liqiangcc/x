@@ -67,7 +67,17 @@ function createFixture() {
       market: 1,
       securityKey: "1.600001",
       rankingValues: [10.5],
-      evidence: { rule_summary: "first", today_close: 10.5 },
+      qualityIssues: ["ledger_legacy_mode"],
+      evidence: {
+        rule_summary: "first",
+        today_close: 10.5,
+        rules: [{
+          key: "first_breakout",
+          type: "first_occurrence",
+          ok: true,
+          qualityIssues: [],
+        }],
+      },
     })
   );
   insert.run(
@@ -82,7 +92,7 @@ function createFixture() {
       market: 0,
       securityKey: "0.000001",
       rankingValues: [11.5],
-      evidence: { rule_summary: "second", today_close: 11.5 },
+      evidence: { rule_summary: "second", today_close: 11.5, rules: [] },
     })
   );
   db.close();
@@ -96,12 +106,12 @@ function cleanEnv(extra) {
   };
 }
 
-test("stdio strategy_get_candidates reads an injected signal database without mutating it", { timeout: 20_000 }, async () => {
+test("stdio strategy signal tools read an injected database without mutating it", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
   const fixture = createFixture();
   const before = fs.readFileSync(fixture.databasePath);
   const client = new Client(
-    { name: "x-mcp-strategy-candidates-e2e", version: "0.1.0" },
+    { name: "x-mcp-strategy-signals-e2e", version: "0.1.0" },
     { versionNegotiation: { mode: "auto" } }
   );
   const transport = new StdioClientTransport({
@@ -116,12 +126,17 @@ test("stdio strategy_get_candidates reads an injected signal database without mu
     assert.equal(client.getProtocolEra(), "modern");
 
     const listed = await client.listTools();
-    const tool = listed.tools.find((item) => item.name === "strategy_get_candidates");
-    assert.ok(tool, "strategy_get_candidates must be discoverable over real stdio MCP");
-    assert.equal(tool.annotations?.readOnlyHint, true);
-    assert.equal(tool.inputSchema.additionalProperties, false);
-    assert.equal(tool.inputSchema.properties.limit.maximum, 200);
-    assert.equal(tool.inputSchema.properties.includeEvidence.default, false);
+    const candidatesTool = listed.tools.find((item) => item.name === "strategy_get_candidates");
+    const explainTool = listed.tools.find((item) => item.name === "strategy_explain_signal");
+    assert.ok(candidatesTool, "strategy_get_candidates must be discoverable over real stdio MCP");
+    assert.ok(explainTool, "strategy_explain_signal must be discoverable over real stdio MCP");
+    assert.equal(candidatesTool.annotations?.readOnlyHint, true);
+    assert.equal(explainTool.annotations?.readOnlyHint, true);
+    assert.equal(candidatesTool.inputSchema.additionalProperties, false);
+    assert.equal(explainTool.inputSchema.additionalProperties, false);
+    assert.equal(candidatesTool.inputSchema.properties.limit.maximum, 200);
+    assert.equal(candidatesTool.inputSchema.properties.includeEvidence.default, false);
+    assert.deepEqual(explainTool.inputSchema.required, ["strategyId", "date", "securityKey"]);
 
     const compactResult = await client.callTool({
       name: "strategy_get_candidates",
@@ -141,11 +156,37 @@ test("stdio strategy_get_candidates reads an injected signal database without mu
     assert.equal(compact.candidates[0].rank, 1);
     assert.equal(compact.candidates[0].code, "600001");
     assert.equal(compact.candidates[0].evidence, undefined);
+    assert.deepEqual(compact.candidates[0].qualityIssues, ["ledger_legacy_mode"]);
     assert.equal(compact.page.total, 2);
     assert.equal(compact.page.hasMore, true);
     assert.equal(compact.page.nextOffset, 1);
     assert.equal(compact.meta.source.kind, "simulator_strategy_signal_store");
     assert.equal(compact.meta.source.readonly, true);
+
+    const explainResult = await client.callTool({
+      name: "strategy_explain_signal",
+      arguments: {
+        strategyId: "three_year_decline_breakout",
+        date: "20260811",
+        securityKey: compact.candidates[0].securityKey,
+      },
+    });
+    assert.notEqual(explainResult.isError, true);
+    const explanation = structuredPayload(explainResult);
+    assert.equal(explanation.status, "ready");
+    assert.equal(explanation.strategyId, "three_year_decline_breakout");
+    assert.equal(explanation.date, "2026-08-11");
+    assert.equal(explanation.securityKey, "1.600001");
+    assert.equal(explanation.build.id, compact.build.id);
+    assert.equal(explanation.candidate.rank, compact.candidates[0].rank);
+    assert.equal(explanation.candidate.code, compact.candidates[0].code);
+    assert.deepEqual(explanation.candidate.rankingValues, compact.candidates[0].rankingValues);
+    assert.deepEqual(explanation.candidate.qualityIssues, ["ledger_legacy_mode"]);
+    assert.equal(explanation.candidate.evidence.rule_summary, "first");
+    assert.equal(explanation.candidate.evidence.today_close, 10.5);
+    assert.equal(explanation.candidate.evidence.rules[0].key, "first_breakout");
+    assert.equal(explanation.candidate.evidence.rules[0].ok, true);
+    assert.equal(explanation.meta.source.readonly, true);
 
     const detailedResult = await client.callTool({
       name: "strategy_get_candidates",
