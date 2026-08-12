@@ -9,6 +9,12 @@ const {
   assertBuyExecutionModel,
 } = require("../src/ports/simulation/buy_execution_model");
 const {
+  assertBuyExecutionModelResolver,
+} = require("../src/ports/simulation/buy_execution_model_resolver");
+const {
+  createBuyExecutionModelResolver,
+} = require("../src/simulation/execution/buy_execution_model_resolver");
+const {
   createLegacyBuyExecutionModel,
 } = require("../src/simulation/execution/legacy_buy_execution_model");
 const {
@@ -73,22 +79,37 @@ test("portfolio requires an execution model instead of constructing a concrete i
   );
 });
 
-test("simulation use case requires an injected execution model factory", () => {
+test("simulation use case requires an injected execution model resolver", () => {
   assert.throws(
     () => new SimulateDrawdownBuyingUseCase({ klineReader: fakeKlineReader() }),
-    /createExecutionModel must be a function/
+    /buyExecutionModelResolver implementation must be an object/
+  );
+  assert.equal(
+    assertBuyExecutionModelResolver(createBuyExecutionModelResolver()).resolve instanceof Function,
+    true
   );
 });
 
-test("concrete execution wiring is confined to the composition boundary", () => {
-  const concreteModule = "legacy_buy_execution_model";
+test("concrete execution models are confined behind the resolver implementation boundary", () => {
+  const legacyModule = "legacy_buy_execution_model";
+  const frictionlessModule = "frictionless_buy_execution_model";
+  const resolverPortModule = "ports/simulation/buy_execution_model_resolver";
+  const resolverImplementationModule = "simulation/execution/buy_execution_model_resolver";
   const portfolioSource = source("src/simulation/portfolio/buy_only_portfolio_simulator.js");
   const applicationSource = source("src/application/simulation/simulate_drawdown_buying.js");
+  const toolSource = source("src/adapters/mcp/tools/simulation_run_drawdown_buying.js");
   const compositionSource = source("src/adapters/mcp/composition_root.js");
+  const resolverSource = source("src/simulation/execution/buy_execution_model_resolver.js");
 
-  assert.equal(portfolioSource.includes(concreteModule), false);
-  assert.equal(applicationSource.includes(concreteModule), false);
-  assert.equal(compositionSource.includes(concreteModule), true);
-  assert.equal(portfolioSource.includes("ports/simulation/buy_execution_model"), true);
-  assert.equal(applicationSource.includes("ports/simulation/buy_execution_model"), true);
+  for (const lowerSource of [portfolioSource, applicationSource, toolSource]) {
+    assert.equal(lowerSource.includes(legacyModule), false);
+    assert.equal(lowerSource.includes(frictionlessModule), false);
+  }
+  assert.equal(applicationSource.includes(resolverPortModule), true);
+  assert.equal(toolSource.includes(resolverPortModule), true);
+  assert.equal(compositionSource.includes(resolverImplementationModule), true);
+  assert.equal(compositionSource.includes(legacyModule), false);
+  assert.equal(compositionSource.includes(frictionlessModule), false);
+  assert.equal(resolverSource.includes(legacyModule), true);
+  assert.equal(resolverSource.includes(frictionlessModule), true);
 });
