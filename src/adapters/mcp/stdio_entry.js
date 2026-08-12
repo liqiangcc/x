@@ -4,23 +4,33 @@ const { serveStdio } = require("@modelcontextprotocol/server/stdio");
 const { createMcpCompositionRoot } = require("./composition_root");
 const { createMcpSdkServer } = require("./sdk_server");
 
+function compositionFromEnvironment(composition = {}, env = process.env) {
+  if (composition.signalReader || composition.signalDatabasePath) return composition;
+  const databasePath = String(env.X_MCP_SIGNAL_DATABASE_PATH ?? "").trim();
+  return databasePath
+    ? { ...composition, signalDatabasePath: databasePath }
+    : composition;
+}
+
 function buildMcpServer({
   composition = {},
   server = {},
+  env = process.env,
 } = {}) {
-  const root = createMcpCompositionRoot(composition);
+  const root = createMcpCompositionRoot(compositionFromEnvironment(composition, env));
   return createMcpSdkServer({ registry: root.registry, ...server });
 }
 
 function startMcpStdio({
   composition = {},
   server = {},
+  env = process.env,
   serveStdioImpl = serveStdio,
 } = {}) {
   if (typeof serveStdioImpl !== "function") {
     throw new TypeError("serveStdioImpl must be a function.");
   }
-  return serveStdioImpl(() => buildMcpServer({ composition, server }));
+  return serveStdioImpl(() => buildMcpServer({ composition, server, env }));
 }
 
 function installShutdownHandlers(handle, processImpl = process) {
@@ -42,6 +52,7 @@ if (require.main === module) {
 
 module.exports = {
   buildMcpServer,
+  compositionFromEnvironment,
   installShutdownHandlers,
   startMcpStdio,
 };
