@@ -23,14 +23,16 @@ MCP 必须建立在现有领域能力之上，而不是直接耦合 `data/` 文�
 
 ### 2.1 核心目标
 
-1. **关注点分离（Separation of Concerns）**：协议、用例、领域算法、数据访问、存储实现相互隔离。
+1. **关注点分离（Separation of Concerns）**：协议、控制、业务、能力、逻辑、数据访问、存储实现相互隔离。
 2. **单一职责原则（Single Responsibility Principle）**：每个模块只有一种主要变化原因。
-3. **复用现有能力**：CLI、HTTP Simulator、GitHub Actions、MCP 共用同一组 Application / Domain 能力。
-4. **确定性优先**：收益率、回撤、BOLL、恢复周期、策略匹配等计算由程序完成，AI 负责解释、比较和推理。
-5. **只读优先**：第一阶段 MCP 不触发数据同步、不修改策略、不修改仓库、不执行交易。
-6. **数据可信**：每个关键结果携带 `as_of`、数据质量、数据来源与必要警告。
-7. **可测试**：MCP Tool 可以在不读取真实文件、不访问网络的情况下完成契约测试。
-8. **渐进式演进**：不要求为了 MCP 立即重构全部现有目录。
+3. **能力与业务分离**：能力描述“系统能做什么”，业务描述“为什么以及如何组合这些能力”；通用能力不得携带具体投资场景语义。
+4. **逻辑与控制分离**：逻辑只负责确定性计算，控制只负责调用顺序、生命周期、失败处理和协议编排；控制层不得包含业务判断。
+5. **复用现有能力**：CLI、HTTP Simulator、GitHub Actions、MCP 共用同一组 Application / Domain 能力。
+6. **确定性优先**：收益率、回撤、BOLL、恢复周期、策略匹配等计算由程序完成，AI 负责解释、比较和推理。
+7. **只读优先**：第一阶段 MCP 不触发数据同步、不修改策略、不修改仓库、不执行交易。
+8. **数据可信**：每个关键结果携带 `as_of`、数据质量、数据来源与必要警告。
+9. **可测试**：MCP Tool 可以在不读取真实文件、不访问网络的情况下完成契约测试。
+10. **渐进式演进**：不要求为了 MCP 立即重构全部现有目录。
 
 ### 2.2 非目标
 
@@ -79,7 +81,154 @@ Domain Capabilities       Ports
 - MCP Adapter 不允许知道具体 JSON 文件路径。
 - Repository Adapter 不允许包含回撤、BOLL、策略匹配等业务算法。
 
-### 3.2 MCP 是 Adapter，不是业务层
+### 3.2 能力与业务分离
+
+能力（Capability）描述**系统能做什么**，必须是稳定、通用、可复用、可组合的原子能力；业务（Business）描述**为什么调用这些能力，以及如何按照业务规则组合这些能力**。
+
+推荐的能力：
+
+```text
+KlineReader
+SecurityReader
+DrawdownCalculator
+RecoveryCalculator
+BollingerCalculator
+ReturnCalculator
+ThresholdDetector
+PositionCalculator
+StrategyEvaluator
+SignalReader
+```
+
+这些能力不得知道具体投资场景，例如：
+
+```text
+医疗 ETF 加仓
+每跌 8% 买 10%
+连续下跌三年后突破
+月线突破 BOLL 中轨后买入
+```
+
+上述内容属于业务规则或业务用例，应由 Application / Business Policy 组合通用能力完成。例如：
+
+```text
+SimulateDrawdownBuying
+  -> KlineReader
+  -> ThresholdDetector
+  -> PositionCalculator
+  -> ReturnCalculator
+  -> TradeSimulation Capability
+```
+
+禁止以业务场景命名通用能力，例如：
+
+```text
+EightPercentBuyCalculator      # 禁止
+MedicalEtfAnalyzer             # 禁止
+ThreeYearDeclineStockCalculator # 禁止
+```
+
+应拆为通用能力与业务规则：
+
+```text
+ThresholdDetector
+DrawdownCalculator
+PositionCalculator
+ReturnCalculator
+
+DrawdownBuyingPolicy
+ThreeYearDeclineBreakoutPolicy
+BollingerEntryPolicy
+```
+
+判断标准：**如果一个能力因为某个具体策略、ETF、阈值或投资场景变化而必须修改，该能力边界通常已经混入业务语义。**
+
+### 3.3 逻辑与控制分离
+
+逻辑（Logic）负责“结果怎么算出来”，控制（Control）负责“什么时候、按什么顺序、调用什么、失败后怎么办”。两者必须分离。
+
+逻辑层应尽量保持纯函数式：
+
+```text
+Input
+  -> deterministic calculation
+  -> Output
+```
+
+例如：
+
+```text
+calculateDrawdowns(prices, options)
+calculateBollinger(prices, window, multiplier)
+evaluateThreshold(previous, current, threshold)
+```
+
+逻辑层不得包含：
+
+- 文件读取；
+- SQL；
+- 网络请求；
+- MCP / HTTP 协议处理；
+- retry / backoff；
+- 日志生命周期；
+- AWS region 选择；
+- workflow dispatch；
+- Git 操作；
+- “跌 8% 就买 10%”之类业务控制判断。
+
+控制层负责：
+
+- 参数校验后的调用编排；
+- 调用顺序；
+- Port / Capability 选择；
+- 超时、取消、重试策略；
+- 错误分类和边界映射；
+- request / response 生命周期；
+- 将业务用例暴露给 MCP / CLI / HTTP / Actions。
+
+但控制层不得包含业务规则。例如下面的代码不得出现在 MCP Controller、HTTP Controller、CLI Handler 或 Workflow Controller 中：
+
+```js
+if (drawdown >= 0.08) {
+  buy(0.10);
+}
+```
+
+控制层只能调用：
+
+```js
+const decision = buyingPolicy.evaluate(context);
+```
+
+推荐调用关系：
+
+```text
+MCP / CLI / HTTP
+      |
+      v
+Controller / Adapter
+      |
+      v
+Application Use Case
+      |
+      +--------------------+
+      v                    v
+Business Policy        Capabilities
+      |                    |
+      +---------+----------+
+                v
+           Pure Logic
+                |
+                v
+              Ports
+                |
+                v
+         Infrastructure
+```
+
+这里不是要求每个请求机械经过所有层，而是明确变化原因和依赖边界：业务可以组合多个能力，能力可以复用纯逻辑，控制只负责调度，不拥有业务规则。
+
+### 3.4 MCP 是 Adapter，不是业务层
 
 MCP Tool 的职责只有：
 
@@ -102,7 +251,7 @@ MCP Tool 不得：
 - 生成成交；
 - 操作 Git。
 
-### 3.3 一个 Use Case 只解决一个问题
+### 3.5 一个 Use Case 只解决一个问题
 
 推荐：
 
@@ -130,7 +279,7 @@ StrategyAndSimulation
 
 判断标准：如果一个类因为两种互不相关的原因频繁修改，应继续拆分。
 
-### 3.4 领域算法保持纯净
+### 3.6 领域算法保持纯净
 
 例如：
 
@@ -144,7 +293,7 @@ StrategyEvaluator
 
 只接收领域输入并返回领域结果，不关心数据来自 Git、JSON、SQLite、HTTP、MCP 或测试 Fixture。
 
-### 3.5 数据访问必须经过 Port
+### 3.7 数据访问必须经过 Port
 
 Application 依赖接口/Port，不依赖具体存储：
 
@@ -166,6 +315,25 @@ SqliteStrategyReader
 ```
 
 因此未来从 JSON 切换 SQLite / DuckDB 时，上层 Tool 契约保持稳定。
+
+### 3.8 Architecture Fitness Rules
+
+以下规则不是建议，而是新代码的架构约束；能自动化检查的应逐步进入 CI：
+
+```text
+RULE-01 Capability 不得依赖具体业务场景、策略名、证券类型或固定阈值。
+RULE-02 Business 不得复制已有通用能力或确定性算法。
+RULE-03 Logic 不得包含 IO、协议、重试、日志生命周期或流程控制。
+RULE-04 Controller / MCP / CLI / HTTP / Actions 不得包含业务规则。
+RULE-05 MCP Tool 不得直接读取 data/。
+RULE-06 MCP Tool 不得直接访问 SQLite 或其他具体存储。
+RULE-07 Infrastructure 不得决定策略、买卖、筛选或风险业务规则。
+RULE-08 Domain / Logic 不得依赖 MCP、HTTP、GitHub、AWS、文件系统或数据库实现。
+RULE-09 同一确定性能力只能有一个权威实现，Adapter 不得复制算法。
+RULE-10 所有入口优先复用同一 Application / Capability，不允许为 MCP 建第二套业务链路。
+```
+
+代码评审时，任何违反规则的实现都应先调整边界，再继续扩展功能。
 
 ## 4. 与现有 `x` 的关系
 
@@ -708,10 +876,21 @@ MCP Tool 测试通过 mock Use Case 完成，不依赖真实 `data/`。
 建议增加自动检查，阻止以下依赖进入主分支：
 
 ```text
-src/mcp/** -> data/** 直接文件访问
-src/mcp/** -> 指标算法实现
-src/domain/** -> mcp / fastify / fs / sqlite
+src/mcp/**        -> data/** 直接文件访问
+src/mcp/**        -> 指标 / 策略 / 回撤算法实现
+src/domain/**     -> mcp / fastify / fs / sqlite / github / aws
+src/logic/**      -> fs / sqlite / http / mcp / workflow
+src/adapters/**   -> 业务策略判断
+controllers       -> 固定业务阈值 / 买卖规则 / 策略条件
 ```
+
+除 import/require 扫描外，应逐步增加语义边界测试：
+
+- Capability 单元测试不引用具体策略名称和投资场景；
+- Logic 测试全部使用内存输入输出，不需要 mock 文件系统或网络；
+- Controller 测试通过 Fake Use Case 验证编排，不验证指标公式；
+- Business Policy 测试只验证业务规则组合，不测试协议和存储；
+- 同一个计算能力在 MCP / CLI / HTTP 调用下必须得到一致结果。
 
 可以先用轻量 Node 测试扫描 import/require，后续再升级为专门依赖规则工具。
 
@@ -815,13 +994,19 @@ AI
 3. 禁止 MCP Tool 调用外部行情 API。
 4. 禁止在 MCP 目录实现指标、回撤、策略、成交算法。
 5. 禁止 Domain import MCP / HTTP / FS / DB 具体实现。
-6. 禁止一个 Tool 同时做查询、同步、计算、写入。
-7. 禁止历史分析读取 `as_of` 之后的数据。
-8. 禁止隐藏数据质量问题。
-9. 禁止为了 MCP 复制现有策略 evidence 逻辑。
-10. 禁止 Tool 返回无上限的大型原始数据。
-11. 禁止把 Tool 输出文案当成投资建议；Tool 输出事实和确定性结果。
-12. 禁止第一阶段 MCP 修改仓库或交易状态。
+6. 禁止 Capability 携带具体策略、证券、固定阈值或投资场景语义。
+7. 禁止 Business 重复实现已有通用 Capability。
+8. 禁止 Logic 包含 IO、重试、网络、协议、日志生命周期和流程编排。
+9. 禁止 Controller / MCP / CLI / HTTP / Actions 写入策略条件、买卖判断或固定业务阈值。
+10. 禁止 Infrastructure 决定业务策略。
+11. 禁止一个 Tool 同时做查询、同步、计算、写入。
+12. 禁止历史分析读取 `as_of` 之后的数据。
+13. 禁止隐藏数据质量问题。
+14. 禁止为了 MCP 复制现有策略 evidence 逻辑。
+15. 禁止 Tool 返回无上限的大型原始数据。
+16. 禁止把 Tool 输出文案当成投资建议；Tool 输出事实和确定性结果。
+17. 禁止第一阶段 MCP 修改仓库或交易状态。
+18. 禁止同一确定性计算在 MCP、CLI、HTTP 中出现多个实现版本。
 
 ## 17. 分阶段实施
 
@@ -832,11 +1017,19 @@ AI
 任务：
 
 - 盘点 Kline / stats / strategy / signal / simulator 可复用入口；
+- 将现有实现按“Business / Capability / Logic / Control / Infrastructure”标记归类；
+- 识别目前混在 Controller、脚本或 Adapter 中的业务规则和确定性算法；
 - 为数据读取定义最小 Port；
-- 为第一批分析建立 Application Use Case；
-- 避免大规模目录重构。
+- 抽出第一批通用 Capability 和纯 Logic，禁止按具体策略场景命名；
+- 为第一批分析建立 Application Use Case / Business Policy；
+- 避免大规模目录重构，只先建立依赖边界。
 
-完成条件：Application 用例可以通过 Fake Port 独立测试。
+完成条件：
+
+- Application 用例可以通过 Fake Port 独立测试；
+- Capability / Logic 可以脱离 MCP、文件系统和数据库测试；
+- Controller 不包含具体股票业务判断；
+- 同一能力可以被至少两个入口或测试直接复用，而无需复制实现。
 
 ### Phase 1：只读行情 + 分析 MCP
 
@@ -891,14 +1084,19 @@ simulation_run_drawdown_buying
 2. MCP Tool 中不存在指标/回撤/策略算法。
 3. 所有 Tool 经 Application Use Case 调用领域能力。
 4. 数据读取通过 Port/Adapter。
-5. 第一阶段全部只读。
-6. 历史调用有明确 `as_of`，并通过未来数据泄漏测试。
-7. 关键结果包含数据质量和来源元数据。
-8. Tool 契约有 schema 和错误模型测试。
-9. MCP 可以在 Fake Repository 上完成完整测试。
-10. 替换 Ledger Adapter 不要求修改 MCP Tool。
-11. CLI / Simulator 现有行为不因 MCP 引入而改变。
-12. 所有新业务算法均先进入可复用 Domain/Application 层，再暴露 MCP。
+5. Capability 不携带具体业务场景、策略名或固定投资阈值。
+6. Business Policy 只组合能力，不复制通用算法。
+7. Logic 可以使用纯内存输入输出独立测试，不依赖 IO/协议/流程控制。
+8. Controller / MCP / CLI / HTTP / Actions 不包含具体业务判断。
+9. 第一阶段全部只读。
+10. 历史调用有明确 `as_of`，并通过未来数据泄漏测试。
+11. 关键结果包含数据质量和来源元数据。
+12. Tool 契约有 schema 和错误模型测试。
+13. MCP 可以在 Fake Repository 上完成完整测试。
+14. 替换 Ledger Adapter 不要求修改 MCP Tool。
+15. CLI / Simulator 现有行为不因 MCP 引入而改变。
+16. 同一确定性能力在 MCP / CLI / HTTP 场景中只存在一个权威实现。
+17. 所有新业务规则先进入 Business Policy / Application，所有通用计算先进入 Capability / Logic，再暴露 MCP。
 
 ## 19. 架构决策摘要
 
@@ -932,24 +1130,64 @@ simulation_run_drawdown_buying
 
 **原因**：股票分析中数据时点和口径错误会直接导致错误结论。
 
+### ADR-MCP-006：能力与业务分离
+
+**决定**：通用 Capability 不允许包含具体策略、证券、阈值或投资场景；业务规则通过 Business Policy / Application 组合 Capability。
+
+**原因**：保持能力稳定、可复用，使新增策略主要表现为业务组合变化，而不是复制底层实现。
+
+### ADR-MCP-007：逻辑与控制分离
+
+**决定**：确定性 Logic 不负责 IO、协议和流程编排；Controller 只负责控制流，不允许包含业务规则。
+
+**原因**：让计算可以独立验证，让 MCP / CLI / HTTP / Actions 只成为不同入口，避免控制代码逐渐演化为隐藏业务层。
+
 ## 20. 推荐的第一项开发任务
 
 不要先创建 MCP Server。
 
-第一项开发任务应是建立最小垂直切片：
+第一项开发任务应是建立最小垂直切片，并显式验证四个分离边界：
 
 ```text
-KlineReader Port
-  -> LedgerKlineReader Adapter
-  -> AnalyzeDrawdownsUseCase
-  -> existing/new DrawdownAnalyzer
-  -> unit/application/integration tests
+Infrastructure
+  LedgerKlineReader
+        |
+        v
+Port
+  KlineReader
+        |
+        v
+Capability
+  DrawdownCapability
+        |
+        v
+Logic
+  DrawdownCalculator
+        |
+        v
+Business / Application
+  AnalyzeDrawdownsUseCase
+        |
+        v
+Control / Adapter
+  analytics_get_drawdowns MCP Tool
 ```
 
-确认该能力可以同时被普通 Node 调用后，再添加：
+实现顺序建议：
 
-```text
-analytics_get_drawdowns MCP Tool
-```
+1. 先确认/抽取 `DrawdownCalculator`，只接受内存价格序列并返回确定性结果；
+2. 建立 `KlineReader` Port 与 `LedgerKlineReader`，隔离数据账本布局；
+3. 建立 `DrawdownCapability`，提供稳定通用能力接口，不包含具体策略语义；
+4. 建立 `AnalyzeDrawdownsUseCase`，只编排数据读取和能力调用；
+5. 为 Logic、Capability、Application、Adapter 分层测试；
+6. 最后增加薄的 `analytics_get_drawdowns` MCP Tool。
 
-这个顺序可以从第一天就验证 SoC / SRP，而不是先写 MCP Tool 再补架构。
+验收时必须证明：
+
+- 修改 MCP schema 不需要修改回撤算法；
+- 修改数据存储不需要修改回撤算法和 MCP Tool；
+- 修改回撤算法不需要修改 Controller；
+- 新增“跌 8% 加仓”业务不能通过修改 `DrawdownCalculator` 实现；
+- CLI / HTTP 如果需要同样的回撤分析，可以直接复用同一 Use Case / Capability。
+
+这个顺序从第一天同时验证 SoC、SRP、能力/业务分离和逻辑/控制分离，而不是先写 MCP Tool 再补架构。
