@@ -33,15 +33,20 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
 
     const listed = await client.listTools();
     const drawdowns = listed.tools.find((tool) => tool.name === "analytics_get_drawdowns");
+    const recoveryPeriods = listed.tools.find((tool) => tool.name === "analytics_get_recovery_periods");
     const marketKline = listed.tools.find((tool) => tool.name === "market_get_kline");
     const marketSummary = listed.tools.find((tool) => tool.name === "market_get_summary");
     assert.ok(drawdowns, "analytics_get_drawdowns must be discoverable over real stdio MCP");
+    assert.ok(recoveryPeriods, "analytics_get_recovery_periods must be discoverable over real stdio MCP");
     assert.ok(marketKline, "market_get_kline must be discoverable over real stdio MCP");
     assert.ok(marketSummary, "market_get_summary must be discoverable over real stdio MCP");
     assert.equal(drawdowns.annotations?.readOnlyHint, true);
+    assert.equal(recoveryPeriods.annotations?.readOnlyHint, true);
     assert.equal(marketKline.annotations?.readOnlyHint, true);
     assert.equal(marketSummary.annotations?.readOnlyHint, true);
     assert.deepEqual(drawdowns.inputSchema.required, ["code", "market", "endDate"]);
+    assert.deepEqual(recoveryPeriods.inputSchema.required, ["code", "market", "endDate"]);
+    assert.equal(recoveryPeriods.inputSchema.additionalProperties, false);
     assert.equal(marketKline.inputSchema.properties.limit.maximum, 500);
     assert.equal(marketSummary.inputSchema.properties.limit, undefined);
 
@@ -131,6 +136,35 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
     assert.equal(drawdownPayload.meta.source.kind, "repo_ledger");
     assert.equal(drawdownPayload.meta.source.contentHash, klinePayload.meta.source.contentHash);
     assert.equal(drawdownPayload.meta.source.path, klinePayload.meta.source.path);
+
+    const recoveryResult = await client.callTool({
+      name: "analytics_get_recovery_periods",
+      arguments: {
+        code: "600001",
+        market: 1,
+        ...ledgerWindow,
+        period: "daily",
+        minDrawdown: 0.05,
+        priceField: "close",
+      },
+    });
+
+    assert.notEqual(recoveryResult.isError, true);
+    const recoveryPayload = structuredPayload(recoveryResult);
+    assert.equal(recoveryPayload.security.code, "600001");
+    assert.equal(recoveryPayload.security.market, 1);
+    assert.equal(recoveryPayload.period, "daily");
+    assert.equal(recoveryPayload.priceField, "close");
+    assert.ok(Array.isArray(recoveryPayload.periods));
+    assert.equal(recoveryPayload.periods.length, drawdownPayload.events.length);
+    assert.equal(recoveryPayload.summary.eventCount, recoveryPayload.periods.length);
+    assert.equal(
+      recoveryPayload.summary.recoveredCount + recoveryPayload.summary.ongoingCount,
+      recoveryPayload.summary.eventCount
+    );
+    assert.equal(recoveryPayload.meta.source.kind, "repo_ledger");
+    assert.equal(recoveryPayload.meta.source.contentHash, klinePayload.meta.source.contentHash);
+    assert.equal(recoveryPayload.meta.source.path, klinePayload.meta.source.path);
   } finally {
     await client.close();
   }
