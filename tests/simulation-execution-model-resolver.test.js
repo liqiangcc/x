@@ -22,15 +22,21 @@ const {
 } = require("../src/simulation/execution/buy_execution_model_resolver");
 
 test("BuyExecutionModelResolver port owns the public model identifiers and narrow resolve contract", () => {
-  assert.deepEqual(BUY_EXECUTION_MODEL_IDS, ["legacy_a_share", "domestic_stock_etf", "frictionless"]);
+  assert.deepEqual(BUY_EXECUTION_MODEL_IDS, [
+    "legacy_a_share",
+    "domestic_stock_etf",
+    "t0_etf",
+    "frictionless",
+  ]);
   assert.deepEqual(BUY_EXECUTION_MODEL_RESOLVER_METHODS, ["resolve"]);
   assert.equal(DEFAULT_BUY_EXECUTION_MODEL_ID, "legacy_a_share");
   assert.equal(normalizeBuyExecutionModelId(), "legacy_a_share");
   assert.equal(normalizeBuyExecutionModelId("domestic_stock_etf"), "domestic_stock_etf");
+  assert.equal(normalizeBuyExecutionModelId("t0_etf"), "t0_etf");
   assert.equal(normalizeBuyExecutionModelId("frictionless"), "frictionless");
   assert.throws(
     () => normalizeBuyExecutionModelId("unknown"),
-    /executionModel must be one of: legacy_a_share, domestic_stock_etf, frictionless/
+    /executionModel must be one of: legacy_a_share, domestic_stock_etf, t0_etf, frictionless/
   );
   assert.throws(() => assertBuyExecutionModelResolver(null), /must be an object/);
   assert.throws(() => assertBuyExecutionModelResolver({}), /missing methods: resolve/);
@@ -42,6 +48,7 @@ test("registered resolver maps catalog profiles and special models behind the sa
 
   const legacy = resolver.resolve({ model: "legacy_a_share", executionConfig: { lotSize: 10 } });
   const etf = resolver.resolve({ model: "domestic_stock_etf", executionConfig: { lotSize: 100 } });
+  const t0Etf = resolver.resolve({ model: "t0_etf", executionConfig: { lotSize: 100 } });
   const frictionless = resolver.resolve({ model: "frictionless", executionConfig: { lotSize: 10 } });
 
   assert.equal(legacy.describe().profileId, "legacy_a_share");
@@ -55,6 +62,13 @@ test("registered resolver maps catalog profiles and special models behind the sa
   assert.equal(etf.describe().tickSize, 0.001);
   assert.equal(etf.describe().stampDutyRate, 0);
   assert.equal(etf.describe().tPlusOne, true);
+  assert.equal(t0Etf.describe().profileId, "t0_etf");
+  assert.equal(t0Etf.describe().assetClass, "t0_eligible_etf");
+  assert.equal(t0Etf.describe().kind, "t0_etf_next_open");
+  assert.equal(t0Etf.describe().lotSize, 100);
+  assert.equal(t0Etf.describe().tickSize, 0.001);
+  assert.equal(t0Etf.describe().stampDutyRate, 0);
+  assert.equal(t0Etf.describe().tPlusOne, false);
   assert.equal(frictionless.describe().kind, "frictionless_next_open");
   assert.equal(frictionless.describe().lotSize, 10);
   assert.equal("profileId" in frictionless.describe(), false);
@@ -78,7 +92,14 @@ test("resolver can add another profiled market implementation without adding ano
     id: "domestic_stock_etf",
     kind: "custom_etf_profiled_next_open",
   });
-  const profileCatalog = createExecutionProfileCatalog({ profiles: [customProfile, etfProfile] });
+  const t0EtfProfile = defineExecutionProfile({
+    ...customProfile,
+    id: "t0_etf",
+    kind: "custom_t0_etf_profiled_next_open",
+  });
+  const profileCatalog = createExecutionProfileCatalog({
+    profiles: [customProfile, etfProfile, t0EtfProfile],
+  });
   const calls = [];
   const specialModel = {
     executeBuy() { return { status: "skipped" }; },
@@ -101,6 +122,10 @@ test("resolver can add another profiled market implementation without adding ano
   assert.equal(profiled.describe().tPlusOne, false);
   assert.equal(profiled.describe().feesIncluded, false);
   assert.equal(profiled.describe().marketRestrictionsIncluded, false);
+  assert.equal(calls.length, 0);
+
+  const t0Profiled = resolver.resolve({ model: "t0_etf", executionConfig: {} });
+  assert.equal(t0Profiled.describe().kind, "custom_t0_etf_profiled_next_open");
   assert.equal(calls.length, 0);
 
   assert.equal(resolver.resolve({ model: "frictionless", executionConfig: { lotSize: 10 } }), specialModel);
