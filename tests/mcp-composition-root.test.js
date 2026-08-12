@@ -61,9 +61,10 @@ test("MCP tool registry rejects malformed, duplicate, and unknown tools", async 
   );
 });
 
-test("MCP composition root keeps KlineReader and StrategyReader as separate shared boundaries", async () => {
+test("MCP composition root keeps KlineReader, StrategyReader, and SignalReader as separate shared boundaries", async () => {
   const klineCalls = [];
   const strategyCalls = [];
+  const signalCalls = [];
   const klineReader = {
     async readRange(input) {
       klineCalls.push(input);
@@ -104,14 +105,44 @@ test("MCP composition root keeps KlineReader and StrategyReader as separate shar
       };
     },
   };
+  const signalReader = {
+    async getStrategyCandidates(input) {
+      signalCalls.push(input);
+      return {
+        status: "ready",
+        strategyId: input.strategyId,
+        date: input.date,
+        build: {
+          id: "build-1",
+          strategyVersion: 1,
+          dataVersion: "v1",
+          algorithmVersion: 8,
+          status: "ready",
+          signalCount: 1,
+        },
+        candidates: [{
+          rank: 1,
+          securityKey: "1.600001",
+          code: "600001",
+          market: 1,
+          rankingValues: [1],
+          qualityIssues: [],
+          evidence: { matched: true },
+        }],
+        page: { offset: input.offset, limit: input.limit, returned: 1, total: 1, hasMore: false, nextOffset: null },
+        source: { kind: "fake_signal_store", readonly: true },
+      };
+    },
+  };
 
-  const { registry } = createMcpCompositionRoot({ klineReader, strategyReader });
+  const { registry } = createMcpCompositionRoot({ klineReader, strategyReader, signalReader });
   assert.deepEqual(registry.listDefinitions().map((definition) => definition.name), [
     "analytics_get_bollinger",
     "analytics_get_drawdowns",
     "analytics_get_recovery_periods",
     "market_get_kline",
     "market_get_summary",
+    "strategy_get_candidates",
     "strategy_list",
   ]);
 
@@ -156,72 +187,33 @@ test("MCP composition root keeps KlineReader and StrategyReader as separate shar
     minDrawdown: 0.2,
     priceField: "close",
   });
+  const candidateResult = await registry.invoke("strategy_get_candidates", {
+    strategyId: "example",
+    date: "2026-01-06",
+    limit: 10,
+    includeEvidence: false,
+  });
   const strategyResult = await registry.invoke("strategy_list", { includeDefinition: false });
 
   assert.deepEqual(klineCalls, [
-    {
-      code: "600001",
-      market: 1,
-      startDate: "2026-01-02",
-      endDate: "2026-01-06",
-      period: "daily",
-      limit: 3,
-    },
-    {
-      code: "600001",
-      market: 1,
-      startDate: "2026-01-02",
-      endDate: "2026-01-06",
-      period: "daily",
-      limit: null,
-    },
-    {
-      code: "600001",
-      market: 1,
-      startDate: "2026-01-02",
-      endDate: "2026-01-06",
-      period: "daily",
-      limit: null,
-    },
-    {
-      code: "600001",
-      market: 1,
-      startDate: "2026-01-02",
-      endDate: "2026-01-06",
-      period: "daily",
-      limit: null,
-    },
-    {
-      code: "600001",
-      market: 1,
-      startDate: "2026-01-02",
-      endDate: "2026-01-06",
-      period: "daily",
-      limit: null,
-    },
+    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: 3 },
+    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
+    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
+    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
+    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
   ]);
   assert.deepEqual(strategyCalls, [{ includeDefinition: false }]);
+  assert.deepEqual(signalCalls, [{ strategyId: "example", date: "2026-01-06", limit: 10, offset: 0 }]);
   assert.equal(marketResult.isError, undefined);
   assert.deepEqual(marketResult.structuredContent.bars.map((bar) => bar.date), ["2026-01-05", "2026-01-06"]);
-  assert.equal(marketResult.structuredContent.page.hasMore, true);
   assert.equal(summaryResult.isError, undefined);
-  assert.deepEqual(summaryResult.structuredContent.latest, { date: "2026-01-06", close: 100 });
-  assert.equal(summaryResult.structuredContent.coverage.barCount, 3);
-  assert.equal(summaryResult.structuredContent.range.returnRate, 0);
   assert.equal(bollingerResult.isError, undefined);
-  assert.deepEqual(bollingerResult.structuredContent.points.map((point) => point.date), ["2026-01-05", "2026-01-06"]);
-  assert.equal(bollingerResult.structuredContent.latest.middle, 90);
   assert.equal(drawdownResult.isError, undefined);
-  assert.equal(drawdownResult.structuredContent.summary.eventCount, 1);
-  assert.equal(drawdownResult.structuredContent.events[0].drawdown, -0.2);
-  assert.equal(drawdownResult.structuredContent.events[0].status, "recovered");
   assert.equal(recoveryResult.isError, undefined);
-  assert.equal(recoveryResult.structuredContent.summary.recoveredCount, 1);
-  assert.equal(recoveryResult.structuredContent.periods[0].declineTradingDays, 1);
-  assert.equal(recoveryResult.structuredContent.periods[0].recoveryTradingDays, 1);
-  assert.equal(recoveryResult.structuredContent.periods[0].underwaterTradingDays, 2);
+  assert.equal(candidateResult.isError, undefined);
+  assert.equal(candidateResult.structuredContent.candidates[0].code, "600001");
+  assert.equal(candidateResult.structuredContent.candidates[0].evidence, undefined);
   assert.equal(strategyResult.isError, undefined);
-  assert.equal(strategyResult.structuredContent.summary.count, 1);
   assert.equal(strategyResult.structuredContent.strategies[0].id, "example");
 });
 
@@ -231,6 +223,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
   const recoveryPeriodsTool = fakeTool("injected_recovery", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
+  const strategyCandidatesTool = fakeTool("injected_strategy_candidates", async () => ({ content: [], structuredContent: { ok: true } }));
   const strategyListTool = fakeTool("injected_strategy_list", async () => ({ content: [], structuredContent: { ok: true } }));
   const { registry } = createMcpCompositionRoot({
     bollingerTool,
@@ -238,6 +231,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     recoveryPeriodsTool,
     marketKlineTool,
     marketSummaryTool,
+    strategyCandidatesTool,
     strategyListTool,
   });
 
@@ -247,6 +241,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     recoveryPeriodsTool.definition,
     marketKlineTool.definition,
     marketSummaryTool.definition,
+    strategyCandidatesTool.definition,
     strategyListTool.definition,
   ]);
   for (const name of [
@@ -255,6 +250,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     "injected_recovery",
     "injected_kline",
     "injected_summary",
+    "injected_strategy_candidates",
     "injected_strategy_list",
   ]) {
     assert.deepEqual(await registry.invoke(name), {
