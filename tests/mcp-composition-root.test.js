@@ -271,8 +271,10 @@ test("MCP composition root keeps market, simulation, strategy catalog, and signa
   assert.equal(simulationResult.isError, undefined);
   assert.equal(simulationResult.structuredContent.signals.length, 2);
   assert.equal(simulationResult.structuredContent.summary.portfolio.filledTradeCount, 2);
-  assert.equal(simulationResult.structuredContent.meta.execution.feesIncluded, false);
-  assert.equal(simulationResult.structuredContent.meta.execution.slippageIncluded, false);
+  assert.equal(simulationResult.structuredContent.meta.execution.timing, "next_trading_day_open");
+  assert.equal(simulationResult.structuredContent.meta.execution.feesIncluded, true);
+  assert.equal(simulationResult.structuredContent.meta.execution.slippageIncluded, true);
+  assert.equal(simulationResult.structuredContent.meta.execution.marketRestrictionsIncluded, true);
   assert.equal(explainResult.isError, undefined);
   assert.equal(explainResult.structuredContent.candidate.evidence.rules[0].key, "r1");
   assert.equal(candidateResult.isError, undefined);
