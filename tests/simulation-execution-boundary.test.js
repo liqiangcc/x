@@ -93,6 +93,7 @@ test("simulation use case requires an injected execution model resolver", () => 
 test("execution profiles and concrete models stay behind the resolver implementation boundary", () => {
   const legacyModule = "legacy_buy_execution_model";
   const etfModule = "domestic_stock_etf_buy_execution_model";
+  const t0EtfModule = "t0_etf_buy_execution_model";
   const frictionlessModule = "frictionless_buy_execution_model";
   const profileCatalogModule = "execution_profile_catalog";
   const profiledModelModule = "profiled_buy_execution_model";
@@ -108,6 +109,7 @@ test("execution profiles and concrete models stay behind the resolver implementa
   for (const lowerSource of [portfolioSource, applicationSource, toolSource]) {
     assert.equal(lowerSource.includes(legacyModule), false);
     assert.equal(lowerSource.includes(etfModule), false);
+    assert.equal(lowerSource.includes(t0EtfModule), false);
     assert.equal(lowerSource.includes(frictionlessModule), false);
     assert.equal(lowerSource.includes(profileCatalogModule), false);
     assert.equal(lowerSource.includes(profiledModelModule), false);
@@ -118,6 +120,7 @@ test("execution profiles and concrete models stay behind the resolver implementa
   assert.equal(compositionSource.includes(resolverImplementationModule), true);
   assert.equal(compositionSource.includes(legacyModule), false);
   assert.equal(compositionSource.includes(etfModule), false);
+  assert.equal(compositionSource.includes(t0EtfModule), false);
   assert.equal(compositionSource.includes(frictionlessModule), false);
   assert.equal(compositionSource.includes(profileCatalogModule), false);
   assert.equal(compositionSource.includes(profiledModelModule), false);
@@ -129,10 +132,19 @@ test("execution profiles and concrete models stay behind the resolver implementa
   assert.equal(resolverSource.includes(frictionlessModule), true);
   assert.equal(resolverSource.includes(legacyModule), false);
   assert.equal(resolverSource.includes(etfModule), false);
+  assert.equal(resolverSource.includes(t0EtfModule), false);
 
   // The profile catalog owns market assumptions only, never execution flow.
   assert.equal(catalogSource.includes(legacyModule), false);
   assert.equal(catalogSource.includes(etfModule), false);
+  assert.equal(catalogSource.includes(t0EtfModule), false);
   assert.equal(catalogSource.includes(frictionlessModule), false);
   assert.equal(catalogSource.includes(profiledModelModule), false);
+
+  // T+0 ETF is the acceptance case for profile-only extension. Adding a
+  // dedicated concrete model would reintroduce duplicated execution flow.
+  assert.equal(
+    fs.existsSync(path.join(__dirname, "..", "src/simulation/execution/t0_etf_buy_execution_model.js")),
+    false
+  );
 });
