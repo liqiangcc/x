@@ -100,7 +100,7 @@ test("execution profiles, security classification, and concrete models stay behi
   const executionResolverPortModule = "ports/simulation/buy_execution_model_resolver";
   const executionResolverImplementationModule = "simulation/execution/buy_execution_model_resolver";
   const securityMetadataReaderPortModule = "ports/market/security_metadata_reader";
-  const securityMetadataReaderImplementationModule = "adapters/ledger/ledger_security_metadata_reader";
+  const securityMetadataReaderImplementationModule = "ledger_security_metadata_reader";
   const securityProfileResolverPortModule = "ports/simulation/security_execution_profile_resolver";
   const securityProfileResolverImplementationModule = "simulation/execution/security_execution_profile_resolver";
   const portfolioSource = source("src/simulation/portfolio/buy_only_portfolio_simulator.js");
