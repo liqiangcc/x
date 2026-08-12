@@ -6,8 +6,12 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const Database = require("better-sqlite3");
-const { assertSignalReader } = require("../src/ports/strategy/signal_reader");
+const {
+  assertSignalDetailReader,
+  assertSignalReader,
+} = require("../src/ports/strategy/signal_reader");
 const { ReadonlySqliteSignalReader } = require("../src/adapters/strategy/readonly_sqlite_signal_reader");
+const { ExplainStrategySignalUseCase } = require("../src/application/strategy/explain_strategy_signal");
 const { GetStrategyCandidatesUseCase } = require("../src/application/strategy/get_strategy_candidates");
 
 function createSignalDatabase() {
@@ -64,7 +68,11 @@ function createSignalDatabase() {
         market: 1,
         securityKey: `1.${code}`,
         rankingValues: [index + 1],
-        evidence: { rule: `r${index + 1}` },
+        qualityIssues: index === 1 ? ["z_issue", "a_issue", "a_issue"] : [],
+        evidence: {
+          rule_summary: `rule-${index + 1}`,
+          rules: [{ key: `r${index + 1}`, type: "value_compare", ok: true }],
+        },
       })
     );
   }
@@ -80,18 +88,20 @@ function createSignalDatabase() {
       market: 1,
       securityKey: "1.600010",
       rankingValues: [10],
-      evidence: { rule: "latest" },
+      evidence: { rule_summary: "latest", rules: [] },
     })
   );
   db.close();
   return { dir, databasePath };
 }
 
-test("SignalReader port requires getStrategyCandidates()", () => {
-  const reader = { async getStrategyCandidates() {} };
-  assert.equal(assertSignalReader(reader), reader);
+test("SignalReader ports keep candidate listing and exact detail as separate capabilities", () => {
+  const candidates = { async getStrategyCandidates() {} };
+  const detail = { async getStrategySignal() {} };
+  assert.equal(assertSignalReader(candidates), candidates);
+  assert.equal(assertSignalDetailReader(detail), detail);
   assert.throws(() => assertSignalReader(), /getStrategyCandidates/);
-  assert.throws(() => assertSignalReader({}), /getStrategyCandidates/);
+  assert.throws(() => assertSignalDetailReader({}), /getStrategySignal/);
 });
 
 test("readonly SQLite SignalReader selects latest ready build, latest date, and never mutates the database", async () => {
@@ -155,6 +165,60 @@ test("readonly SQLite SignalReader preserves insertion ranking and bounded pagin
   }
 });
 
+test("readonly SQLite SignalReader performs exact signal lookup without scanning or mutating the database", async () => {
+  const fixture = createSignalDatabase();
+  try {
+    const before = fs.readFileSync(fixture.databasePath);
+    const reader = new ReadonlySqliteSignalReader({ databasePath: fixture.databasePath });
+    const result = await reader.getStrategySignal({
+      strategyId: "alpha",
+      date: "20260210",
+      securityKey: "1.600002",
+    });
+    const after = fs.readFileSync(fixture.databasePath);
+
+    assert.deepEqual(after, before);
+    assert.equal(result.status, "ready");
+    assert.equal(result.strategyId, "alpha");
+    assert.equal(result.date, "2026-02-10");
+    assert.equal(result.securityKey, "1.600002");
+    assert.equal(result.build.id, "build-new");
+    assert.equal(result.candidate.rank, 2);
+    assert.equal(result.candidate.code, "600002");
+    assert.equal(result.candidate.evidence.rule_summary, "rule-2");
+    assert.equal(result.candidate.evidence.rules[0].key, "r2");
+    assert.equal(result.source.readonly, true);
+  } finally {
+    fs.rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});
+
+test("readonly SQLite SignalReader distinguishes missing build from missing exact signal", async () => {
+  const fixture = createSignalDatabase();
+  try {
+    const reader = new ReadonlySqliteSignalReader({ databasePath: fixture.databasePath });
+    const notBuilt = await reader.getStrategySignal({
+      strategyId: "missing",
+      date: "2026-02-10",
+      securityKey: "1.600001",
+    });
+    assert.equal(notBuilt.status, "not_built");
+    assert.equal(notBuilt.build, null);
+    assert.equal(notBuilt.candidate, null);
+
+    const notFound = await reader.getStrategySignal({
+      strategyId: "alpha",
+      date: "2026-02-10",
+      securityKey: "1.699999",
+    });
+    assert.equal(notFound.status, "not_found");
+    assert.equal(notFound.build.id, "build-new");
+    assert.equal(notFound.candidate, null);
+  } finally {
+    fs.rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});
+
 test("readonly SQLite SignalReader reports not_built without manufacturing candidates", async () => {
   const fixture = createSignalDatabase();
   try {
@@ -174,6 +238,10 @@ test("readonly SQLite SignalReader fails closed when the signal database does no
   const reader = new ReadonlySqliteSignalReader({ databasePath });
   await assert.rejects(
     () => reader.getStrategyCandidates({ strategyId: "alpha" }),
+    (error) => error.code === "signal_store_unavailable"
+  );
+  await assert.rejects(
+    () => reader.getStrategySignal({ strategyId: "alpha", date: "2026-02-10", securityKey: "1.600001" }),
     (error) => error.code === "signal_store_unavailable"
   );
   assert.equal(fs.existsSync(databasePath), false);
@@ -234,4 +302,56 @@ test("GetStrategyCandidatesUseCase keeps evidence opt-in and delegates normalize
     includeEvidence: true,
   });
   assert.deepEqual(detailed.candidates[0].evidence, { matched: true });
+});
+
+test("ExplainStrategySignalUseCase normalizes exact identity and always projects stored evidence", async () => {
+  const calls = [];
+  const useCase = new ExplainStrategySignalUseCase({
+    signalReader: {
+      async getStrategySignal(input) {
+        calls.push(input);
+        return {
+          status: "ready",
+          strategyId: input.strategyId,
+          date: input.date,
+          securityKey: input.securityKey,
+          build: {
+            id: "b2",
+            strategyVersion: 2,
+            dataVersion: "v2",
+            algorithmVersion: 8,
+            status: "ready",
+            signalCount: 4,
+          },
+          candidate: {
+            rank: 2,
+            securityKey: input.securityKey,
+            code: "600002",
+            market: 1,
+            rankingValues: [2, Number.NaN],
+            qualityIssues: ["z", "a", "a"],
+            evidence: { rule_summary: "matched", rules: [{ key: "r1", ok: true }] },
+          },
+          source: { kind: "fake", readonly: true },
+        };
+      },
+    },
+  });
+
+  const result = await useCase.execute({
+    strategyId: " alpha ",
+    date: "20260210",
+    securityKey: " 1.600002 ",
+  });
+  assert.deepEqual(calls, [{
+    strategyId: "alpha",
+    date: "2026-02-10",
+    securityKey: "1.600002",
+  }]);
+  assert.equal(result.status, "ready");
+  assert.equal(result.candidate.rank, 2);
+  assert.deepEqual(result.candidate.rankingValues, [2, null]);
+  assert.deepEqual(result.candidate.qualityIssues, ["a", "z"]);
+  assert.equal(result.candidate.evidence.rule_summary, "matched");
+  assert.equal(result.candidate.evidence.rules[0].key, "r1");
 });
