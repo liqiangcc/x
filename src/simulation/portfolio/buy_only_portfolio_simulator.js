@@ -148,7 +148,7 @@ function simulateBuyOrders({
       marketValue: snapshot.marketValue,
       equity: snapshot.equity,
       unrealizedPnl: snapshot.unrealizedPnl,
-      totalReturn: snapshot.equity / normalizedInitialCash - 1,
+      totalReturn: roundMoney(snapshot.equity / normalizedInitialCash - 1),
     }),
     config: Object.freeze({
       lotSize: normalizedLotSize,
