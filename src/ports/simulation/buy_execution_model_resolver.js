@@ -3,6 +3,7 @@
 const DEFAULT_BUY_EXECUTION_MODEL_ID = "legacy_a_share";
 const BUY_EXECUTION_MODEL_IDS = Object.freeze([
   "legacy_a_share",
+  "domestic_stock_etf",
   "frictionless",
 ]);
 const BUY_EXECUTION_MODEL_RESOLVER_METHODS = Object.freeze(["resolve"]);
