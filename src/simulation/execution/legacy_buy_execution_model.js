@@ -6,16 +6,12 @@ const { normalizeLegacyRules, validateOrderQuantity } = require("../../simulator
 const { executionBlockReason } = require("../../simulator/mechanisms/a_share_rules");
 const { createFill } = require("../../simulator/mechanisms/fill_model");
 const { adverseOpenPrice } = require("../../simulator/mechanisms/slippage_model");
-
-function positiveMoney(value, field) {
-  if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
-  return value;
-}
-
-function nonNegativeMoney(value, field) {
-  if (!Number.isFinite(value) || value < 0) throw new TypeError(`${field} must be non-negative.`);
-  return value;
-}
+const {
+  nonNegativeMoney,
+  normalizeExecutionBars,
+  positiveMoney,
+  skippedBuyExecutionResult,
+} = require("./execution_model_support");
 
 function normalizeTickSize(value) {
   const normalized = Number(value ?? 0.01);
@@ -38,38 +34,6 @@ function normalizeExecutionConfig(input = {}) {
     stampDutyRate: rules.stampDutyRate,
     tickSize: normalizeTickSize(input.tickSize),
     qualityIssues: Object.freeze([...rules.qualityIssues]),
-  });
-}
-
-function normalizeBars(bars) {
-  if (!Array.isArray(bars)) throw new TypeError("bars must be an array.");
-  let previousDate = null;
-  return bars.map((bar, index) => {
-    const date = String(bar?.date ?? "");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TypeError(`bars[${index}].date must be an ISO date.`);
-    if (previousDate && date <= previousDate) throw new TypeError("bars must be strictly ordered by ascending date.");
-    previousDate = date;
-    return bar;
-  });
-}
-
-function skippedResult({ status, reason, signalDate, executionDate = null, requestedBudget, effectiveBudget }) {
-  return Object.freeze({
-    status,
-    reason,
-    signalDate,
-    executionDate,
-    date: executionDate ?? signalDate,
-    requestedBudget,
-    effectiveBudget,
-    price: null,
-    quantity: 0,
-    grossAmount: 0,
-    feeAmount: 0,
-    fees: Object.freeze({ commission: 0, stampDuty: 0, total: 0 }),
-    slippageAmount: 0,
-    totalCost: 0,
-    availableDate: null,
   });
 }
 
@@ -103,7 +67,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
       cashAvailable,
       orderIndex = 1,
     } = {}) {
-      const rows = normalizeBars(bars);
+      const rows = normalizeExecutionBars(bars);
       const budget = positiveMoney(Number(requestedBudget), "requestedBudget");
       const availableCash = nonNegativeMoney(Number(cashAvailable), "cashAvailable");
       const effectiveBudget = Math.min(budget, availableCash);
@@ -114,7 +78,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
       const executionIndex = signalIndex + 1;
       const bar = rows[executionIndex] ?? null;
       if (!bar) {
-        return skippedResult({
+        return skippedBuyExecutionResult({
           status: "skipped_no_execution_bar",
           reason: "no_next_trading_bar",
           signalDate: normalizedSignalDate,
@@ -125,7 +89,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
 
       const blocked = executionBlockReason({ bar, side: OrderSide.BUY });
       if (blocked) {
-        return skippedResult({
+        return skippedBuyExecutionResult({
           status: "skipped_market_restriction",
           reason: blocked,
           signalDate: normalizedSignalDate,
@@ -186,7 +150,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
         quantity -= config.lotSize;
       }
 
-      return skippedResult({
+      return skippedBuyExecutionResult({
         status: "skipped_insufficient_budget",
         reason: "budget_cannot_cover_one_lot_with_fees",
         signalDate: normalizedSignalDate,
