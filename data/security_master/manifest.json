@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "recordSets": [
+    {
+      "kind": "universe_snapshot",
+      "path": "universe/20260701/stocks.json",
+      "effectiveFrom": "2026-07-01",
+      "effectiveTo": null,
+      "classification": {
+        "instrumentType": "a_share",
+        "intradayRoundTripEligible": false
+      },
+      "source": {
+        "provider": "eastmoney_clist",
+        "document": "data/universe/20260701/stocks.json",
+        "version": "20260701",
+        "collectedAt": "2026-07-01T15:27:03.310Z"
+      },
+      "qualityIssues": [
+        "classification_inherited_from_hs_a_universe_snapshot"
+      ]
+    }
+  ],
+  "records": []
+}
