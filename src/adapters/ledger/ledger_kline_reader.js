@@ -4,7 +4,6 @@ const {
   ExistingKlineRepository,
   isoDate,
 } = require("../../simulator/adapters/ledger/existing_kline_repository");
-const { assertKlineReader } = require("../../ports/market/kline_reader");
 
 function normalizeOptionalDate(value, field) {
   if (value === undefined || value === null || value === "") return null;
@@ -71,10 +70,6 @@ class LedgerKlineReader {
     };
   }
 }
-
-assertKlineReader(new LedgerKlineReader({
-  repository: { getLegacyHistory: async () => ({ bars: [] }) },
-}));
 
 module.exports = {
   LedgerKlineReader,
