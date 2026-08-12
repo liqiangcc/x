@@ -97,22 +97,24 @@ test("buy-only portfolio executes signals through the injected execution model a
     lotSize: 10,
   });
 
+  // This fixture deliberately has high === low === open. The shared slippage
+  // model therefore clamps adverse slippage back into the executable bar range.
   assert.deepEqual(result.trades.map((trade) => [trade.status, trade.signalDate, trade.executionDate, trade.quantity, trade.totalCost]), [
-    ["filled", "2026-01-02", "2026-01-05", 30, 245.3],
-    ["filled", "2026-01-05", "2026-01-06", 20, 245.4],
+    ["filled", "2026-01-02", "2026-01-05", 30, 245],
+    ["filled", "2026-01-05", "2026-01-06", 20, 245],
   ]);
-  assert.equal(result.summary.investedAmount, 490.7);
-  assert.equal(result.summary.grossAmount, 480.7);
+  assert.equal(result.summary.investedAmount, 490);
+  assert.equal(result.summary.grossAmount, 480);
   assert.equal(result.summary.totalFees, 10);
-  assert.equal(result.summary.totalSlippage, 0.7);
-  assert.equal(result.summary.remainingCash, 509.3);
+  assert.equal(result.summary.totalSlippage, 0);
+  assert.equal(result.summary.remainingCash, 510);
   assert.equal(result.summary.quantity, 50);
-  assert.equal(result.summary.averageCost, 9.814);
+  assert.equal(result.summary.averageCost, 9.8);
   assert.equal(result.summary.finalPrice, 12);
   assert.equal(result.summary.marketValue, 600);
-  assert.equal(result.summary.equity, 1109.3);
-  assert.ok(Math.abs(result.summary.unrealizedPnl - 109.3) < 1e-9);
-  assert.equal(result.summary.totalReturn, 0.1093);
+  assert.equal(result.summary.equity, 1110);
+  assert.ok(Math.abs(result.summary.unrealizedPnl - 110) < 1e-9);
+  assert.equal(result.summary.totalReturn, 0.11);
   assert.equal(result.config.timing, "next_trading_day_open");
   assert.equal(result.config.executionPriceField, "open");
   assert.equal(result.config.feesIncluded, true);
