@@ -41,13 +41,20 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
     assert.deepEqual(drawdowns.inputSchema.required, ["code", "market", "endDate"]);
     assert.equal(marketKline.inputSchema.properties.limit.maximum, 500);
 
+    // Keep the E2E window inside the checked-in ledger fixture. The sample
+    // 600001 history currently ends on 2009-12-15; the test must not imply
+    // that a repository fixture contains present-day market data.
+    const ledgerWindow = {
+      startDate: "2009-01-01",
+      endDate: "2009-12-15",
+    };
+
     const klineResult = await client.callTool({
       name: "market_get_kline",
       arguments: {
         code: "600001",
         market: 1,
-        startDate: "2025-01-01",
-        endDate: "2026-08-12",
+        ...ledgerWindow,
         period: "daily",
         limit: 5,
         adjustment: "ledger_default",
@@ -61,6 +68,7 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
     assert.equal(klinePayload.period, "daily");
     assert.equal(klinePayload.adjustment, "ledger_default");
     assert.ok(klinePayload.bars.length > 0 && klinePayload.bars.length <= 5);
+    assert.equal(klinePayload.bars.at(-1)?.date, "2009-12-15");
     assert.equal(klinePayload.page.returnedBars, klinePayload.bars.length);
     assert.equal(typeof klinePayload.page.hasMore, "boolean");
     assert.equal(klinePayload.meta.source.kind, "repo_ledger");
@@ -75,8 +83,7 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
       arguments: {
         code: "600001",
         market: 1,
-        startDate: "2025-01-01",
-        endDate: "2026-08-12",
+        ...ledgerWindow,
         period: "daily",
         minDrawdown: 0.05,
         priceField: "close",
@@ -90,6 +97,7 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
     assert.equal(drawdownPayload.period, "daily");
     assert.equal(drawdownPayload.priceField, "close");
     assert.ok(Array.isArray(drawdownPayload.events));
+    assert.ok(drawdownPayload.events.length > 0);
     assert.equal(drawdownPayload.meta.source.kind, "repo_ledger");
     assert.equal(drawdownPayload.meta.source.contentHash, klinePayload.meta.source.contentHash);
     assert.equal(drawdownPayload.meta.source.path, klinePayload.meta.source.path);
