@@ -1,0 +1,69 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const test = require("node:test");
+const { Client } = require("@modelcontextprotocol/client");
+const { StdioClientTransport } = require("@modelcontextprotocol/client/stdio");
+
+function structuredPayload(result) {
+  if (result?.structuredContent && typeof result.structuredContent === "object") {
+    return result.structuredContent;
+  }
+  const text = result?.content?.find((item) => item?.type === "text")?.text;
+  if (typeof text !== "string") throw new TypeError("MCP tool result has no structuredContent or text payload.");
+  return JSON.parse(text);
+}
+
+test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { timeout: 20_000 }, async () => {
+  const repositoryRoot = path.resolve(__dirname, "..");
+  const client = new Client({ name: "x-mcp-stdio-e2e", version: "0.1.0" });
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.join(repositoryRoot, "src/adapters/mcp/stdio_entry.js")],
+    cwd: repositoryRoot,
+  });
+
+  try {
+    await client.connect(transport);
+
+    const listed = await client.listTools();
+    const drawdowns = listed.tools.find((tool) => tool.name === "analytics_get_drawdowns");
+    assert.ok(drawdowns, "analytics_get_drawdowns must be discoverable over real stdio MCP");
+    assert.equal(drawdowns.annotations?.readOnlyHint, true);
+    assert.deepEqual(drawdowns.inputSchema.required, ["code", "market", "endDate"]);
+
+    const result = await client.callTool({
+      name: "analytics_get_drawdowns",
+      arguments: {
+        code: "600001",
+        market: 1,
+        startDate: "2025-01-01",
+        endDate: "2026-08-12",
+        period: "daily",
+        minDrawdown: 0.05,
+        priceField: "close",
+      },
+    });
+
+    assert.notEqual(result.isError, true);
+    const payload = structuredPayload(result);
+    assert.equal(payload.security.code, "600001");
+    assert.equal(payload.security.market, 1);
+    assert.equal(payload.period, "daily");
+    assert.equal(payload.priceField, "close");
+    assert.ok(Array.isArray(payload.events));
+    assert.equal(payload.meta.source.kind, "repo_ledger");
+    assert.ok(payload.meta.source.contentHash);
+    assert.match(
+      payload.meta.source.path,
+      /data[\\/]kline[\\/]daily[\\/]600[\\/]600001\.json$/
+    );
+  } finally {
+    await client.close();
+  }
+});
+
+module.exports = {
+  structuredPayload,
+};
