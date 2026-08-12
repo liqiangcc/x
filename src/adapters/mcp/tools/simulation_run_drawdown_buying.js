@@ -89,7 +89,7 @@ const INPUT_SCHEMA = Object.freeze({
       type: "string",
       enum: [...BUY_EXECUTION_MODEL_IDS],
       default: DEFAULT_BUY_EXECUTION_MODEL_ID,
-      description: "Execution assumptions for the same business policy. legacy_a_share includes approximate A-share fees, slippage and market restrictions; frictionless keeps next-day-open timing but removes those frictions for comparison.",
+      description: "Execution assumptions for the same business policy. legacy_a_share uses the repository's approximate A-share rules; domestic_stock_etf uses an approximate domestic stock-ETF profile with 100-share lots, 0.001 price tick, T+1 and zero stamp duty and does not model T+0 ETF categories; frictionless preserves next-trading-day-open timing while removing fees, slippage and market restrictions for comparison.",
     },
   },
   required: ["code", "market", "endDate"],
@@ -171,7 +171,7 @@ const OUTPUT_SCHEMA = Object.freeze({
 const TOOL_DEFINITION = Object.freeze({
   name: TOOL_NAME,
   title: "Simulate Drawdown Buying",
-  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. The business policy is unchanged across execution models: legacy_a_share applies the repository's approximate A-share lot, market-restriction, slippage and fee mechanisms, while frictionless preserves next-trading-day-open timing but removes those frictions for comparison. This is read-only analysis, not trade execution.",
+  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. The business policy is unchanged across execution models: legacy_a_share applies approximate A-share execution, domestic_stock_etf applies an approximate domestic stock-ETF T+1 profile and explicitly excludes T+0 ETF categories, and frictionless keeps next-trading-day-open timing while removing trading frictions for comparison. This is read-only analysis, not trade execution.",
   inputSchema: INPUT_SCHEMA,
   outputSchema: OUTPUT_SCHEMA,
   annotations: Object.freeze({
