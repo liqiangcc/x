@@ -6,11 +6,13 @@ const {
   DEFAULT_BUY_EXECUTION_MODEL_ID,
   normalizeBuyExecutionModelId,
 } = require("../../ports/simulation/buy_execution_model_resolver");
+const { createDomesticStockEtfBuyExecutionModel } = require("./domestic_stock_etf_buy_execution_model");
 const { createFrictionlessBuyExecutionModel } = require("./frictionless_buy_execution_model");
 const { createLegacyBuyExecutionModel } = require("./legacy_buy_execution_model");
 
 const DEFAULT_BUY_EXECUTION_MODEL_FACTORIES = Object.freeze({
   legacy_a_share: createLegacyBuyExecutionModel,
+  domestic_stock_etf: createDomesticStockEtfBuyExecutionModel,
   frictionless: createFrictionlessBuyExecutionModel,
 });
 
