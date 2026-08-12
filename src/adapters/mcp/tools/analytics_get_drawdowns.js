@@ -1,5 +1,7 @@
 "use strict";
 
+const { errorPayload, jsonResult } = require("../tool_result");
+
 const TOOL_NAME = "analytics_get_drawdowns";
 
 const INPUT_SCHEMA = Object.freeze({
@@ -118,26 +120,6 @@ const TOOL_DEFINITION = Object.freeze({
   }),
 });
 
-function jsonResult(payload, { isError = false } = {}) {
-  return {
-    content: [{ type: "text", text: JSON.stringify(payload) }],
-    structuredContent: payload,
-    ...(isError ? { isError: true } : {}),
-  };
-}
-
-function errorPayload(error) {
-  const code = typeof error?.code === "string" && error.code
-    ? error.code
-    : error instanceof TypeError
-      ? "invalid_arguments"
-      : "tool_execution_failed";
-  const message = typeof error?.message === "string" && error.message
-    ? error.message
-    : "Tool execution failed.";
-  return { error: { code, message } };
-}
-
 function createAnalyticsGetDrawdownsTool({ useCase } = {}) {
   if (!useCase || typeof useCase.execute !== "function") {
     throw new TypeError("useCase must provide execute().");
@@ -161,6 +143,4 @@ module.exports = {
   TOOL_DEFINITION,
   TOOL_NAME,
   createAnalyticsGetDrawdownsTool,
-  errorPayload,
-  jsonResult,
 };
