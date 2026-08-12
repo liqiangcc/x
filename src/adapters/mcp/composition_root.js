@@ -12,6 +12,7 @@ const { SimulateDrawdownBuyingUseCase } = require("../../application/simulation/
 const { ExplainStrategySignalUseCase } = require("../../application/strategy/explain_strategy_signal");
 const { GetStrategyCandidatesUseCase } = require("../../application/strategy/get_strategy_candidates");
 const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
+const { createLegacyBuyExecutionModel } = require("../../simulation/execution/legacy_buy_execution_model");
 const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
@@ -28,6 +29,7 @@ function createMcpCompositionRoot({
   strategyReader = null,
   signalReader = null,
   signalDatabasePath = null,
+  simulationExecutionModelFactory = createLegacyBuyExecutionModel,
   bollingerUseCase = null,
   bollingerTool = null,
   drawdownsUseCase = null,
@@ -51,6 +53,9 @@ function createMcpCompositionRoot({
   const resolvedRegistry = registry ?? new McpToolRegistry();
   if (!(resolvedRegistry instanceof McpToolRegistry) && typeof resolvedRegistry.register !== "function") {
     throw new TypeError("registry must provide register().");
+  }
+  if (typeof simulationExecutionModelFactory !== "function") {
+    throw new TypeError("simulationExecutionModelFactory must be a function.");
   }
 
   let resolvedKlineReader = klineReader;
@@ -119,6 +124,7 @@ function createMcpCompositionRoot({
   if (!resolvedSimulationTool) {
     const resolvedUseCase = simulationUseCase ?? new SimulateDrawdownBuyingUseCase({
       klineReader: getKlineReader(),
+      createExecutionModel: simulationExecutionModelFactory,
     });
     resolvedSimulationTool = createSimulationRunDrawdownBuyingTool({ useCase: resolvedUseCase });
   }
