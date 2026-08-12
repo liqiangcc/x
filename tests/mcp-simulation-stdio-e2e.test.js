@@ -15,7 +15,7 @@ function structuredPayload(result) {
   return JSON.parse(text);
 }
 
-test("stdio MCP client runs drawdown buying simulation through the real ledger composition", { timeout: 20_000 }, async () => {
+test("stdio MCP client runs execution-aware drawdown buying simulation through the real ledger composition", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
   const client = new Client(
     { name: "x-mcp-simulation-stdio-e2e", version: "0.1.0" },
@@ -39,6 +39,7 @@ test("stdio MCP client runs drawdown buying simulation through the real ledger c
     assert.deepEqual(simulation.inputSchema.properties.period.enum, ["daily"]);
     assert.equal(simulation.inputSchema.properties.drawdownStep.default, 0.08);
     assert.equal(simulation.inputSchema.properties.trancheFraction.default, 0.1);
+    assert.equal(simulation.inputSchema.properties.lotSize.default, 100);
 
     // Keep the test inside the checked-in ledger fixture rather than implying
     // that the repository contains current market data.
@@ -55,7 +56,7 @@ test("stdio MCP client runs drawdown buying simulation through the real ledger c
         drawdownStep: 0.08,
         trancheFraction: 0.1,
         maxPurchases: 10,
-        lotSize: 1,
+        lotSize: 100,
         priceField: "close",
       },
     });
@@ -71,12 +72,22 @@ test("stdio MCP client runs drawdown buying simulation through the real ledger c
     assert.equal(payload.config.drawdownStep, 0.08);
     assert.equal(payload.config.trancheFraction, 0.1);
     assert.equal(payload.config.maxPurchases, 10);
+    assert.equal(payload.config.lotSize, 100);
     assert.ok(payload.signals.length >= 1);
     assert.equal(payload.signals[0].type, "initial_entry");
     assert.equal(payload.trades.length, payload.signals.length);
     assert.ok(payload.summary.portfolio.filledTradeCount >= 1);
     assert.ok(payload.summary.portfolio.filledTradeCount <= payload.config.maxPurchases);
     assert.equal(typeof payload.summary.portfolio.totalReturn, "number");
+    assert.ok(payload.summary.portfolio.totalFees > 0);
+    assert.ok(payload.summary.portfolio.totalSlippage >= 0);
+
+    const firstFill = payload.trades.find((trade) => trade.status === "filled");
+    assert.ok(firstFill, "at least one signal must execute in the checked-in fixture");
+    assert.ok(firstFill.executionDate > firstFill.signalDate, "execution must occur after the signal bar");
+    assert.ok(firstFill.feeAmount > 0);
+    assert.ok(firstFill.quantity % 100 === 0);
+
     assert.equal(payload.meta.source.kind, "repo_ledger");
     assert.ok(payload.meta.source.contentHash);
     assert.match(
@@ -84,9 +95,15 @@ test("stdio MCP client runs drawdown buying simulation through the real ledger c
       /data[\\/]kline[\\/]daily[\\/]600[\\/]600001\.json$/
     );
     assert.equal(payload.meta.execution.priceField, "close");
-    assert.equal(payload.meta.execution.lotSize, 1);
-    assert.equal(payload.meta.execution.feesIncluded, false);
-    assert.equal(payload.meta.execution.slippageIncluded, false);
+    assert.equal(payload.meta.execution.signalPriceField, "close");
+    assert.equal(payload.meta.execution.executionPriceField, "open");
+    assert.equal(payload.meta.execution.timing, "next_trading_day_open");
+    assert.equal(payload.meta.execution.lotSize, 100);
+    assert.equal(payload.meta.execution.feesIncluded, true);
+    assert.equal(payload.meta.execution.slippageIncluded, true);
+    assert.equal(payload.meta.execution.marketRestrictionsIncluded, true);
+    assert.ok(payload.meta.execution.qualityIssues.includes("historical_fee_rules_unavailable"));
+    assert.ok(payload.meta.execution.qualityIssues.includes("market_rule_approximation"));
   } finally {
     await client.close();
   }
