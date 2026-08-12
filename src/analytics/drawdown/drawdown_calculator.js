@@ -40,14 +40,14 @@ function normalizePoints(rows, priceField) {
 
 function materializeEvent({ peak, trough, recovery, minDrawdown }) {
   if (!peak || !trough || trough.price >= peak.price) return null;
-  const drawdown = (trough.price / peak.price) - 1;
-  if (-drawdown < minDrawdown) return null;
+  const drawdownMagnitude = (peak.price - trough.price) / peak.price;
+  if (drawdownMagnitude < minDrawdown) return null;
   return {
     peakDate: peak.date,
     peakPrice: peak.price,
     troughDate: trough.date,
     troughPrice: trough.price,
-    drawdown,
+    drawdown: -drawdownMagnitude,
     peakToTroughTradingDays: trough.index - peak.index,
     recoveryDate: recovery?.date ?? null,
     recoveryTradingDays: recovery ? recovery.index - trough.index : null,
