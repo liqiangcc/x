@@ -3,6 +3,7 @@
 const { Account } = require("../../simulator/core/account");
 const { normalizeSecurityId, securityKey } = require("../../simulator/core/contracts");
 const { roundMoney } = require("../../simulator/core/position");
+const { createLegacyBuyExecutionModel } = require("../execution/legacy_buy_execution_model");
 
 const PRICE_FIELDS = Object.freeze(["open", "close", "high", "low"]);
 
@@ -12,7 +13,7 @@ function normalizePositiveMoney(value, field) {
 }
 
 function normalizeLotSize(value) {
-  const normalized = value ?? 1;
+  const normalized = value ?? 100;
   if (!Number.isInteger(normalized) || normalized < 1) {
     throw new TypeError("lotSize must be a positive integer.");
   }
@@ -27,20 +28,18 @@ function normalizePriceField(value) {
   return normalized;
 }
 
-function indexBars(bars, priceField) {
+function normalizeBars(bars, priceField) {
   if (!Array.isArray(bars)) throw new TypeError("bars must be an array.");
-  const indexed = new Map();
   let previousDate = null;
-  for (const [index, bar] of bars.entries()) {
+  return bars.map((bar, index) => {
     const date = String(bar?.date ?? "");
-    const price = Number(bar?.[priceField]);
+    const markPrice = Number(bar?.[priceField]);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TypeError(`bars[${index}].date must be an ISO date.`);
     if (previousDate && date <= previousDate) throw new TypeError("bars must be strictly ordered by ascending date.");
-    if (!Number.isFinite(price) || price <= 0) throw new TypeError(`bars[${index}].${priceField} must be positive.`);
-    indexed.set(date, { date, price });
+    if (!Number.isFinite(markPrice) || markPrice <= 0) throw new TypeError(`bars[${index}].${priceField} must be positive.`);
     previousDate = date;
-  }
-  return indexed;
+    return { ...bar, date, markPrice };
+  });
 }
 
 function normalizeOrders(orders) {
@@ -61,77 +60,73 @@ function normalizeOrders(orders) {
   });
 }
 
+function assertBuyExecutionModel(model) {
+  if (!model || typeof model !== "object") throw new TypeError("executionModel must be an object.");
+  if (typeof model.executeBuy !== "function") throw new TypeError("executionModel must provide executeBuy().");
+  if (typeof model.describe !== "function") throw new TypeError("executionModel must provide describe().");
+  return model;
+}
+
 function simulateBuyOrders({
   bars,
   orders,
   security,
   initialCash = 100000,
-  lotSize = 1,
+  lotSize = 100,
   priceField = "close",
+  executionModel = null,
 } = {}) {
   const normalizedSecurity = normalizeSecurityId(security);
   const normalizedInitialCash = normalizePositiveMoney(Number(initialCash), "initialCash");
   const normalizedLotSize = normalizeLotSize(lotSize);
   const normalizedPriceField = normalizePriceField(priceField);
-  const barIndex = indexBars(bars, normalizedPriceField);
+  const rows = normalizeBars(bars, normalizedPriceField);
   const normalizedOrders = normalizeOrders(orders);
+  const resolvedExecutionModel = assertBuyExecutionModel(
+    executionModel ?? createLegacyBuyExecutionModel({ executionConfig: { lotSize: normalizedLotSize } })
+  );
   const account = new Account({ initialCash: normalizedInitialCash });
   const trades = [];
 
   for (const [index, order] of normalizedOrders.entries()) {
-    const point = barIndex.get(order.date);
-    if (!point) throw new TypeError(`No ${normalizedPriceField} price is available for order date ${order.date}.`);
-    const effectiveBudget = Math.min(order.budget, account.cashAvailable);
-    const lots = Math.floor((effectiveBudget + Number.EPSILON) / (point.price * normalizedLotSize));
-    const quantity = lots * normalizedLotSize;
-
-    if (quantity < normalizedLotSize) {
-      trades.push(Object.freeze({
-        index: index + 1,
-        date: order.date,
-        status: "skipped_insufficient_budget",
-        requestedBudget: order.budget,
-        effectiveBudget,
-        price: point.price,
-        quantity: 0,
-        totalCost: 0,
-        metadata: Object.freeze(order.metadata),
-      }));
-      continue;
-    }
-
-    const totalCost = roundMoney(quantity * point.price);
-    const orderId = `buy-only-${index + 1}`;
-    account.freezeBuy({ amount: totalCost, orderId });
-    account.settleBuy({
-      availableDate: order.date,
-      fees: 0,
-      orderId,
-      quantity,
-      security: normalizedSecurity,
-      totalCost,
-    });
-    account.openTradingDate(order.date);
-    trades.push(Object.freeze({
-      index: index + 1,
-      date: order.date,
-      status: "filled",
+    const execution = resolvedExecutionModel.executeBuy({
+      bars: rows,
+      signalDate: order.date,
       requestedBudget: order.budget,
-      effectiveBudget,
-      price: point.price,
-      quantity,
-      totalCost,
+      cashAvailable: account.cashAvailable,
+      security: normalizedSecurity,
+      orderIndex: index + 1,
+    });
+    const trade = Object.freeze({
+      index: index + 1,
+      ...execution,
       metadata: Object.freeze(order.metadata),
-    }));
+    });
+    trades.push(trade);
+    if (execution.status !== "filled") continue;
+
+    account.openTradingDate(execution.executionDate);
+    const orderId = `buy-only-${index + 1}`;
+    account.freezeBuy({ amount: execution.totalCost, orderId });
+    account.settleBuy({
+      availableDate: execution.availableDate,
+      fees: execution.feeAmount,
+      orderId,
+      quantity: execution.quantity,
+      security: normalizedSecurity,
+      totalCost: execution.totalCost,
+    });
   }
 
-  const lastPoint = [...barIndex.values()].at(-1) ?? null;
+  const lastPoint = rows.at(-1) ?? null;
+  if (lastPoint) account.openTradingDate(lastPoint.date);
   const key = securityKey(normalizedSecurity);
   const snapshot = account.snapshot({
-    prices: lastPoint ? { [key]: lastPoint.price } : {},
+    prices: lastPoint ? { [key]: lastPoint.markPrice } : {},
   });
   const filledTrades = trades.filter((trade) => trade.status === "filled");
   const position = snapshot.positions[0] ?? null;
+  const executionDescription = resolvedExecutionModel.describe();
 
   return Object.freeze({
     security: normalizedSecurity,
@@ -141,27 +136,30 @@ function simulateBuyOrders({
       filledTradeCount: filledTrades.length,
       skippedTradeCount: trades.length - filledTrades.length,
       investedAmount: roundMoney(filledTrades.reduce((sum, trade) => sum + trade.totalCost, 0)),
+      grossAmount: roundMoney(filledTrades.reduce((sum, trade) => sum + trade.grossAmount, 0)),
+      totalFees: snapshot.totalFees,
+      totalSlippage: roundMoney(filledTrades.reduce((sum, trade) => sum + trade.slippageAmount, 0)),
       remainingCash: snapshot.cash,
       quantity: position?.quantity ?? 0,
       averageCost: position?.averageCost ?? 0,
-      finalPrice: lastPoint?.price ?? null,
+      finalPrice: lastPoint?.markPrice ?? null,
       marketValue: snapshot.marketValue,
       equity: snapshot.equity,
       unrealizedPnl: snapshot.unrealizedPnl,
       totalReturn: roundMoney(snapshot.equity / normalizedInitialCash - 1),
     }),
     config: Object.freeze({
-      lotSize: normalizedLotSize,
       priceField: normalizedPriceField,
-      feesIncluded: false,
-      slippageIncluded: false,
+      signalPriceField: normalizedPriceField,
+      ...executionDescription,
     }),
   });
 }
 
 module.exports = {
   PRICE_FIELDS,
-  indexBars,
+  assertBuyExecutionModel,
+  normalizeBars,
   normalizeLotSize,
   normalizeOrders,
   normalizePriceField,
