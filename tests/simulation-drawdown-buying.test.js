@@ -177,6 +177,7 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
     trancheFraction: 0.25,
     maxPurchases: 4,
     lotSize: 1,
+    executionModel: "legacy_a_share",
   });
 
   assert.deepEqual(calls, [{
@@ -204,6 +205,8 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
   assert.equal(result.meta.execution.timing, "next_trading_day_open");
   assert.equal(result.meta.execution.feesIncluded, true);
   assert.equal(result.meta.execution.slippageIncluded, true);
+  assert.equal(result.meta.executionSelection.mode, "explicit_override");
+  assert.equal(result.meta.executionSelection.profileId, "legacy_a_share");
 });
 
 test("SimulateDrawdownBuyingUseCase keeps policy, resolver, and portfolio implementations injectable", async () => {
