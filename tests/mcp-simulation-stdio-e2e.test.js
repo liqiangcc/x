@@ -13,7 +13,7 @@ function structuredPayload(result) {
   return JSON.parse(text);
 }
 
-test("stdio MCP client compares stock, ETF, and frictionless execution through the real ledger composition", { timeout: 20_000 }, async () => {
+test("stdio MCP client compares stock, T+1 ETF, T+0 ETF, and frictionless execution through the real ledger composition", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
   const client = new Client(
     { name: "x-mcp-simulation-stdio-e2e", version: "0.1.0" },
@@ -41,6 +41,7 @@ test("stdio MCP client compares stock, ETF, and frictionless execution through t
     assert.deepEqual(simulation.inputSchema.properties.executionModel.enum, [
       "legacy_a_share",
       "domestic_stock_etf",
+      "t0_etf",
       "frictionless",
     ]);
     assert.equal(simulation.inputSchema.properties.executionModel.default, "legacy_a_share");
@@ -66,9 +67,10 @@ test("stdio MCP client compares stock, ETF, and frictionless execution through t
 
     const legacy = await call("legacy_a_share");
     const etf = await call("domestic_stock_etf");
+    const t0Etf = await call("t0_etf");
     const frictionless = await call("frictionless");
 
-    for (const payload of [legacy, etf, frictionless]) {
+    for (const payload of [legacy, etf, t0Etf, frictionless]) {
       assert.equal(payload.security.code, "600001");
       assert.equal(payload.security.market, 1);
       assert.equal(payload.period, "daily");
@@ -90,6 +92,7 @@ test("stdio MCP client compares stock, ETF, and frictionless execution through t
     }
 
     assert.deepEqual(etf.signals, legacy.signals);
+    assert.deepEqual(t0Etf.signals, legacy.signals);
     assert.deepEqual(frictionless.signals, legacy.signals);
 
     assert.equal(legacy.config.executionModel, "legacy_a_share");
@@ -106,6 +109,18 @@ test("stdio MCP client compares stock, ETF, and frictionless execution through t
     assert.equal(etf.meta.execution.slippageIncluded, true);
     assert.ok(etf.meta.execution.qualityIssues.includes("etf_profile_assumes_domestic_stock_etf_t_plus_one"));
     assert.ok(etf.meta.execution.qualityIssues.includes("etf_profile_does_not_cover_t_plus_zero_etf_categories"));
+
+    assert.equal(t0Etf.config.executionModel, "t0_etf");
+    assert.equal(t0Etf.meta.execution.profileId, "t0_etf");
+    assert.equal(t0Etf.meta.execution.assetClass, "t0_eligible_etf");
+    assert.equal(t0Etf.meta.execution.kind, "t0_etf_next_open");
+    assert.equal(t0Etf.meta.execution.tickSize, 0.001);
+    assert.equal(t0Etf.meta.execution.stampDutyRate, 0);
+    assert.equal(t0Etf.meta.execution.tPlusOne, false);
+    assert.equal(t0Etf.meta.execution.feesIncluded, true);
+    assert.equal(t0Etf.meta.execution.slippageIncluded, true);
+    assert.ok(t0Etf.meta.execution.qualityIssues.includes("t0_etf_profile_requires_exchange_eligible_instrument"));
+    assert.ok(t0Etf.meta.execution.qualityIssues.includes("t0_etf_profile_uses_shared_a_share_market_restriction_approximation"));
 
     assert.equal(frictionless.config.executionModel, "frictionless");
     assert.equal(frictionless.meta.execution.kind, "frictionless_next_open");
