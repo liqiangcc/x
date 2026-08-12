@@ -13,7 +13,7 @@ const {
 } = require("../src/application/simulation/simulate_drawdown_buying");
 
 function bar(date, close) {
-  return { date, open: close, close, high: close, low: close };
+  return { date, open: close, close, high: close, low: close, volume: 1000 };
 }
 
 test("DrawdownBuyingPolicy emits initial entry and parameterized drawdown steps at exact boundaries", () => {
@@ -81,7 +81,7 @@ test("DrawdownBuyingPolicy owns allocation rules instead of hard-coding one stra
   );
 });
 
-test("buy-only portfolio capability executes budgets through shared Account and Position accounting", () => {
+test("buy-only portfolio executes signals through the injected execution model and shared Account accounting", () => {
   const result = simulateBuyOrders({
     bars: [
       bar("2026-01-02", 10),
@@ -97,26 +97,32 @@ test("buy-only portfolio capability executes budgets through shared Account and 
     lotSize: 10,
   });
 
-  assert.deepEqual(result.trades.map((trade) => [trade.status, trade.quantity, trade.totalCost]), [
-    ["filled", 30, 300],
-    ["filled", 30, 240],
+  assert.deepEqual(result.trades.map((trade) => [trade.status, trade.signalDate, trade.executionDate, trade.quantity, trade.totalCost]), [
+    ["filled", "2026-01-02", "2026-01-05", 30, 245.3],
+    ["filled", "2026-01-05", "2026-01-06", 20, 245.4],
   ]);
-  assert.equal(result.summary.investedAmount, 540);
-  assert.equal(result.summary.remainingCash, 460);
-  assert.equal(result.summary.quantity, 60);
-  assert.equal(result.summary.averageCost, 9);
+  assert.equal(result.summary.investedAmount, 490.7);
+  assert.equal(result.summary.grossAmount, 480.7);
+  assert.equal(result.summary.totalFees, 10);
+  assert.equal(result.summary.totalSlippage, 0.7);
+  assert.equal(result.summary.remainingCash, 509.3);
+  assert.equal(result.summary.quantity, 50);
+  assert.equal(result.summary.averageCost, 9.814);
   assert.equal(result.summary.finalPrice, 12);
-  assert.equal(result.summary.marketValue, 720);
-  assert.equal(result.summary.equity, 1180);
-  assert.equal(result.summary.unrealizedPnl, 180);
-  assert.equal(result.summary.totalReturn, 0.18);
-  assert.equal(result.config.feesIncluded, false);
-  assert.equal(result.config.slippageIncluded, false);
+  assert.equal(result.summary.marketValue, 600);
+  assert.equal(result.summary.equity, 1109.3);
+  assert.ok(Math.abs(result.summary.unrealizedPnl - 109.3) < 1e-9);
+  assert.equal(result.summary.totalReturn, 0.1093);
+  assert.equal(result.config.timing, "next_trading_day_open");
+  assert.equal(result.config.executionPriceField, "open");
+  assert.equal(result.config.feesIncluded, true);
+  assert.equal(result.config.slippageIncluded, true);
+  assert.equal(result.config.marketRestrictionsIncluded, true);
 });
 
-test("buy-only portfolio capability reports too-small budgets without inventing fractional lots", () => {
+test("buy-only portfolio reports too-small budgets without inventing fractional lots", () => {
   const result = simulateBuyOrders({
-    bars: [bar("2026-01-02", 10)],
+    bars: [bar("2026-01-02", 10), bar("2026-01-05", 10)],
     orders: [{ date: "2026-01-02", budget: 50 }],
     security: { code: "600001", market: 1 },
     initialCash: 1000,
@@ -128,7 +134,7 @@ test("buy-only portfolio capability reports too-small budgets without inventing 
   assert.equal(result.summary.quantity, 0);
 });
 
-test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, and portfolio capability without storage logic", async () => {
+test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution model, and portfolio without storage logic", async () => {
   const calls = [];
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
@@ -179,31 +185,47 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, and portfo
     "2026-01-06",
   ]);
   assert.deepEqual(result.trades.map((trade) => trade.requestedBudget), [250, 250, 250]);
+  assert.deepEqual(result.trades.map((trade) => trade.status), ["filled", "filled", "skipped_no_execution_bar"]);
   assert.equal(result.summary.policy.signalCount, 3);
-  assert.equal(result.summary.portfolio.filledTradeCount, 3);
-  assert.equal(result.summary.portfolio.quantity, 6);
+  assert.equal(result.summary.portfolio.filledTradeCount, 2);
+  assert.equal(result.summary.portfolio.skippedTradeCount, 1);
+  assert.equal(result.summary.portfolio.quantity, 4);
+  assert.equal(result.summary.portfolio.totalFees, 10);
   assert.equal(result.meta.source.kind, "fake_kline_reader");
   assert.deepEqual(result.meta.qualityIssues, ["example_quality"]);
-  assert.equal(result.meta.execution.feesIncluded, false);
+  assert.equal(result.meta.execution.timing, "next_trading_day_open");
+  assert.equal(result.meta.execution.feesIncluded, true);
+  assert.equal(result.meta.execution.slippageIncluded, true);
 });
 
-test("SimulateDrawdownBuyingUseCase keeps policy and portfolio implementations injectable", async () => {
+test("SimulateDrawdownBuyingUseCase keeps policy, execution model, and portfolio implementations injectable", async () => {
   const calls = [];
+  const fakeExecutionModel = {
+    executeBuy() { throw new Error("fake portfolio owns execution in this test"); },
+    describe() { return { kind: "fake", feesIncluded: true, slippageIncluded: true }; },
+  };
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: { async readRange() { return { security: { code: "600001", market: 1 }, period: "daily", startDate: null, endDate: "2026-01-02", bars: [], qualityIssues: [], source: {} }; } },
     buildPlan(bars, config) {
       calls.push({ layer: "policy", bars, config });
       return { signals: [], summary: { signalCount: 0 }, config };
     },
+    createExecutionModel(input) {
+      calls.push({ layer: "execution", input });
+      return fakeExecutionModel;
+    },
     simulatePortfolio(input) {
       calls.push({ layer: "portfolio", input });
-      return { trades: [], summary: { equity: input.initialCash }, config: { feesIncluded: false, slippageIncluded: false } };
+      return { trades: [], summary: { equity: input.initialCash }, config: { kind: "fake", feesIncluded: true, slippageIncluded: true } };
     },
   });
 
   const result = await useCase.execute({ code: "600001", market: 1, endDate: "2026-01-02" });
   assert.equal(calls[0].layer, "policy");
-  assert.equal(calls[1].layer, "portfolio");
-  assert.deepEqual(calls[1].input.orders, []);
+  assert.equal(calls[1].layer, "execution");
+  assert.deepEqual(calls[1].input, { executionConfig: { lotSize: 100 } });
+  assert.equal(calls[2].layer, "portfolio");
+  assert.equal(calls[2].input.executionModel, fakeExecutionModel);
+  assert.deepEqual(calls[2].input.orders, []);
   assert.equal(result.summary.portfolio.equity, 100000);
 });
