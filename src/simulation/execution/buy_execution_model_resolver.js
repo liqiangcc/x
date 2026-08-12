@@ -6,38 +6,64 @@ const {
   DEFAULT_BUY_EXECUTION_MODEL_ID,
   normalizeBuyExecutionModelId,
 } = require("../../ports/simulation/buy_execution_model_resolver");
-const { createDomesticStockEtfBuyExecutionModel } = require("./domestic_stock_etf_buy_execution_model");
+const {
+  DEFAULT_EXECUTION_PROFILE_CATALOG,
+} = require("./execution_profile_catalog");
 const { createFrictionlessBuyExecutionModel } = require("./frictionless_buy_execution_model");
-const { createLegacyBuyExecutionModel } = require("./legacy_buy_execution_model");
+const { createProfiledBuyExecutionModel } = require("./profiled_buy_execution_model");
 
 const DEFAULT_BUY_EXECUTION_MODEL_FACTORIES = Object.freeze({
-  legacy_a_share: createLegacyBuyExecutionModel,
-  domestic_stock_etf: createDomesticStockEtfBuyExecutionModel,
   frictionless: createFrictionlessBuyExecutionModel,
 });
+
+function normalizeProfileCatalog(profileCatalog) {
+  if (!profileCatalog || typeof profileCatalog !== "object") {
+    throw new TypeError("executionProfileCatalog must be an object.");
+  }
+  for (const method of ["get", "list"]) {
+    if (typeof profileCatalog[method] !== "function") {
+      throw new TypeError(`executionProfileCatalog is missing method: ${method}.`);
+    }
+  }
+  return profileCatalog;
+}
 
 function normalizeFactories(factories) {
   if (!factories || typeof factories !== "object" || Array.isArray(factories)) {
     throw new TypeError("buyExecutionModel factories must be an object.");
   }
-  for (const id of BUY_EXECUTION_MODEL_IDS) {
-    if (typeof factories[id] !== "function") {
-      throw new TypeError(`buyExecutionModel factory is missing for: ${id}.`);
-    }
-  }
   return factories;
 }
 
+function assertModelCoverage({ profileCatalog, factories }) {
+  for (const id of BUY_EXECUTION_MODEL_IDS) {
+    if (profileCatalog.get(id)) continue;
+    if (typeof factories[id] !== "function") {
+      throw new TypeError(`buyExecutionModel implementation is missing for: ${id}.`);
+    }
+  }
+}
+
 function createBuyExecutionModelResolver({
+  profileCatalog = DEFAULT_EXECUTION_PROFILE_CATALOG,
   factories = DEFAULT_BUY_EXECUTION_MODEL_FACTORIES,
 } = {}) {
+  const resolvedProfileCatalog = normalizeProfileCatalog(profileCatalog);
   const resolvedFactories = normalizeFactories(factories);
+  assertModelCoverage({ profileCatalog: resolvedProfileCatalog, factories: resolvedFactories });
+
   return Object.freeze({
     resolve({
       model = DEFAULT_BUY_EXECUTION_MODEL_ID,
       executionConfig = {},
     } = {}) {
       const normalizedModel = normalizeBuyExecutionModelId(model);
+      const profile = resolvedProfileCatalog.get(normalizedModel);
+      if (profile) {
+        return assertBuyExecutionModel(
+          createProfiledBuyExecutionModel({ profile, executionConfig })
+        );
+      }
       return assertBuyExecutionModel(
         resolvedFactories[normalizedModel]({ executionConfig })
       );
@@ -47,6 +73,8 @@ function createBuyExecutionModelResolver({
 
 module.exports = {
   DEFAULT_BUY_EXECUTION_MODEL_FACTORIES,
+  assertModelCoverage,
   createBuyExecutionModelResolver,
   normalizeFactories,
+  normalizeProfileCatalog,
 };
