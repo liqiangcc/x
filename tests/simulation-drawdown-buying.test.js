@@ -6,6 +6,9 @@ const {
   buildDrawdownBuyingPlan,
 } = require("../src/business/simulation/drawdown_buying_policy");
 const {
+  createBuyExecutionModelResolver,
+} = require("../src/simulation/execution/buy_execution_model_resolver");
+const {
   createLegacyBuyExecutionModel,
 } = require("../src/simulation/execution/legacy_buy_execution_model");
 const {
@@ -140,7 +143,7 @@ test("buy-only portfolio reports too-small budgets without inventing fractional 
   assert.equal(result.summary.quantity, 0);
 });
 
-test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution model, and portfolio without storage logic", async () => {
+test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution resolver, and portfolio without storage logic", async () => {
   const calls = [];
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
@@ -163,7 +166,7 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
         };
       },
     },
-    createExecutionModel: createLegacyBuyExecutionModel,
+    executionModelResolver: createBuyExecutionModelResolver(),
   });
 
   const result = await useCase.execute({
@@ -186,6 +189,7 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
     period: "daily",
     limit: null,
   }]);
+  assert.equal(result.config.executionModel, "legacy_a_share");
   assert.deepEqual(result.signals.map((signal) => signal.date), [
     "2026-01-02",
     "2026-01-05",
@@ -205,7 +209,7 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
   assert.equal(result.meta.execution.slippageIncluded, true);
 });
 
-test("SimulateDrawdownBuyingUseCase keeps policy, execution model, and portfolio implementations injectable", async () => {
+test("SimulateDrawdownBuyingUseCase keeps policy, resolver, and portfolio implementations injectable", async () => {
   const calls = [];
   const fakeExecutionModel = {
     executeBuy() { throw new Error("fake portfolio owns execution in this test"); },
@@ -217,9 +221,11 @@ test("SimulateDrawdownBuyingUseCase keeps policy, execution model, and portfolio
       calls.push({ layer: "policy", bars, config });
       return { signals: [], summary: { signalCount: 0 }, config };
     },
-    createExecutionModel(input) {
-      calls.push({ layer: "execution", input });
-      return fakeExecutionModel;
+    executionModelResolver: {
+      resolve(input) {
+        calls.push({ layer: "execution", input });
+        return fakeExecutionModel;
+      },
     },
     simulatePortfolio(input) {
       calls.push({ layer: "portfolio", input });
@@ -227,13 +233,46 @@ test("SimulateDrawdownBuyingUseCase keeps policy, execution model, and portfolio
     },
   });
 
-  const result = await useCase.execute({ code: "600001", market: 1, endDate: "2026-01-02" });
+  const result = await useCase.execute({
+    code: "600001",
+    market: 1,
+    endDate: "2026-01-02",
+    executionModel: "frictionless",
+  });
   assert.equal(calls[0].layer, "policy");
   assert.equal(calls[1].layer, "execution");
-  assert.deepEqual(calls[1].input, { executionConfig: { lotSize: 100 } });
+  assert.deepEqual(calls[1].input, {
+    model: "frictionless",
+    executionConfig: { lotSize: 100 },
+  });
   assert.equal(calls[2].layer, "portfolio");
   assert.equal(calls[2].input.executionModel, fakeExecutionModel);
   assert.equal("lotSize" in calls[2].input, false);
   assert.deepEqual(calls[2].input.orders, []);
+  assert.equal(result.config.executionModel, "frictionless");
   assert.equal(result.summary.portfolio.equity, 100000);
+});
+
+test("SimulateDrawdownBuyingUseCase rejects unknown execution models before reading market data", async () => {
+  let readCount = 0;
+  const useCase = new SimulateDrawdownBuyingUseCase({
+    klineReader: {
+      async readRange() {
+        readCount += 1;
+        throw new Error("must not read");
+      },
+    },
+    executionModelResolver: createBuyExecutionModelResolver(),
+  });
+
+  await assert.rejects(
+    () => useCase.execute({
+      code: "600001",
+      market: 1,
+      endDate: "2026-01-02",
+      executionModel: "unknown",
+    }),
+    /executionModel must be one of: legacy_a_share, frictionless/
+  );
+  assert.equal(readCount, 0);
 });
