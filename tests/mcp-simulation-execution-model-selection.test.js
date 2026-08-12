@@ -33,8 +33,8 @@ function bar(date, open, close = open) {
   };
 }
 
-test("composition root can select frictionless execution without changing the simulation use case or MCP tool", async () => {
-  const factoryCalls = [];
+test("composition root injects the resolver so MCP selects frictionless execution without owning concrete factories", async () => {
+  const resolverCalls = [];
   const root = createMcpCompositionRoot({
     klineReader: {
       async readRange() {
@@ -55,9 +55,13 @@ test("composition root can select frictionless execution without changing the si
         };
       },
     },
-    simulationExecutionModelFactory(input) {
-      factoryCalls.push(input);
-      return createFrictionlessBuyExecutionModel(input);
+    simulationExecutionModelResolver: {
+      resolve(input) {
+        resolverCalls.push(input);
+        return createFrictionlessBuyExecutionModel({
+          executionConfig: input.executionConfig,
+        });
+      },
     },
     bollingerTool: fakeTool("injected_bollinger"),
     drawdownsTool: fakeTool("injected_drawdowns"),
@@ -82,10 +86,15 @@ test("composition root can select frictionless execution without changing the si
     maxPurchases: 1,
     lotSize: 100,
     priceField: "close",
+    executionModel: "frictionless",
   });
 
   assert.equal(result.isError, undefined);
-  assert.deepEqual(factoryCalls, [{ executionConfig: { lotSize: 100 } }]);
+  assert.deepEqual(resolverCalls, [{
+    model: "frictionless",
+    executionConfig: { lotSize: 100 },
+  }]);
+  assert.equal(result.structuredContent.config.executionModel, "frictionless");
   assert.equal(result.structuredContent.meta.execution.kind, "frictionless_next_open");
   assert.equal(result.structuredContent.meta.execution.feesIncluded, false);
   assert.equal(result.structuredContent.meta.execution.slippageIncluded, false);
