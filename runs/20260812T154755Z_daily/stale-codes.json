@@ -1,0 +1,11 @@
+{
+  "date": "20260812",
+  "expected_latest_date": "2026-08-12",
+  "period": "daily",
+  "total_codes": 3,
+  "codes": [
+    "603899",
+    "688050",
+    "688793"
+  ]
+}
