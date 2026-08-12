@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
 
+# Temporary verification workflow. Remove after the MCP client lockfile is committed.
 jobs:
   verify:
     if: github.actor != 'github-actions[bot]'
