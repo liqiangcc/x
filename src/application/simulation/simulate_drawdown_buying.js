@@ -1,9 +1,9 @@
 "use strict";
 
 const { buildDrawdownBuyingPlan } = require("../../business/simulation/drawdown_buying_policy");
-const { createLegacyBuyExecutionModel } = require("../../simulation/execution/legacy_buy_execution_model");
 const { simulateBuyOrders } = require("../../simulation/portfolio/buy_only_portfolio_simulator");
 const { assertKlineReader } = require("../../ports/market/kline_reader");
+const { assertBuyExecutionModel } = require("../../ports/simulation/buy_execution_model");
 
 function positiveMoney(value, field) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
@@ -19,7 +19,7 @@ class SimulateDrawdownBuyingUseCase {
   constructor({
     klineReader,
     buildPlan = buildDrawdownBuyingPlan,
-    createExecutionModel = createLegacyBuyExecutionModel,
+    createExecutionModel,
     simulatePortfolio = simulateBuyOrders,
   } = {}) {
     this.klineReader = assertKlineReader(klineReader);
@@ -75,15 +75,14 @@ class SimulateDrawdownBuyingUseCase {
         drawdownFromReference: signal.drawdownFromReference,
       },
     }));
-    const executionModel = this.createExecutionModel({
+    const executionModel = assertBuyExecutionModel(this.createExecutionModel({
       executionConfig: { lotSize: normalizedLotSize },
-    });
+    }));
     const portfolio = this.simulatePortfolio({
       bars,
       orders,
       security: marketData.security,
       initialCash: normalizedInitialCapital,
-      lotSize: normalizedLotSize,
       priceField,
       executionModel,
     });
