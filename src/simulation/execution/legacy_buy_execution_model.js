@@ -12,6 +12,11 @@ function positiveMoney(value, field) {
   return value;
 }
 
+function nonNegativeMoney(value, field) {
+  if (!Number.isFinite(value) || value < 0) throw new TypeError(`${field} must be non-negative.`);
+  return value;
+}
+
 function normalizeTickSize(value) {
   const normalized = Number(value ?? 0.01);
   if (!Number.isFinite(normalized) || normalized <= 0) throw new TypeError("tickSize must be positive.");
@@ -100,7 +105,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
     } = {}) {
       const rows = normalizeBars(bars);
       const budget = positiveMoney(Number(requestedBudget), "requestedBudget");
-      const availableCash = positiveMoney(Number(cashAvailable), "cashAvailable");
+      const availableCash = nonNegativeMoney(Number(cashAvailable), "cashAvailable");
       const effectiveBudget = Math.min(budget, availableCash);
       const normalizedSignalDate = String(signalDate ?? "");
       const signalIndex = rows.findIndex((bar) => bar.date === normalizedSignalDate);
@@ -195,6 +200,7 @@ function createLegacyBuyExecutionModel({ executionConfig = {} } = {}) {
 
 module.exports = {
   createLegacyBuyExecutionModel,
+  nonNegativeMoney,
   normalizeExecutionConfig,
   normalizeTickSize,
 };
