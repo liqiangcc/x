@@ -6,6 +6,9 @@ const {
   buildDrawdownBuyingPlan,
 } = require("../src/business/simulation/drawdown_buying_policy");
 const {
+  createLegacyBuyExecutionModel,
+} = require("../src/simulation/execution/legacy_buy_execution_model");
+const {
   simulateBuyOrders,
 } = require("../src/simulation/portfolio/buy_only_portfolio_simulator");
 const {
@@ -94,7 +97,7 @@ test("buy-only portfolio executes signals through the injected execution model a
     ],
     security: { code: "600001", market: 1 },
     initialCash: 1000,
-    lotSize: 10,
+    executionModel: createLegacyBuyExecutionModel({ executionConfig: { lotSize: 10 } }),
   });
 
   // This fixture deliberately has high === low === open. The shared slippage
@@ -117,6 +120,7 @@ test("buy-only portfolio executes signals through the injected execution model a
   assert.equal(result.summary.totalReturn, 0.11);
   assert.equal(result.config.timing, "next_trading_day_open");
   assert.equal(result.config.executionPriceField, "open");
+  assert.equal(result.config.lotSize, 10);
   assert.equal(result.config.feesIncluded, true);
   assert.equal(result.config.slippageIncluded, true);
   assert.equal(result.config.marketRestrictionsIncluded, true);
@@ -128,7 +132,7 @@ test("buy-only portfolio reports too-small budgets without inventing fractional 
     orders: [{ date: "2026-01-02", budget: 50 }],
     security: { code: "600001", market: 1 },
     initialCash: 1000,
-    lotSize: 10,
+    executionModel: createLegacyBuyExecutionModel({ executionConfig: { lotSize: 10 } }),
   });
   assert.equal(result.trades[0].status, "skipped_insufficient_budget");
   assert.equal(result.trades[0].quantity, 0);
@@ -159,6 +163,7 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
         };
       },
     },
+    createExecutionModel: createLegacyBuyExecutionModel,
   });
 
   const result = await useCase.execute({
@@ -228,6 +233,7 @@ test("SimulateDrawdownBuyingUseCase keeps policy, execution model, and portfolio
   assert.deepEqual(calls[1].input, { executionConfig: { lotSize: 100 } });
   assert.equal(calls[2].layer, "portfolio");
   assert.equal(calls[2].input.executionModel, fakeExecutionModel);
+  assert.equal("lotSize" in calls[2].input, false);
   assert.deepEqual(calls[2].input.orders, []);
   assert.equal(result.summary.portfolio.equity, 100000);
 });
