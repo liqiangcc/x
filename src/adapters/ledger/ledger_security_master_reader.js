@@ -18,6 +18,7 @@ const {
 
 const SECURITY_MASTER_SCHEMA_VERSION = 1;
 const RECORD_SET_KINDS = Object.freeze({
+  RECORD_FILE: "record_file",
   UNIVERSE_SNAPSHOT: "universe_snapshot",
 });
 
@@ -92,11 +93,7 @@ class LedgerSecurityMasterReader {
     target.set(key, existing);
   }
 
-  #loadUniverseSnapshot(target, recordSet, index) {
-    const definition = objectValue(recordSet, "recordSets[]");
-    if (definition.kind !== RECORD_SET_KINDS.UNIVERSE_SNAPSHOT) {
-      throw new TypeError(`unsupported security master record set kind: ${String(definition.kind)}`);
-    }
+  #loadUniverseSnapshot(target, definition, index) {
     const classification = objectValue(definition.classification, "recordSets[].classification");
     const sourcePath = this.#resolveDataPath(definition.path, "recordSets[].path");
     const payload = objectValue(
@@ -125,6 +122,40 @@ class LedgerSecurityMasterReader {
         path: definition.path,
       });
     }
+  }
+
+  #loadRecordFile(target, definition, index) {
+    const sourcePath = this.#resolveDataPath(definition.path, "recordSets[].path");
+    const payload = objectValue(
+      JSON.parse(fs.readFileSync(sourcePath, "utf8")),
+      "security master record file"
+    );
+    if (payload.schemaVersion !== SECURITY_MASTER_SCHEMA_VERSION) {
+      throw new TypeError(
+        `security master record file schemaVersion must be ${SECURITY_MASTER_SCHEMA_VERSION}.`
+      );
+    }
+    const records = arrayValue(payload.records, "security master record file records");
+    records.forEach((record, recordIndex) => this.#addRecord(target, record, 2, {
+      kind: "record_set",
+      index,
+      recordIndex,
+      recordSetKind: definition.kind,
+      path: definition.path,
+    }));
+  }
+
+  #loadRecordSet(target, recordSet, index) {
+    const definition = objectValue(recordSet, "recordSets[]");
+    if (definition.kind === RECORD_SET_KINDS.UNIVERSE_SNAPSHOT) {
+      this.#loadUniverseSnapshot(target, definition, index);
+      return;
+    }
+    if (definition.kind === RECORD_SET_KINDS.RECORD_FILE) {
+      this.#loadRecordFile(target, definition, index);
+      return;
+    }
+    throw new TypeError(`unsupported security master record set kind: ${String(definition.kind)}`);
   }
 
   #refresh() {
@@ -160,7 +191,7 @@ class LedgerSecurityMasterReader {
     const recordSets = arrayValue(manifest.recordSets ?? [], "recordSets");
     const explicitRecords = arrayValue(manifest.records ?? [], "records");
     const next = new Map();
-    recordSets.forEach((recordSet, index) => this.#loadUniverseSnapshot(next, recordSet, index));
+    recordSets.forEach((recordSet, index) => this.#loadRecordSet(next, recordSet, index));
     explicitRecords.forEach((record, index) => this.#addRecord(next, record, 2, {
       kind: "explicit_record",
       index,
