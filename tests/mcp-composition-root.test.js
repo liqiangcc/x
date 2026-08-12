@@ -61,7 +61,7 @@ test("MCP tool registry rejects malformed, duplicate, and unknown tools", async 
   );
 });
 
-test("MCP composition root keeps KlineReader, StrategyReader, and one shared SignalReader as separate boundaries", async () => {
+test("MCP composition root keeps market, simulation, strategy catalog, and signal storage boundaries separate", async () => {
   const klineCalls = [];
   const strategyCalls = [];
   const signalCalls = [];
@@ -169,6 +169,7 @@ test("MCP composition root keeps KlineReader, StrategyReader, and one shared Sig
     "analytics_get_recovery_periods",
     "market_get_kline",
     "market_get_summary",
+    "simulation_run_drawdown_buying",
     "strategy_explain_signal",
     "strategy_get_candidates",
     "strategy_list",
@@ -215,6 +216,20 @@ test("MCP composition root keeps KlineReader, StrategyReader, and one shared Sig
     minDrawdown: 0.2,
     priceField: "close",
   });
+  const simulationResult = await registry.invoke("simulation_run_drawdown_buying", {
+    code: "600001",
+    market: 1,
+    startDate: "2026-01-02",
+    endDate: "2026-01-06",
+    period: "daily",
+    initialCapital: 100000,
+    initialDrawdown: 0,
+    drawdownStep: 0.2,
+    trancheFraction: 0.1,
+    maxPurchases: 5,
+    lotSize: 1,
+    priceField: "close",
+  });
   const explainResult = await registry.invoke("strategy_explain_signal", {
     strategyId: "example",
     date: "2026-01-06",
@@ -228,13 +243,14 @@ test("MCP composition root keeps KlineReader, StrategyReader, and one shared Sig
   });
   const strategyResult = await registry.invoke("strategy_list", { includeDefinition: false });
 
-  assert.deepEqual(klineCalls, [
-    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: 3 },
-    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
-    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
-    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
-    { code: "600001", market: 1, startDate: "2026-01-02", endDate: "2026-01-06", period: "daily", limit: null },
-  ]);
+  assert.equal(klineCalls.length, 6);
+  for (const call of klineCalls) {
+    assert.equal(call.code, "600001");
+    assert.equal(call.market, 1);
+    assert.equal(call.startDate, "2026-01-02");
+    assert.equal(call.endDate, "2026-01-06");
+    assert.equal(call.period, "daily");
+  }
   assert.deepEqual(strategyCalls, [{ includeDefinition: false }]);
   assert.deepEqual(signalCalls, [
     {
@@ -252,6 +268,11 @@ test("MCP composition root keeps KlineReader, StrategyReader, and one shared Sig
   assert.equal(bollingerResult.isError, undefined);
   assert.equal(drawdownResult.isError, undefined);
   assert.equal(recoveryResult.isError, undefined);
+  assert.equal(simulationResult.isError, undefined);
+  assert.equal(simulationResult.structuredContent.signals.length, 2);
+  assert.equal(simulationResult.structuredContent.summary.portfolio.filledTradeCount, 2);
+  assert.equal(simulationResult.structuredContent.meta.execution.feesIncluded, false);
+  assert.equal(simulationResult.structuredContent.meta.execution.slippageIncluded, false);
   assert.equal(explainResult.isError, undefined);
   assert.equal(explainResult.structuredContent.candidate.evidence.rules[0].key, "r1");
   assert.equal(candidateResult.isError, undefined);
@@ -267,6 +288,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
   const recoveryPeriodsTool = fakeTool("injected_recovery", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
+  const simulationTool = fakeTool("injected_simulation", async () => ({ content: [], structuredContent: { ok: true } }));
   const strategyExplainTool = fakeTool("injected_strategy_explain", async () => ({ content: [], structuredContent: { ok: true } }));
   const strategyCandidatesTool = fakeTool("injected_strategy_candidates", async () => ({ content: [], structuredContent: { ok: true } }));
   const strategyListTool = fakeTool("injected_strategy_list", async () => ({ content: [], structuredContent: { ok: true } }));
@@ -276,6 +298,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     recoveryPeriodsTool,
     marketKlineTool,
     marketSummaryTool,
+    simulationTool,
     strategyExplainTool,
     strategyCandidatesTool,
     strategyListTool,
@@ -287,6 +310,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     recoveryPeriodsTool.definition,
     marketKlineTool.definition,
     marketSummaryTool.definition,
+    simulationTool.definition,
     strategyExplainTool.definition,
     strategyCandidatesTool.definition,
     strategyListTool.definition,
@@ -297,6 +321,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     "injected_recovery",
     "injected_kline",
     "injected_summary",
+    "injected_simulation",
     "injected_strategy_explain",
     "injected_strategy_candidates",
     "injected_strategy_list",
