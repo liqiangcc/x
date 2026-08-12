@@ -1,14 +1,14 @@
 # Security Master 设计
 
 > 日期：2026-08-12  
-> 状态：实现中  
+> 状态：已实现  
 > 范围：证券身份、证券类型、交易资格事实及其可审计来源。本文不定义交易费用、滑点、成交时机、业务策略或 MCP 协议。
 
 ## 1. 目标
 
 Security Master 解决的是“**证券是什么，以及在某个有效期内具备什么资格**”，而不是“如何成交”。
 
-目标链路：
+当前链路：
 
 ```text
 Repository data
@@ -35,7 +35,19 @@ BuyExecutionModelResolver
 - SecurityMetadataReader：面向 Application 的窄投影；
 - SecurityExecutionProfileResolver：事实到 profile id 的纯确定性映射；
 - ExecutionProfile / ExecutionModel：市场执行假设与成交机制；
-- Business Policy：为什么买、何时产生业务信号。
+- Business Policy：为什么买、何时产生业务 signal。
+
+已实现组件：
+
+```text
+src/market/security_execution_metadata.js
+src/market/security_master_record.js
+src/ports/market/security_master_reader.js
+src/adapters/ledger/ledger_security_master_reader.js
+src/adapters/ledger/ledger_security_metadata_reader.js
+data/security_master/manifest.json
+tests/security-master.test.js
+```
 
 ## 2. SecurityMasterRecord
 
@@ -86,11 +98,13 @@ SecurityMasterRecord 是纯数据事实，不包含：
 - drawdown 策略参数；
 - MCP/HTTP/SQLite/文件系统知识。
 
+证券身份和执行资格的基础规范化由 `src/market/security_execution_metadata.js` 提供单一权威实现；Security Master 和 `SecurityExecutionProfileResolver` 复用同一份确定性 Logic，不再各自复制 A 股/ETF/T+0 校验规则。
+
 ## 3. Repository Manifest
 
 仓库使用 `data/security_master/manifest.json` 作为统一入口。
 
-为了避免把当前 5534 只沪深 A 股复制成第二份静态证券清单，manifest 可以声明可审计的 record set：
+为了避免把当前 5534 只沪深 A 股复制成第二份静态证券清单，manifest 声明可审计的 record set：
 
 ```json
 {
@@ -111,7 +125,9 @@ SecurityMasterRecord 是纯数据事实，不包含：
         "version": "20260701",
         "collectedAt": "2026-07-01T15:27:03.310Z"
       },
-      "qualityIssues": []
+      "qualityIssues": [
+        "classification_inherited_from_hs_a_universe_snapshot"
+      ]
     }
   ],
   "records": []
@@ -155,7 +171,9 @@ readRecord(security, { asOf? }) -> SecurityMasterRecord | null
 - 仅允许读取 `dataRoot` 内的相对路径；
 - 缓存不可变 snapshot 的归一化结果。
 
-缺失 Security Master 时返回无记录；损坏或违反契约的数据应暴露错误，而不是悄悄猜一个证券类型。
+缺失 Security Master 时返回无记录；损坏或违反契约的数据暴露错误，而不是悄悄猜一个证券类型。
+
+当前 `universe_snapshot` 被视为不可变 snapshot；Reader 的缓存失效以 manifest 变化为边界。若未来允许原地修改被引用 snapshot，应把内容哈希/被引用文件签名纳入 manifest，而不是让 Reader 隐式探测所有文件。
 
 ### 4.3 LedgerSecurityMetadataReader
 
@@ -170,7 +188,7 @@ SecurityMasterRecord
     -> qualityIssues
 ```
 
-它不再直接知道 `data/universe` 的结构。
+它只依赖 `SecurityMasterReader Port`，不直接构造 `LedgerSecurityMasterReader`，也不再知道 `data/universe`、manifest 或文件系统结构。具体存储 wiring 由 Composition Root 完成。
 
 ## 5. 时间语义
 
@@ -179,7 +197,7 @@ Security Master 从第一版就保存 `effectiveFrom/effectiveTo`，但本阶段
 规则：
 
 - `SecurityMasterReader` 支持显式 `asOf` 查询；
-- 不传 `asOf` 时返回最新可用事实，用于保持当前 simulation auto-selection 语义；
+- 不传 `asOf` 时返回最高优先级的最新可用事实，用于保持当前 simulation auto-selection 语义；
 - 历史模拟若未来需要精确处理区间内资格变化，应建立独立的 temporal execution-profile capability，让执行 profile 随交易日变化，而不是让 Application 在一次模拟开始前猜一个历史状态。
 
 因此数据契约先具备时间能力，业务执行语义后续单独演进。
@@ -209,12 +227,37 @@ if name includes("ETF")
 
 ## 7. Architecture Fitness
 
-应持续保证：
+当前测试持续保证：
 
-- Application 只依赖 `SecurityMetadataReader Port`；
+- Application 只依赖 `SecurityMetadataReader Port`，不依赖 `SecurityMasterReader`；
 - MCP Tool 不读取 Security Master/Universe；
+- Composition Root 才负责 `LedgerSecurityMasterReader -> LedgerSecurityMetadataReader` concrete wiring；
 - `SecurityExecutionProfileResolver` 不依赖 Ledger/FS/DB；
-- `LedgerSecurityMetadataReader` 不拥有证券分类规则；
+- `LedgerSecurityMetadataReader` 不拥有证券分类规则，不访问文件系统；
+- `LedgerSecurityMasterReader` 负责 repository IO，但不知道 execution profile id / ExecutionModel；
 - Security Master 不包含 execution profile id；
 - Security Master 数据源路径不能逃逸 `dataRoot`；
-- 同一证券事实的规范化只有一个权威实现。
+- 同一证券身份/执行资格的规范化只有一个权威实现。
+
+对应测试：
+
+```text
+tests/security-master.test.js
+tests/simulation-security-execution-profile-resolver.test.js
+tests/simulation-execution-boundary.test.js
+```
+
+## 8. 本阶段验收
+
+已经覆盖：
+
+- Record schema 与日期、来源、质量字段规范化；
+- A 股矛盾资格和无审计来源数据 fail closed；
+- record set 派生记录；
+- 显式逐证券记录优先级；
+- `asOf` 有效期选择；
+- 未知证券返回 `null`；
+- `dataRoot` 路径逃逸保护；
+- MetadataReader 仅做 SecurityMasterRecord 投影；
+- Resolver 复用共享证券元数据 Logic；
+- Architecture fitness 边界。
