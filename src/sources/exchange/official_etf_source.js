@@ -1,6 +1,9 @@
 "use strict";
 
 const {
+  normalizeCollectedAt,
+} = require("../../market/security_master_record");
+const {
   normalizeEtfSecurityFact,
   normalizeExchange,
 } = require("../../market/etf_security_fact_normalizer");
@@ -64,7 +67,7 @@ function normalizeSnapshot(value, field, exchange) {
     source: Object.freeze({
       document: assertOfficialDocument(exchange, source.document, `${field}.source.document`),
       version: requiredText(source.version, `${field}.source.version`),
-      collectedAt: requiredText(source.collectedAt, `${field}.source.collectedAt`),
+      collectedAt: normalizeCollectedAt(source.collectedAt),
     }),
   });
 }
