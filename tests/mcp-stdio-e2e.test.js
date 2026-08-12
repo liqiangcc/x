@@ -15,7 +15,7 @@ function structuredPayload(result) {
   return JSON.parse(text);
 }
 
-test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { timeout: 20_000 }, async () => {
+test("stdio MCP client lists and calls real ledger-backed market and analytics tools", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
   const client = new Client(
     { name: "x-mcp-stdio-e2e", version: "0.1.0" },
@@ -33,11 +33,44 @@ test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { 
 
     const listed = await client.listTools();
     const drawdowns = listed.tools.find((tool) => tool.name === "analytics_get_drawdowns");
+    const marketKline = listed.tools.find((tool) => tool.name === "market_get_kline");
     assert.ok(drawdowns, "analytics_get_drawdowns must be discoverable over real stdio MCP");
+    assert.ok(marketKline, "market_get_kline must be discoverable over real stdio MCP");
     assert.equal(drawdowns.annotations?.readOnlyHint, true);
+    assert.equal(marketKline.annotations?.readOnlyHint, true);
     assert.deepEqual(drawdowns.inputSchema.required, ["code", "market", "endDate"]);
+    assert.equal(marketKline.inputSchema.properties.limit.maximum, 500);
 
-    const result = await client.callTool({
+    const klineResult = await client.callTool({
+      name: "market_get_kline",
+      arguments: {
+        code: "600001",
+        market: 1,
+        startDate: "2025-01-01",
+        endDate: "2026-08-12",
+        period: "daily",
+        limit: 5,
+        adjustment: "ledger_default",
+      },
+    });
+
+    assert.notEqual(klineResult.isError, true);
+    const klinePayload = structuredPayload(klineResult);
+    assert.equal(klinePayload.security.code, "600001");
+    assert.equal(klinePayload.security.market, 1);
+    assert.equal(klinePayload.period, "daily");
+    assert.equal(klinePayload.adjustment, "ledger_default");
+    assert.ok(klinePayload.bars.length > 0 && klinePayload.bars.length <= 5);
+    assert.equal(klinePayload.page.returnedBars, klinePayload.bars.length);
+    assert.equal(typeof klinePayload.page.hasMore, "boolean");
+    assert.equal(klinePayload.meta.source.kind, "repo_ledger");
+    assert.ok(klinePayload.meta.source.contentHash);
+    assert.match(
+      klinePayload.meta.source.path,
+      /data[\\/]kline[\\/]daily[\\/]600[\\/]600001\.json$/
+    );
+
+    const drawdownResult = await client.callTool({
       name: "analytics_get_drawdowns",
       arguments: {
         code: "600001",
@@ -50,19 +83,16 @@ test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { 
       },
     });
 
-    assert.notEqual(result.isError, true);
-    const payload = structuredPayload(result);
-    assert.equal(payload.security.code, "600001");
-    assert.equal(payload.security.market, 1);
-    assert.equal(payload.period, "daily");
-    assert.equal(payload.priceField, "close");
-    assert.ok(Array.isArray(payload.events));
-    assert.equal(payload.meta.source.kind, "repo_ledger");
-    assert.ok(payload.meta.source.contentHash);
-    assert.match(
-      payload.meta.source.path,
-      /data[\\/]kline[\\/]daily[\\/]600[\\/]600001\.json$/
-    );
+    assert.notEqual(drawdownResult.isError, true);
+    const drawdownPayload = structuredPayload(drawdownResult);
+    assert.equal(drawdownPayload.security.code, "600001");
+    assert.equal(drawdownPayload.security.market, 1);
+    assert.equal(drawdownPayload.period, "daily");
+    assert.equal(drawdownPayload.priceField, "close");
+    assert.ok(Array.isArray(drawdownPayload.events));
+    assert.equal(drawdownPayload.meta.source.kind, "repo_ledger");
+    assert.equal(drawdownPayload.meta.source.contentHash, klinePayload.meta.source.contentHash);
+    assert.equal(drawdownPayload.meta.source.path, klinePayload.meta.source.path);
   } finally {
     await client.close();
   }
