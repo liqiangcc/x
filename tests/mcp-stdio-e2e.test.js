@@ -34,12 +34,16 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
     const listed = await client.listTools();
     const drawdowns = listed.tools.find((tool) => tool.name === "analytics_get_drawdowns");
     const marketKline = listed.tools.find((tool) => tool.name === "market_get_kline");
+    const marketSummary = listed.tools.find((tool) => tool.name === "market_get_summary");
     assert.ok(drawdowns, "analytics_get_drawdowns must be discoverable over real stdio MCP");
     assert.ok(marketKline, "market_get_kline must be discoverable over real stdio MCP");
+    assert.ok(marketSummary, "market_get_summary must be discoverable over real stdio MCP");
     assert.equal(drawdowns.annotations?.readOnlyHint, true);
     assert.equal(marketKline.annotations?.readOnlyHint, true);
+    assert.equal(marketSummary.annotations?.readOnlyHint, true);
     assert.deepEqual(drawdowns.inputSchema.required, ["code", "market", "endDate"]);
     assert.equal(marketKline.inputSchema.properties.limit.maximum, 500);
+    assert.equal(marketSummary.inputSchema.properties.limit, undefined);
 
     // Keep the E2E window inside the checked-in ledger fixture. The sample
     // 600001 history currently ends on 2009-12-15; the test must not imply
@@ -77,6 +81,32 @@ test("stdio MCP client lists and calls real ledger-backed market and analytics t
       klinePayload.meta.source.path,
       /data[\\/]kline[\\/]daily[\\/]600[\\/]600001\.json$/
     );
+
+    const summaryResult = await client.callTool({
+      name: "market_get_summary",
+      arguments: {
+        code: "600001",
+        market: 1,
+        ...ledgerWindow,
+        period: "daily",
+        adjustment: "ledger_default",
+      },
+    });
+
+    assert.notEqual(summaryResult.isError, true);
+    const summaryPayload = structuredPayload(summaryResult);
+    assert.equal(summaryPayload.security.code, "600001");
+    assert.equal(summaryPayload.security.market, 1);
+    assert.equal(summaryPayload.latest.date, "2009-12-15");
+    assert.equal(summaryPayload.latest.close, klinePayload.bars.at(-1)?.close);
+    assert.equal(summaryPayload.coverage.requestedStartDate, "2009-01-01");
+    assert.equal(summaryPayload.coverage.requestedEndDate, "2009-12-15");
+    assert.equal(summaryPayload.coverage.observedEndDate, "2009-12-15");
+    assert.ok(summaryPayload.coverage.barCount > klinePayload.bars.length);
+    assert.equal(typeof summaryPayload.range.returnRate, "number");
+    assert.ok(summaryPayload.range.high?.price >= summaryPayload.range.low?.price);
+    assert.equal(summaryPayload.meta.source.contentHash, klinePayload.meta.source.contentHash);
+    assert.equal(summaryPayload.meta.source.path, klinePayload.meta.source.path);
 
     const drawdownResult = await client.callTool({
       name: "analytics_get_drawdowns",
