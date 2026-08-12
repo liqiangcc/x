@@ -3,8 +3,10 @@
 const { LedgerKlineReader } = require("../ledger/ledger_kline_reader");
 const { AnalyzeDrawdownsUseCase } = require("../../application/analytics/analyze_drawdowns");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
+const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
+const { createMarketGetSummaryTool } = require("./tools/market_get_summary");
 const { McpToolRegistry } = require("./tool_registry");
 
 function createMcpCompositionRoot({
@@ -13,6 +15,8 @@ function createMcpCompositionRoot({
   drawdownsTool = null,
   marketKlineUseCase = null,
   marketKlineTool = null,
+  marketSummaryUseCase = null,
+  marketSummaryTool = null,
   registry = null,
 } = {}) {
   const resolvedRegistry = registry ?? new McpToolRegistry();
@@ -42,8 +46,17 @@ function createMcpCompositionRoot({
     resolvedMarketKlineTool = createMarketGetKlineTool({ useCase: resolvedUseCase });
   }
 
+  let resolvedMarketSummaryTool = marketSummaryTool;
+  if (!resolvedMarketSummaryTool) {
+    const resolvedUseCase = marketSummaryUseCase ?? new GetMarketSummaryUseCase({
+      klineReader: getKlineReader(),
+    });
+    resolvedMarketSummaryTool = createMarketGetSummaryTool({ useCase: resolvedUseCase });
+  }
+
   resolvedRegistry.register(resolvedDrawdownsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
+  resolvedRegistry.register(resolvedMarketSummaryTool);
   return Object.freeze({ registry: resolvedRegistry });
 }
 
