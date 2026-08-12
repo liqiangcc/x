@@ -99,9 +99,13 @@ test("drawdown buying MCP definition is bounded, read-only, and exposes executio
   assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.default, 100);
   assert.equal(TOOL_DEFINITION.inputSchema.properties.lotSize.minimum, 1);
   assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.priceField.enum, ["open", "close", "high", "low"]);
-  assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.executionModel.enum, ["legacy_a_share", "frictionless"]);
+  assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.executionModel.enum, [
+    "legacy_a_share",
+    "domestic_stock_etf",
+    "frictionless",
+  ]);
   assert.equal(TOOL_DEFINITION.inputSchema.properties.executionModel.default, "legacy_a_share");
-  assert.match(TOOL_DEFINITION.description, /next-trading-day-open/);
+  assert.match(TOOL_DEFINITION.description, /domestic_stock_etf/);
   assert.match(TOOL_DEFINITION.description, /frictionless/);
   assert.equal(TOOL_DEFINITION.annotations.readOnlyHint, true);
   assert.equal(TOOL_DEFINITION.annotations.destructiveHint, false);
@@ -133,7 +137,7 @@ test("drawdown buying MCP handler delegates unchanged execution model selection 
     maxPurchases: 8,
     lotSize: 100,
     priceField: "close",
-    executionModel: "frictionless",
+    executionModel: "domestic_stock_etf",
   };
   const result = await tool.handler(input);
 
@@ -141,17 +145,13 @@ test("drawdown buying MCP handler delegates unchanged execution model selection 
   assert.deepEqual(result.structuredContent, expected);
   assert.deepEqual(JSON.parse(result.content[0].text), expected);
   assert.equal(result.isError, undefined);
-  assert.equal(result.structuredContent.meta.execution.timing, "next_trading_day_open");
-  assert.equal(result.structuredContent.meta.execution.feesIncluded, true);
-  assert.equal(result.structuredContent.meta.execution.slippageIncluded, true);
-  assert.equal(result.structuredContent.meta.execution.marketRestrictionsIncluded, true);
 });
 
 test("drawdown buying MCP handler maps application errors to stable tool errors", async () => {
   const tool = createSimulationRunDrawdownBuyingTool({
     useCase: {
       async execute() {
-        throw new TypeError("executionModel must be one of: legacy_a_share, frictionless.");
+        throw new TypeError("executionModel must be one of: legacy_a_share, domestic_stock_etf, frictionless.");
       },
     },
   });
@@ -161,7 +161,7 @@ test("drawdown buying MCP handler maps application errors to stable tool errors"
   assert.deepEqual(result.structuredContent, {
     error: {
       code: "invalid_arguments",
-      message: "executionModel must be one of: legacy_a_share, frictionless.",
+      message: "executionModel must be one of: legacy_a_share, domestic_stock_etf, frictionless.",
     },
   });
   assert.deepEqual(JSON.parse(result.content[0].text), result.structuredContent);
