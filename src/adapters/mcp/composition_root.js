@@ -3,8 +3,10 @@
 const { LedgerKlineReader } = require("../ledger/ledger_kline_reader");
 const { AnalyzeDrawdownsUseCase } = require("../../application/analytics/analyze_drawdowns");
 const { AnalyzeRecoveryPeriodsUseCase } = require("../../application/analytics/analyze_recovery_periods");
+const { CalculateBollingerUseCase } = require("../../application/analytics/calculate_bollinger");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
 const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
+const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
@@ -13,6 +15,8 @@ const { McpToolRegistry } = require("./tool_registry");
 
 function createMcpCompositionRoot({
   klineReader = null,
+  bollingerUseCase = null,
+  bollingerTool = null,
   drawdownsUseCase = null,
   drawdownsTool = null,
   recoveryPeriodsUseCase = null,
@@ -33,6 +37,14 @@ function createMcpCompositionRoot({
     if (!resolvedKlineReader) resolvedKlineReader = new LedgerKlineReader();
     return resolvedKlineReader;
   };
+
+  let resolvedBollingerTool = bollingerTool;
+  if (!resolvedBollingerTool) {
+    const resolvedUseCase = bollingerUseCase ?? new CalculateBollingerUseCase({
+      klineReader: getKlineReader(),
+    });
+    resolvedBollingerTool = createAnalyticsGetBollingerTool({ useCase: resolvedUseCase });
+  }
 
   let resolvedDrawdownsTool = drawdownsTool;
   if (!resolvedDrawdownsTool) {
@@ -66,6 +78,7 @@ function createMcpCompositionRoot({
     resolvedMarketSummaryTool = createMarketGetSummaryTool({ useCase: resolvedUseCase });
   }
 
+  resolvedRegistry.register(resolvedBollingerTool);
   resolvedRegistry.register(resolvedDrawdownsTool);
   resolvedRegistry.register(resolvedRecoveryPeriodsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
