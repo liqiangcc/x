@@ -61,8 +61,10 @@ test("MCP tool registry rejects malformed, duplicate, and unknown tools", async 
   );
 });
 
-test("MCP composition root keeps market, simulation, strategy catalog, and signal storage boundaries separate", async () => {
+test("MCP composition root keeps market, security classification, execution, strategy catalog, and signal storage boundaries separate", async () => {
   const klineCalls = [];
+  const securityMetadataCalls = [];
+  const securityProfileCalls = [];
   const strategyCalls = [];
   const signalCalls = [];
   const klineReader = {
@@ -83,6 +85,22 @@ test("MCP composition root keeps market, simulation, strategy catalog, and signa
         qualityIssues: [],
         source: { kind: "test", contentHash: null, path: null },
       };
+    },
+  };
+  const securityMetadataReader = {
+    async readMetadata(security) {
+      securityMetadataCalls.push(security);
+      return {
+        instrumentType: "a_share",
+        intradayRoundTripEligible: false,
+        source: { kind: "fake_security_metadata" },
+      };
+    },
+  };
+  const simulationSecurityExecutionProfileResolver = {
+    resolve(input) {
+      securityProfileCalls.push(input);
+      return "legacy_a_share";
     },
   };
   const strategyReader = {
@@ -162,7 +180,13 @@ test("MCP composition root keeps market, simulation, strategy catalog, and signa
     },
   };
 
-  const { registry } = createMcpCompositionRoot({ klineReader, strategyReader, signalReader });
+  const { registry } = createMcpCompositionRoot({
+    klineReader,
+    securityMetadataReader,
+    simulationSecurityExecutionProfileResolver,
+    strategyReader,
+    signalReader,
+  });
   assert.deepEqual(registry.listDefinitions().map((definition) => definition.name), [
     "analytics_get_bollinger",
     "analytics_get_drawdowns",
@@ -251,6 +275,15 @@ test("MCP composition root keeps market, simulation, strategy catalog, and signa
     assert.equal(call.endDate, "2026-01-06");
     assert.equal(call.period, "daily");
   }
+  assert.deepEqual(securityMetadataCalls, [{ code: "600001", market: 1 }]);
+  assert.deepEqual(securityProfileCalls, [{
+    security: { code: "600001", market: 1 },
+    metadata: {
+      instrumentType: "a_share",
+      intradayRoundTripEligible: false,
+      source: { kind: "fake_security_metadata" },
+    },
+  }]);
   assert.deepEqual(strategyCalls, [{ includeDefinition: false }]);
   assert.deepEqual(signalCalls, [
     {
@@ -271,6 +304,13 @@ test("MCP composition root keeps market, simulation, strategy catalog, and signa
   assert.equal(simulationResult.isError, undefined);
   assert.equal(simulationResult.structuredContent.signals.length, 2);
   assert.equal(simulationResult.structuredContent.summary.portfolio.filledTradeCount, 2);
+  assert.equal(simulationResult.structuredContent.config.executionModel, "legacy_a_share");
+  assert.equal(simulationResult.structuredContent.config.executionModelSelection, "security_metadata");
+  assert.deepEqual(simulationResult.structuredContent.meta.executionSelection, {
+    mode: "security_metadata",
+    profileId: "legacy_a_share",
+    securityMetadataSource: "reader",
+  });
   assert.equal(simulationResult.structuredContent.meta.execution.timing, "next_trading_day_open");
   assert.equal(simulationResult.structuredContent.meta.execution.feesIncluded, true);
   assert.equal(simulationResult.structuredContent.meta.execution.slippageIncluded, true);
