@@ -1,6 +1,7 @@
 "use strict";
 
 const { buildDrawdownBuyingPlan } = require("../../business/simulation/drawdown_buying_policy");
+const { createLegacyBuyExecutionModel } = require("../../simulation/execution/legacy_buy_execution_model");
 const { simulateBuyOrders } = require("../../simulation/portfolio/buy_only_portfolio_simulator");
 const { assertKlineReader } = require("../../ports/market/kline_reader");
 
@@ -18,12 +19,15 @@ class SimulateDrawdownBuyingUseCase {
   constructor({
     klineReader,
     buildPlan = buildDrawdownBuyingPlan,
+    createExecutionModel = createLegacyBuyExecutionModel,
     simulatePortfolio = simulateBuyOrders,
   } = {}) {
     this.klineReader = assertKlineReader(klineReader);
     if (typeof buildPlan !== "function") throw new TypeError("buildPlan must be a function.");
+    if (typeof createExecutionModel !== "function") throw new TypeError("createExecutionModel must be a function.");
     if (typeof simulatePortfolio !== "function") throw new TypeError("simulatePortfolio must be a function.");
     this.buildPlan = buildPlan;
+    this.createExecutionModel = createExecutionModel;
     this.simulatePortfolio = simulatePortfolio;
   }
 
@@ -38,7 +42,7 @@ class SimulateDrawdownBuyingUseCase {
     drawdownStep = 0.08,
     trancheFraction = 0.1,
     maxPurchases = 10,
-    lotSize = 1,
+    lotSize = 100,
     priceField = "close",
   } = {}) {
     const normalizedInitialCapital = positiveMoney(Number(initialCapital), "initialCapital");
@@ -71,6 +75,9 @@ class SimulateDrawdownBuyingUseCase {
         drawdownFromReference: signal.drawdownFromReference,
       },
     }));
+    const executionModel = this.createExecutionModel({
+      executionConfig: { lotSize: normalizedLotSize },
+    });
     const portfolio = this.simulatePortfolio({
       bars,
       orders,
@@ -78,6 +85,7 @@ class SimulateDrawdownBuyingUseCase {
       initialCash: normalizedInitialCapital,
       lotSize: normalizedLotSize,
       priceField,
+      executionModel,
     });
 
     return {
