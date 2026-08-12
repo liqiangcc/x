@@ -90,20 +90,25 @@ test("simulation use case requires an injected execution model resolver", () => 
   );
 });
 
-test("execution profiles and concrete models stay behind the resolver implementation boundary", () => {
+test("execution profiles, security classification, and concrete models stay behind their own boundaries", () => {
   const legacyModule = "legacy_buy_execution_model";
   const etfModule = "domestic_stock_etf_buy_execution_model";
   const t0EtfModule = "t0_etf_buy_execution_model";
   const frictionlessModule = "frictionless_buy_execution_model";
   const profileCatalogModule = "execution_profile_catalog";
   const profiledModelModule = "profiled_buy_execution_model";
-  const resolverPortModule = "ports/simulation/buy_execution_model_resolver";
-  const resolverImplementationModule = "simulation/execution/buy_execution_model_resolver";
+  const executionResolverPortModule = "ports/simulation/buy_execution_model_resolver";
+  const executionResolverImplementationModule = "simulation/execution/buy_execution_model_resolver";
+  const securityMetadataReaderPortModule = "ports/market/security_metadata_reader";
+  const securityMetadataReaderImplementationModule = "adapters/ledger/ledger_security_metadata_reader";
+  const securityProfileResolverPortModule = "ports/simulation/security_execution_profile_resolver";
+  const securityProfileResolverImplementationModule = "simulation/execution/security_execution_profile_resolver";
   const portfolioSource = source("src/simulation/portfolio/buy_only_portfolio_simulator.js");
   const applicationSource = source("src/application/simulation/simulate_drawdown_buying.js");
   const toolSource = source("src/adapters/mcp/tools/simulation_run_drawdown_buying.js");
   const compositionSource = source("src/adapters/mcp/composition_root.js");
-  const resolverSource = source("src/simulation/execution/buy_execution_model_resolver.js");
+  const executionResolverSource = source("src/simulation/execution/buy_execution_model_resolver.js");
+  const securityProfileResolverSource = source("src/simulation/execution/security_execution_profile_resolver.js");
   const catalogSource = source("src/simulation/execution/execution_profile_catalog.js");
 
   for (const lowerSource of [portfolioSource, applicationSource, toolSource]) {
@@ -113,11 +118,20 @@ test("execution profiles and concrete models stay behind the resolver implementa
     assert.equal(lowerSource.includes(frictionlessModule), false);
     assert.equal(lowerSource.includes(profileCatalogModule), false);
     assert.equal(lowerSource.includes(profiledModelModule), false);
+    assert.equal(lowerSource.includes(securityMetadataReaderImplementationModule), false);
+    assert.equal(lowerSource.includes(securityProfileResolverImplementationModule), false);
   }
 
-  assert.equal(applicationSource.includes(resolverPortModule), true);
-  assert.equal(toolSource.includes(resolverPortModule), true);
-  assert.equal(compositionSource.includes(resolverImplementationModule), true);
+  assert.equal(applicationSource.includes(executionResolverPortModule), true);
+  assert.equal(applicationSource.includes(securityMetadataReaderPortModule), true);
+  assert.equal(applicationSource.includes(securityProfileResolverPortModule), true);
+  assert.equal(toolSource.includes(executionResolverPortModule), true);
+  assert.equal(toolSource.includes(securityMetadataReaderPortModule), false);
+  assert.equal(toolSource.includes(securityProfileResolverPortModule), false);
+
+  assert.equal(compositionSource.includes(executionResolverImplementationModule), true);
+  assert.equal(compositionSource.includes(securityMetadataReaderImplementationModule), true);
+  assert.equal(compositionSource.includes(securityProfileResolverImplementationModule), true);
   assert.equal(compositionSource.includes(legacyModule), false);
   assert.equal(compositionSource.includes(etfModule), false);
   assert.equal(compositionSource.includes(t0EtfModule), false);
@@ -125,14 +139,22 @@ test("execution profiles and concrete models stay behind the resolver implementa
   assert.equal(compositionSource.includes(profileCatalogModule), false);
   assert.equal(compositionSource.includes(profiledModelModule), false);
 
-  // The resolver composes generic profile-backed execution plus explicitly
-  // exceptional models. It must not regain per-market concrete wrappers.
-  assert.equal(resolverSource.includes(profileCatalogModule), true);
-  assert.equal(resolverSource.includes(profiledModelModule), true);
-  assert.equal(resolverSource.includes(frictionlessModule), true);
-  assert.equal(resolverSource.includes(legacyModule), false);
-  assert.equal(resolverSource.includes(etfModule), false);
-  assert.equal(resolverSource.includes(t0EtfModule), false);
+  // The execution resolver composes generic profile-backed execution plus
+  // explicitly exceptional models. It must not regain per-market wrappers.
+  assert.equal(executionResolverSource.includes(profileCatalogModule), true);
+  assert.equal(executionResolverSource.includes(profiledModelModule), true);
+  assert.equal(executionResolverSource.includes(frictionlessModule), true);
+  assert.equal(executionResolverSource.includes(legacyModule), false);
+  assert.equal(executionResolverSource.includes(etfModule), false);
+  assert.equal(executionResolverSource.includes(t0EtfModule), false);
+
+  // Security classification only maps explicit metadata to a public profile id.
+  // It must not know execution flow, fees, storage, MCP, or concrete models.
+  assert.equal(securityProfileResolverSource.includes(profileCatalogModule), false);
+  assert.equal(securityProfileResolverSource.includes(profiledModelModule), false);
+  assert.equal(securityProfileResolverSource.includes(frictionlessModule), false);
+  assert.equal(securityProfileResolverSource.includes(securityMetadataReaderImplementationModule), false);
+  assert.equal(securityProfileResolverSource.includes("adapters/mcp"), false);
 
   // The profile catalog owns market assumptions only, never execution flow.
   assert.equal(catalogSource.includes(legacyModule), false);
