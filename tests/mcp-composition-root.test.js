@@ -88,6 +88,7 @@ test("MCP composition root shares one KlineReader across market and analytics us
   assert.deepEqual(registry.listDefinitions().map((definition) => definition.name), [
     "analytics_get_drawdowns",
     "market_get_kline",
+    "market_get_summary",
   ]);
 
   const marketResult = await registry.invoke("market_get_kline", {
@@ -97,6 +98,14 @@ test("MCP composition root shares one KlineReader across market and analytics us
     endDate: "2026-01-06",
     period: "daily",
     limit: 2,
+    adjustment: "ledger_default",
+  });
+  const summaryResult = await registry.invoke("market_get_summary", {
+    code: "600001",
+    market: 1,
+    startDate: "2026-01-02",
+    endDate: "2026-01-06",
+    period: "daily",
     adjustment: "ledger_default",
   });
   const drawdownResult = await registry.invoke("analytics_get_drawdowns", {
@@ -125,10 +134,22 @@ test("MCP composition root shares one KlineReader across market and analytics us
       period: "daily",
       limit: null,
     },
+    {
+      code: "600001",
+      market: 1,
+      startDate: "2026-01-02",
+      endDate: "2026-01-06",
+      period: "daily",
+      limit: null,
+    },
   ]);
   assert.equal(marketResult.isError, undefined);
   assert.deepEqual(marketResult.structuredContent.bars.map((bar) => bar.date), ["2026-01-05", "2026-01-06"]);
   assert.equal(marketResult.structuredContent.page.hasMore, true);
+  assert.equal(summaryResult.isError, undefined);
+  assert.deepEqual(summaryResult.structuredContent.latest, { date: "2026-01-06", close: 100 });
+  assert.equal(summaryResult.structuredContent.coverage.barCount, 3);
+  assert.equal(summaryResult.structuredContent.range.returnRate, 0);
   assert.equal(drawdownResult.isError, undefined);
   assert.equal(drawdownResult.structuredContent.summary.eventCount, 1);
   assert.equal(drawdownResult.structuredContent.events[0].drawdown, -0.2);
@@ -138,14 +159,23 @@ test("MCP composition root shares one KlineReader across market and analytics us
 test("MCP composition root accepts prebuilt tools without constructing business dependencies", async () => {
   const drawdownsTool = fakeTool("injected_drawdowns", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
-  const { registry } = createMcpCompositionRoot({ drawdownsTool, marketKlineTool });
+  const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
+  const { registry } = createMcpCompositionRoot({ drawdownsTool, marketKlineTool, marketSummaryTool });
 
-  assert.deepEqual(registry.listDefinitions(), [drawdownsTool.definition, marketKlineTool.definition]);
+  assert.deepEqual(registry.listDefinitions(), [
+    drawdownsTool.definition,
+    marketKlineTool.definition,
+    marketSummaryTool.definition,
+  ]);
   assert.deepEqual(await registry.invoke("injected_drawdowns"), {
     content: [],
     structuredContent: { ok: true },
   });
   assert.deepEqual(await registry.invoke("injected_kline"), {
+    content: [],
+    structuredContent: { ok: true },
+  });
+  assert.deepEqual(await registry.invoke("injected_summary"), {
     content: [],
     structuredContent: { ok: true },
   });
