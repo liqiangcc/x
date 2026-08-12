@@ -3,21 +3,13 @@
 const { Account } = require("../../simulator/core/account");
 const { normalizeSecurityId, securityKey } = require("../../simulator/core/contracts");
 const { roundMoney } = require("../../simulator/core/position");
-const { createLegacyBuyExecutionModel } = require("../execution/legacy_buy_execution_model");
+const { assertBuyExecutionModel } = require("../../ports/simulation/buy_execution_model");
 
 const PRICE_FIELDS = Object.freeze(["open", "close", "high", "low"]);
 
 function normalizePositiveMoney(value, field) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
   return value;
-}
-
-function normalizeLotSize(value) {
-  const normalized = value ?? 100;
-  if (!Number.isInteger(normalized) || normalized < 1) {
-    throw new TypeError("lotSize must be a positive integer.");
-  }
-  return normalized;
 }
 
 function normalizePriceField(value) {
@@ -60,31 +52,20 @@ function normalizeOrders(orders) {
   });
 }
 
-function assertBuyExecutionModel(model) {
-  if (!model || typeof model !== "object") throw new TypeError("executionModel must be an object.");
-  if (typeof model.executeBuy !== "function") throw new TypeError("executionModel must provide executeBuy().");
-  if (typeof model.describe !== "function") throw new TypeError("executionModel must provide describe().");
-  return model;
-}
-
 function simulateBuyOrders({
   bars,
   orders,
   security,
   initialCash = 100000,
-  lotSize = 100,
   priceField = "close",
-  executionModel = null,
+  executionModel,
 } = {}) {
   const normalizedSecurity = normalizeSecurityId(security);
   const normalizedInitialCash = normalizePositiveMoney(Number(initialCash), "initialCash");
-  const normalizedLotSize = normalizeLotSize(lotSize);
   const normalizedPriceField = normalizePriceField(priceField);
   const rows = normalizeBars(bars, normalizedPriceField);
   const normalizedOrders = normalizeOrders(orders);
-  const resolvedExecutionModel = assertBuyExecutionModel(
-    executionModel ?? createLegacyBuyExecutionModel({ executionConfig: { lotSize: normalizedLotSize } })
-  );
+  const resolvedExecutionModel = assertBuyExecutionModel(executionModel);
   const account = new Account({ initialCash: normalizedInitialCash });
   const trades = [];
 
@@ -158,9 +139,7 @@ function simulateBuyOrders({
 
 module.exports = {
   PRICE_FIELDS,
-  assertBuyExecutionModel,
   normalizeBars,
-  normalizeLotSize,
   normalizeOrders,
   normalizePriceField,
   simulateBuyOrders,
