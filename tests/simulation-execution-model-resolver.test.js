@@ -10,6 +10,14 @@ const {
   normalizeBuyExecutionModelId,
 } = require("../src/ports/simulation/buy_execution_model_resolver");
 const {
+  RESTRICTION_RULE_KINDS,
+  SHARE_AVAILABILITY,
+  defineExecutionProfile,
+} = require("../src/ports/simulation/execution_profile");
+const {
+  createExecutionProfileCatalog,
+} = require("../src/simulation/execution/execution_profile_catalog");
+const {
   createBuyExecutionModelResolver,
 } = require("../src/simulation/execution/buy_execution_model_resolver");
 
@@ -28,7 +36,7 @@ test("BuyExecutionModelResolver port owns the public model identifiers and narro
   assert.throws(() => assertBuyExecutionModelResolver({}), /missing methods: resolve/);
 });
 
-test("registered resolver maps stable identifiers to interchangeable execution model implementations", () => {
+test("registered resolver maps catalog profiles and special models behind the same port", () => {
   const resolver = createBuyExecutionModelResolver();
   assert.equal(assertBuyExecutionModelResolver(resolver), resolver);
 
@@ -36,8 +44,12 @@ test("registered resolver maps stable identifiers to interchangeable execution m
   const etf = resolver.resolve({ model: "domestic_stock_etf", executionConfig: { lotSize: 100 } });
   const frictionless = resolver.resolve({ model: "frictionless", executionConfig: { lotSize: 10 } });
 
+  assert.equal(legacy.describe().profileId, "legacy_a_share");
+  assert.equal(legacy.describe().assetClass, "a_share");
   assert.equal(legacy.describe().kind, "legacy_a_share_next_open");
   assert.equal(legacy.describe().lotSize, 10);
+  assert.equal(etf.describe().profileId, "domestic_stock_etf");
+  assert.equal(etf.describe().assetClass, "domestic_stock_etf");
   assert.equal(etf.describe().kind, "domestic_stock_etf_next_open");
   assert.equal(etf.describe().lotSize, 100);
   assert.equal(etf.describe().tickSize, 0.001);
@@ -45,25 +57,60 @@ test("registered resolver maps stable identifiers to interchangeable execution m
   assert.equal(etf.describe().tPlusOne, true);
   assert.equal(frictionless.describe().kind, "frictionless_next_open");
   assert.equal(frictionless.describe().lotSize, 10);
+  assert.equal("profileId" in frictionless.describe(), false);
 });
 
-test("registered resolver keeps concrete factories behind one infrastructure mapping", () => {
+test("resolver can add another profiled market implementation without adding another concrete model factory", () => {
+  const customProfile = defineExecutionProfile({
+    id: "legacy_a_share",
+    assetClass: "custom_asset",
+    kind: "custom_profiled_next_open",
+    ruleApproximation: "custom_rules",
+    settlement: { sharesAvailable: SHARE_AVAILABILITY.SAME_DAY },
+    lotRules: { buyLotSize: 50 },
+    priceRules: { tickSize: 0.005, slippageRate: 0 },
+    feeRules: { commissionRate: 0, minimumCommissionYuan: 0, stampDutyRate: 0 },
+    restrictionRules: { kind: RESTRICTION_RULE_KINDS.NONE },
+    qualityIssues: ["custom_profile"],
+  });
+  const etfProfile = defineExecutionProfile({
+    ...customProfile,
+    id: "domestic_stock_etf",
+    kind: "custom_etf_profiled_next_open",
+  });
+  const profileCatalog = createExecutionProfileCatalog({ profiles: [customProfile, etfProfile] });
   const calls = [];
-  const model = {
+  const specialModel = {
     executeBuy() { return { status: "skipped" }; },
-    describe() { return { kind: "fake" }; },
+    describe() { return { kind: "special" }; },
   };
   const resolver = createBuyExecutionModelResolver({
+    profileCatalog,
     factories: {
-      legacy_a_share(input) { calls.push({ id: "legacy_a_share", input }); return model; },
-      domestic_stock_etf(input) { calls.push({ id: "domestic_stock_etf", input }); return model; },
-      frictionless(input) { calls.push({ id: "frictionless", input }); return model; },
+      frictionless(input) {
+        calls.push(input);
+        return specialModel;
+      },
     },
   });
 
-  assert.equal(resolver.resolve({ model: "domestic_stock_etf", executionConfig: { lotSize: 100 } }), model);
-  assert.deepEqual(calls, [{
-    id: "domestic_stock_etf",
-    input: { executionConfig: { lotSize: 100 } },
-  }]);
+  const profiled = resolver.resolve({ model: "legacy_a_share", executionConfig: {} });
+  assert.equal(profiled.describe().kind, "custom_profiled_next_open");
+  assert.equal(profiled.describe().lotSize, 50);
+  assert.equal(profiled.describe().tickSize, 0.005);
+  assert.equal(profiled.describe().tPlusOne, false);
+  assert.equal(profiled.describe().feesIncluded, false);
+  assert.equal(profiled.describe().marketRestrictionsIncluded, false);
+  assert.equal(calls.length, 0);
+
+  assert.equal(resolver.resolve({ model: "frictionless", executionConfig: { lotSize: 10 } }), specialModel);
+  assert.deepEqual(calls, [{ executionConfig: { lotSize: 10 } }]);
+});
+
+test("resolver fails closed when a public execution model has neither a profile nor a special factory", () => {
+  const profileCatalog = createExecutionProfileCatalog({ profiles: [] });
+  assert.throws(
+    () => createBuyExecutionModelResolver({ profileCatalog, factories: {} }),
+    /implementation is missing for: legacy_a_share/
+  );
 });
