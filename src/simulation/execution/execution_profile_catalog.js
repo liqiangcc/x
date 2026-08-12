@@ -36,9 +36,26 @@ const DOMESTIC_STOCK_ETF_EXECUTION_PROFILE = defineExecutionProfile({
   ],
 });
 
+const T0_ETF_EXECUTION_PROFILE = defineExecutionProfile({
+  id: "t0_etf",
+  assetClass: "t0_eligible_etf",
+  kind: "t0_etf_next_open",
+  ruleApproximation: "t0_etf_current_approximation",
+  settlement: { sharesAvailable: SHARE_AVAILABILITY.SAME_DAY },
+  lotRules: { buyLotSize: 100 },
+  priceRules: { tickSize: 0.001 },
+  feeRules: { stampDutyRate: 0 },
+  restrictionRules: { kind: RESTRICTION_RULE_KINDS.A_SHARE_MARKET },
+  qualityIssues: [
+    "t0_etf_profile_requires_exchange_eligible_instrument",
+    "t0_etf_profile_uses_shared_a_share_market_restriction_approximation",
+  ],
+});
+
 const DEFAULT_EXECUTION_PROFILES = Object.freeze([
   LEGACY_A_SHARE_EXECUTION_PROFILE,
   DOMESTIC_STOCK_ETF_EXECUTION_PROFILE,
+  T0_ETF_EXECUTION_PROFILE,
 ]);
 
 function createExecutionProfileCatalog({ profiles = DEFAULT_EXECUTION_PROFILES } = {}) {
@@ -66,5 +83,6 @@ module.exports = {
   DEFAULT_EXECUTION_PROFILE_CATALOG,
   DOMESTIC_STOCK_ETF_EXECUTION_PROFILE,
   LEGACY_A_SHARE_EXECUTION_PROFILE,
+  T0_ETF_EXECUTION_PROFILE,
   createExecutionProfileCatalog,
 };
