@@ -6,15 +6,10 @@ const {
 const {
   assertSecurityMasterReader,
 } = require("../../ports/market/security_master_reader");
-const { LedgerSecurityMasterReader } = require("./ledger_security_master_reader");
 
 class LedgerSecurityMetadataReader {
-  constructor({ securityMasterReader = null, dataRoot = undefined } = {}) {
-    this.securityMasterReader = assertSecurityMasterReader(
-      securityMasterReader ?? new LedgerSecurityMasterReader(
-        dataRoot === undefined ? {} : { dataRoot }
-      )
-    );
+  constructor({ securityMasterReader } = {}) {
+    this.securityMasterReader = assertSecurityMasterReader(securityMasterReader);
   }
 
   readMetadata(security, options = {}) {
