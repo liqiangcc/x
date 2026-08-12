@@ -12,7 +12,7 @@ const { SimulateDrawdownBuyingUseCase } = require("../../application/simulation/
 const { ExplainStrategySignalUseCase } = require("../../application/strategy/explain_strategy_signal");
 const { GetStrategyCandidatesUseCase } = require("../../application/strategy/get_strategy_candidates");
 const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
-const { createLegacyBuyExecutionModel } = require("../../simulation/execution/legacy_buy_execution_model");
+const { createBuyExecutionModelResolver } = require("../../simulation/execution/buy_execution_model_resolver");
 const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
@@ -29,7 +29,7 @@ function createMcpCompositionRoot({
   strategyReader = null,
   signalReader = null,
   signalDatabasePath = null,
-  simulationExecutionModelFactory = createLegacyBuyExecutionModel,
+  simulationExecutionModelResolver = null,
   bollingerUseCase = null,
   bollingerTool = null,
   drawdownsUseCase = null,
@@ -54,9 +54,6 @@ function createMcpCompositionRoot({
   if (!(resolvedRegistry instanceof McpToolRegistry) && typeof resolvedRegistry.register !== "function") {
     throw new TypeError("registry must provide register().");
   }
-  if (typeof simulationExecutionModelFactory !== "function") {
-    throw new TypeError("simulationExecutionModelFactory must be a function.");
-  }
 
   let resolvedKlineReader = klineReader;
   const getKlineReader = () => {
@@ -78,6 +75,14 @@ function createMcpCompositionRoot({
       );
     }
     return resolvedSignalReader;
+  };
+
+  let resolvedSimulationExecutionModelResolver = simulationExecutionModelResolver;
+  const getSimulationExecutionModelResolver = () => {
+    if (!resolvedSimulationExecutionModelResolver) {
+      resolvedSimulationExecutionModelResolver = createBuyExecutionModelResolver();
+    }
+    return resolvedSimulationExecutionModelResolver;
   };
 
   let resolvedBollingerTool = bollingerTool;
@@ -124,7 +129,7 @@ function createMcpCompositionRoot({
   if (!resolvedSimulationTool) {
     const resolvedUseCase = simulationUseCase ?? new SimulateDrawdownBuyingUseCase({
       klineReader: getKlineReader(),
-      createExecutionModel: simulationExecutionModelFactory,
+      executionModelResolver: getSimulationExecutionModelResolver(),
     });
     resolvedSimulationTool = createSimulationRunDrawdownBuyingTool({ useCase: resolvedUseCase });
   }
