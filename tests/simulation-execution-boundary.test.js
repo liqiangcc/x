@@ -90,7 +90,7 @@ test("simulation use case requires an injected execution model resolver", () => 
   );
 });
 
-test("execution profiles, security classification, and concrete models stay behind their own boundaries", () => {
+test("execution profiles, security master, classification, and concrete models stay behind their own boundaries", () => {
   const legacyModule = "legacy_buy_execution_model";
   const etfModule = "domestic_stock_etf_buy_execution_model";
   const t0EtfModule = "t0_etf_buy_execution_model";
@@ -101,6 +101,8 @@ test("execution profiles, security classification, and concrete models stay behi
   const executionResolverImplementationModule = "simulation/execution/buy_execution_model_resolver";
   const securityMetadataReaderPortModule = "ports/market/security_metadata_reader";
   const securityMetadataReaderImplementationModule = "ledger_security_metadata_reader";
+  const securityMasterReaderPortModule = "ports/market/security_master_reader";
+  const securityMasterReaderImplementationModule = "ledger_security_master_reader";
   const securityProfileResolverPortModule = "ports/simulation/security_execution_profile_resolver";
   const securityProfileResolverImplementationModule = "simulation/execution/security_execution_profile_resolver";
   const portfolioSource = source("src/simulation/portfolio/buy_only_portfolio_simulator.js");
@@ -109,6 +111,8 @@ test("execution profiles, security classification, and concrete models stay behi
   const compositionSource = source("src/adapters/mcp/composition_root.js");
   const executionResolverSource = source("src/simulation/execution/buy_execution_model_resolver.js");
   const securityProfileResolverSource = source("src/simulation/execution/security_execution_profile_resolver.js");
+  const securityMetadataReaderSource = source("src/adapters/ledger/ledger_security_metadata_reader.js");
+  const securityMasterReaderSource = source("src/adapters/ledger/ledger_security_master_reader.js");
   const catalogSource = source("src/simulation/execution/execution_profile_catalog.js");
 
   for (const lowerSource of [portfolioSource, applicationSource, toolSource]) {
@@ -119,18 +123,22 @@ test("execution profiles, security classification, and concrete models stay behi
     assert.equal(lowerSource.includes(profileCatalogModule), false);
     assert.equal(lowerSource.includes(profiledModelModule), false);
     assert.equal(lowerSource.includes(securityMetadataReaderImplementationModule), false);
+    assert.equal(lowerSource.includes(securityMasterReaderImplementationModule), false);
     assert.equal(lowerSource.includes(securityProfileResolverImplementationModule), false);
   }
 
   assert.equal(applicationSource.includes(executionResolverPortModule), true);
   assert.equal(applicationSource.includes(securityMetadataReaderPortModule), true);
+  assert.equal(applicationSource.includes(securityMasterReaderPortModule), false);
   assert.equal(applicationSource.includes(securityProfileResolverPortModule), true);
   assert.equal(toolSource.includes(executionResolverPortModule), true);
   assert.equal(toolSource.includes(securityMetadataReaderPortModule), false);
+  assert.equal(toolSource.includes(securityMasterReaderPortModule), false);
   assert.equal(toolSource.includes(securityProfileResolverPortModule), false);
 
   assert.equal(compositionSource.includes(executionResolverImplementationModule), true);
   assert.equal(compositionSource.includes(securityMetadataReaderImplementationModule), true);
+  assert.equal(compositionSource.includes(securityMasterReaderImplementationModule), true);
   assert.equal(compositionSource.includes(securityProfileResolverImplementationModule), true);
   assert.equal(compositionSource.includes(legacyModule), false);
   assert.equal(compositionSource.includes(etfModule), false);
@@ -138,6 +146,25 @@ test("execution profiles, security classification, and concrete models stay behi
   assert.equal(compositionSource.includes(frictionlessModule), false);
   assert.equal(compositionSource.includes(profileCatalogModule), false);
   assert.equal(compositionSource.includes(profiledModelModule), false);
+
+  // Metadata projection depends on the SecurityMasterReader Port only. It must
+  // not own storage selection or reclassify securities itself.
+  assert.equal(securityMetadataReaderSource.includes(securityMasterReaderPortModule), true);
+  assert.equal(securityMetadataReaderSource.includes(securityMasterReaderImplementationModule), false);
+  assert.equal(securityMetadataReaderSource.includes("node:fs"), false);
+  assert.equal(securityMetadataReaderSource.includes("data/universe"), false);
+  assert.equal(securityMetadataReaderSource.includes("instrumentType: \"a_share\""), false);
+  assert.equal(securityMetadataReaderSource.includes("instrumentType: \"etf\""), false);
+
+  // Ledger Security Master owns repository IO and normalization, but never
+  // execution-profile selection or execution mechanics.
+  assert.equal(securityMasterReaderSource.includes("node:fs"), true);
+  assert.equal(securityMasterReaderSource.includes("security_master_record"), true);
+  assert.equal(securityMasterReaderSource.includes("legacy_a_share"), false);
+  assert.equal(securityMasterReaderSource.includes("domestic_stock_etf"), false);
+  assert.equal(securityMasterReaderSource.includes("t0_etf"), false);
+  assert.equal(securityMasterReaderSource.includes(profileCatalogModule), false);
+  assert.equal(securityMasterReaderSource.includes(profiledModelModule), false);
 
   // The execution resolver composes generic profile-backed execution plus
   // explicitly exceptional models. It must not regain per-market wrappers.
@@ -154,6 +181,7 @@ test("execution profiles, security classification, and concrete models stay behi
   assert.equal(securityProfileResolverSource.includes(profiledModelModule), false);
   assert.equal(securityProfileResolverSource.includes(frictionlessModule), false);
   assert.equal(securityProfileResolverSource.includes(securityMetadataReaderImplementationModule), false);
+  assert.equal(securityProfileResolverSource.includes(securityMasterReaderImplementationModule), false);
   assert.equal(securityProfileResolverSource.includes("adapters/mcp"), false);
 
   // The profile catalog owns market assumptions only, never execution flow.
