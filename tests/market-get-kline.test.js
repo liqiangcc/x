@@ -157,7 +157,7 @@ test("kline range helpers keep deterministic contracts", () => {
     amount: null,
     changePct: null,
   });
-  assert.throws(() => new GetKlineRangeUseCase(), /KlineReader/);
+  assert.throws(() => new GetKlineRangeUseCase(), /klineReader/);
   assert.throws(
     () => new GetKlineRangeUseCase({ klineReader: { readRange() {} }, maxBars: 0 }),
     /maxBars/
