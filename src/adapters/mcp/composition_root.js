@@ -1,6 +1,7 @@
 "use strict";
 
 const { LedgerKlineReader } = require("../ledger/ledger_kline_reader");
+const { LedgerSecurityMetadataReader } = require("../ledger/ledger_security_metadata_reader");
 const { BuiltinStrategyReader } = require("../strategy/builtin_strategy_reader");
 const { ReadonlySqliteSignalReader } = require("../strategy/readonly_sqlite_signal_reader");
 const { AnalyzeDrawdownsUseCase } = require("../../application/analytics/analyze_drawdowns");
@@ -13,6 +14,7 @@ const { ExplainStrategySignalUseCase } = require("../../application/strategy/exp
 const { GetStrategyCandidatesUseCase } = require("../../application/strategy/get_strategy_candidates");
 const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
 const { createBuyExecutionModelResolver } = require("../../simulation/execution/buy_execution_model_resolver");
+const { createSecurityExecutionProfileResolver } = require("../../simulation/execution/security_execution_profile_resolver");
 const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
@@ -26,10 +28,12 @@ const { McpToolRegistry } = require("./tool_registry");
 
 function createMcpCompositionRoot({
   klineReader = null,
+  securityMetadataReader = null,
   strategyReader = null,
   signalReader = null,
   signalDatabasePath = null,
   simulationExecutionModelResolver = null,
+  simulationSecurityExecutionProfileResolver = null,
   bollingerUseCase = null,
   bollingerTool = null,
   drawdownsUseCase = null,
@@ -61,6 +65,14 @@ function createMcpCompositionRoot({
     return resolvedKlineReader;
   };
 
+  let resolvedSecurityMetadataReader = securityMetadataReader;
+  const getSecurityMetadataReader = () => {
+    if (!resolvedSecurityMetadataReader) {
+      resolvedSecurityMetadataReader = new LedgerSecurityMetadataReader();
+    }
+    return resolvedSecurityMetadataReader;
+  };
+
   let resolvedStrategyReader = strategyReader;
   const getStrategyReader = () => {
     if (!resolvedStrategyReader) resolvedStrategyReader = new BuiltinStrategyReader();
@@ -83,6 +95,14 @@ function createMcpCompositionRoot({
       resolvedSimulationExecutionModelResolver = createBuyExecutionModelResolver();
     }
     return resolvedSimulationExecutionModelResolver;
+  };
+
+  let resolvedSimulationSecurityExecutionProfileResolver = simulationSecurityExecutionProfileResolver;
+  const getSimulationSecurityExecutionProfileResolver = () => {
+    if (!resolvedSimulationSecurityExecutionProfileResolver) {
+      resolvedSimulationSecurityExecutionProfileResolver = createSecurityExecutionProfileResolver();
+    }
+    return resolvedSimulationSecurityExecutionProfileResolver;
   };
 
   let resolvedBollingerTool = bollingerTool;
@@ -130,6 +150,8 @@ function createMcpCompositionRoot({
     const resolvedUseCase = simulationUseCase ?? new SimulateDrawdownBuyingUseCase({
       klineReader: getKlineReader(),
       executionModelResolver: getSimulationExecutionModelResolver(),
+      securityMetadataReader: getSecurityMetadataReader(),
+      securityExecutionProfileResolver: getSimulationSecurityExecutionProfileResolver(),
     });
     resolvedSimulationTool = createSimulationRunDrawdownBuyingTool({ useCase: resolvedUseCase });
   }
