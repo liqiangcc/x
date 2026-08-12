@@ -27,12 +27,13 @@ const {
   createSecurityExecutionProfileResolver,
 } = require("../src/simulation/execution/security_execution_profile_resolver");
 
-function snapshot(records, name, { complete = true } = {}) {
+function snapshot(records, name, { complete = true, exchange = "sse" } = {}) {
+  const host = exchange === "szse" ? "www.szse.cn" : "www.sse.com.cn";
   return {
     complete,
     records,
     source: {
-      document: `https://example.test/${name}`,
+      document: `https://${host}/${name}`,
       version: `${name}-v1`,
       collectedAt: "2026-08-12T14:30:00.000Z",
     },
@@ -85,20 +86,42 @@ test("official exchange ETF source derives T+0 only from complete membership sna
   assert.match(result.records[1].source.document, /all=.*;t0=.*/);
 });
 
-test("official ETF source fails closed on incomplete or inconsistent snapshots", async () => {
+test("official ETF source fails closed on incomplete, inconsistent, or third-party snapshots", async () => {
   const incomplete = new OfficialExchangeEtfSource({
     exchange: "szse",
-    fetchAllEtfs: async () => snapshot([{ code: "159001", listingDate: "2026-01-01" }], "all", { complete: false }),
-    fetchT0Etfs: async () => snapshot([], "t0"),
+    fetchAllEtfs: async () => snapshot(
+      [{ code: "159001", listingDate: "2026-01-01" }],
+      "all",
+      { complete: false, exchange: "szse" }
+    ),
+    fetchT0Etfs: async () => snapshot([], "t0", { exchange: "szse" }),
   });
   await assert.rejects(() => incomplete.fetchFacts(), /complete must be true/);
 
   const inconsistent = new OfficialExchangeEtfSource({
     exchange: "szse",
-    fetchAllEtfs: async () => snapshot([{ code: "159001", listingDate: "2026-01-01" }], "all"),
-    fetchT0Etfs: async () => snapshot([{ code: "159999" }], "t0"),
+    fetchAllEtfs: async () => snapshot(
+      [{ code: "159001", listingDate: "2026-01-01" }],
+      "all",
+      { exchange: "szse" }
+    ),
+    fetchT0Etfs: async () => snapshot([{ code: "159999" }], "t0", { exchange: "szse" }),
   });
   await assert.rejects(() => inconsistent.fetchFacts(), /absent from the complete ETF snapshot/);
+
+  const thirdParty = new OfficialExchangeEtfSource({
+    exchange: "sse",
+    fetchAllEtfs: async () => ({
+      ...snapshot([{ code: "510300", listingDate: "2026-01-01" }], "all"),
+      source: {
+        document: "https://example.test/all",
+        version: "all-v1",
+        collectedAt: "2026-08-12T14:30:00.000Z",
+      },
+    }),
+    fetchT0Etfs: async () => snapshot([], "t0"),
+  });
+  await assert.rejects(() => thirdParty.fetchFacts(), /must belong to sse\.com\.cn/);
 });
 
 test("ETF fact normalizer requires explicit eligibility and matching provenance", () => {
