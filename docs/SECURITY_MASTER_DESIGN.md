@@ -29,10 +29,36 @@ SecurityExecutionProfileResolver
 BuyExecutionModelResolver
 ```
 
+质量门禁独立存在：
+
+```text
+Repository Security Master
+        |
+        v
+LedgerSecurityMasterReader.readSnapshot()
+        |
+        v
+ValidateSecurityMasterUseCase
+        |
+        +-> SecurityMasterQualityValidator
+        |      deterministic record checks
+        |
+        +-> SecurityExecutionProfileResolver Port
+               profile resolvability check
+        |
+        v
+ValidationReport
+        |
+        v
+CI / validation CLI
+```
+
 关注点保持独立：
 
 - Security Master：事实与证据；
-- SecurityMetadataReader：面向 Application 的窄投影；
+- SecurityMetadataReader：面向 simulation Application 的窄投影；
+- SecurityMasterQualityValidator：证券主数据本身的确定性质量规则；
+- Security Master audit Application：组合 snapshot 与 profile resolvability；
 - SecurityExecutionProfileResolver：事实到 profile id 的纯确定性映射；
 - ExecutionProfile / ExecutionModel：市场执行假设与成交机制；
 - Business Policy：为什么买、何时产生业务 signal。
@@ -42,11 +68,15 @@ BuyExecutionModelResolver
 ```text
 src/market/security_execution_metadata.js
 src/market/security_master_record.js
+src/market/security_master_quality_validator.js
 src/ports/market/security_master_reader.js
 src/adapters/ledger/ledger_security_master_reader.js
 src/adapters/ledger/ledger_security_metadata_reader.js
+src/application/market/validate_security_master.js
+scripts/validate_security_master.js
 data/security_master/manifest.json
 tests/security-master.test.js
+tests/security-master-quality.test.js
 ```
 
 ## 2. SecurityMasterRecord
@@ -144,6 +174,8 @@ SecurityMasterRecord 是纯数据事实，不包含：
 
 ### 4.1 SecurityMasterReader Port
 
+主查询能力保持最窄：
+
 ```text
 readRecord(security, { asOf? }) -> SecurityMasterRecord | null
 ```
@@ -159,9 +191,33 @@ readRecord(security, { asOf? }) -> SecurityMasterRecord | null
 - 选择 execution profile；
 - 构造 ExecutionModel；
 - 判断投资策略；
-- 暴露原始 manifest/universe JSON 给 Application。
+- 暴露原始 manifest/universe JSON 给 simulation Application。
 
-### 4.2 LedgerSecurityMasterReader
+### 4.2 SecurityMasterSnapshotReader capability
+
+质量审计需要全量事实，因此在同一个 Port 模块中提供独立 capability assertion：
+
+```text
+readSnapshot() -> {
+  available,
+  entries[],
+  source
+}
+```
+
+`assertSecurityMasterReader` 仍只要求 `readRecord()`；`assertSecurityMasterSnapshotReader` 只要求 `readSnapshot()`。两种消费者不会被迫依赖对方不需要的能力。
+
+Snapshot entry 在 SecurityMasterRecord 之外只携带审计元数据：
+
+```text
+record
+priority
+origin
+```
+
+`priority/origin` 用于识别显式记录覆盖 record set 的情况，不进入业务执行 metadata。
+
+### 4.3 LedgerSecurityMasterReader
 
 职责：
 
@@ -169,13 +225,15 @@ readRecord(security, { asOf? }) -> SecurityMasterRecord | null
 - 将受支持的 record set 和显式 records 归一化；
 - 校验数据契约；
 - 仅允许读取 `dataRoot` 内的相对路径；
+- 对主查询提供 `readRecord()`；
+- 对质量审计提供 `readSnapshot()`；
 - 缓存不可变 snapshot 的归一化结果。
 
-缺失 Security Master 时返回无记录；损坏或违反契约的数据暴露错误，而不是悄悄猜一个证券类型。
+缺失 Security Master 时主查询返回无记录；损坏、引用文件缺失或违反契约的数据暴露错误，而不是悄悄猜一个证券类型。质量审计会把这些加载错误转成稳定 ValidationReport error。
 
 当前 `universe_snapshot` 被视为不可变 snapshot；Reader 的缓存失效以 manifest 变化为边界。若未来允许原地修改被引用 snapshot，应把内容哈希/被引用文件签名纳入 manifest，而不是让 Reader 隐式探测所有文件。
 
-### 4.3 LedgerSecurityMetadataReader
+### 4.4 LedgerSecurityMetadataReader
 
 只负责投影：
 
@@ -202,12 +260,76 @@ Security Master 从第一版就保存 `effectiveFrom/effectiveTo`，但本阶段
 
 因此数据契约先具备时间能力，业务执行语义后续单独演进。
 
-## 6. 扩展原则
+## 6. Security Master 质量门禁
+
+### 6.1 纯确定性 Validator
+
+`src/market/security_master_quality_validator.js` 只消费记录/entry，不读取文件、不访问网络、不依赖 MCP、Port 或 execution implementation。
+
+当前规则：
+
+- 单条 Record schema / provenance 无法规范化：`invalid_security_master_record`，error；
+- 同证券、同优先级、同事实、完全相同有效期重复：`duplicate_security_fact_window`，error；
+- 同证券、同优先级、同事实、有效期重叠：`overlapping_security_fact_windows`，error；
+- 同证券有效期重叠且 `instrumentType` / `intradayRoundTripEligible` 冲突：`conflicting_security_fact_overlap`，error；
+- 跨优先级的等价完整覆盖：`shadowed_security_fact_window`，warning；
+- 跨优先级的等价部分重叠：`shadowed_security_fact_overlap`，warning。
+
+有效期按闭区间处理，所以：
+
+```text
+2026-01-01 .. 2026-06-30
+2026-07-01 .. null
+```
+
+不重叠；而第一条若到 `2026-07-01`，则与第二条在 7 月 1 日重叠。
+
+warning 不阻断 CI；error 阻断。
+
+### 6.2 Audit Application
+
+`ValidateSecurityMasterUseCase` 负责控制/编排：
+
+1. 通过 `SecurityMasterSnapshotReader` 获取全量归一化 entry；
+2. 调用纯 Validator；
+3. 对每个有效 SecurityMasterRecord 调用 `SecurityExecutionProfileResolver Port`；
+4. Resolver 无法得到稳定 profile id 时产生 `security_execution_profile_unresolvable`；
+5. manifest 缺失产生 `security_master_unavailable`；
+6. manifest/引用文件/路径/JSON 加载失败产生 `security_master_snapshot_load_failed`；
+7. 汇总稳定 ValidationReport。
+
+Application 不读取 filesystem，也不依赖 Ledger concrete implementation。
+
+### 6.3 CI Gate / CLI Adapter
+
+`scripts/validate_security_master.js` 是薄 CLI Adapter，只负责 concrete wiring、格式化报告与退出码：
+
+```text
+LedgerSecurityMasterReader
+        +
+SecurityExecutionProfileResolver
+        ↓
+ValidateSecurityMasterUseCase
+        ↓
+console / exit code
+```
+
+`.github/workflows/ci.yml` 在 unit tests 后显式运行：
+
+```text
+node scripts/validate_security_master.js
+```
+
+因此错误的 Security Master 数据不能仅靠 simulation 运行时偶然发现，而是在提交阶段直接阻断。
+
+## 7. 扩展原则
 
 新增跨境 ETF、黄金 ETF、债券 ETF 等时，优先顺序：
 
 ```text
 新增/同步 Security Master 数据
+        ↓
+Security Master quality gate
         ↓
 现有 SecurityExecutionProfileResolver 是否已能映射？
         |
@@ -225,11 +347,14 @@ if name includes("ETF")
 
 来代替证券主数据。
 
-## 7. Architecture Fitness
+## 8. Architecture Fitness
 
 当前测试持续保证：
 
-- Application 只依赖 `SecurityMetadataReader Port`，不依赖 `SecurityMasterReader`；
+- simulation Application 只依赖 `SecurityMetadataReader Port`，不依赖 Security Master storage；
+- Security Master audit Application 只依赖 snapshot capability 与 resolver Port，不依赖 filesystem/Ledger；
+- 主查询和 snapshot audit capability 分别断言，不互相扩大消费者依赖；
+- `SecurityMasterQualityValidator` 不依赖 IO、Adapter、Port、MCP 或 simulation；
 - MCP Tool 不读取 Security Master/Universe；
 - Composition Root 才负责 `LedgerSecurityMasterReader -> LedgerSecurityMetadataReader` concrete wiring；
 - `SecurityExecutionProfileResolver` 不依赖 Ledger/FS/DB；
@@ -243,11 +368,12 @@ if name includes("ETF")
 
 ```text
 tests/security-master.test.js
+tests/security-master-quality.test.js
 tests/simulation-security-execution-profile-resolver.test.js
 tests/simulation-execution-boundary.test.js
 ```
 
-## 8. 本阶段验收
+## 9. 本阶段验收
 
 已经覆盖：
 
@@ -259,5 +385,28 @@ tests/simulation-execution-boundary.test.js
 - 未知证券返回 `null`；
 - `dataRoot` 路径逃逸保护；
 - MetadataReader 仅做 SecurityMasterRecord 投影；
-- Resolver 复用共享证券元数据 Logic；
+- 独立 snapshot audit capability；
+- 重复记录、有效期重叠、资格冲突检测；
+- manifest / referenced file integrity 失败进入结构化 audit error；
+- Security Master facts 到 execution profile 的可解析性检查；
+- validation CLI；
+- CI quality gate；
 - Architecture fitness 边界。
+
+下一阶段不应再增加代码号段分类。优先建立 ETF Security Master 的**来源适配与同步流水线**：
+
+```text
+External/Repository Source Adapter
+        ↓
+Raw ETF facts
+        ↓
+Security Master Normalizer
+        ↓
+SecurityMasterRecord[]
+        ↓
+Quality Gate
+        ↓
+Repository manifest / records
+```
+
+来源适配负责 IO；事实规范化和冲突规则保持确定性；写入仓库之前必须先通过当前质量门禁。
