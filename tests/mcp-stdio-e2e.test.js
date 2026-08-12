@@ -17,7 +17,10 @@ function structuredPayload(result) {
 
 test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
-  const client = new Client({ name: "x-mcp-stdio-e2e", version: "0.1.0" });
+  const client = new Client(
+    { name: "x-mcp-stdio-e2e", version: "0.1.0" },
+    { versionNegotiation: { mode: "auto" } }
+  );
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [path.join(repositoryRoot, "src/adapters/mcp/stdio_entry.js")],
@@ -26,6 +29,7 @@ test("stdio MCP client lists and calls the real ledger-backed drawdown tool", { 
 
   try {
     await client.connect(transport);
+    assert.equal(client.getProtocolEra(), "modern");
 
     const listed = await client.listTools();
     const drawdowns = listed.tools.find((tool) => tool.name === "analytics_get_drawdowns");
