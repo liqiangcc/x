@@ -3,7 +3,11 @@
 const { buildDrawdownBuyingPlan } = require("../../business/simulation/drawdown_buying_policy");
 const { simulateBuyOrders } = require("../../simulation/portfolio/buy_only_portfolio_simulator");
 const { assertKlineReader } = require("../../ports/market/kline_reader");
-const { assertBuyExecutionModel } = require("../../ports/simulation/buy_execution_model");
+const {
+  DEFAULT_BUY_EXECUTION_MODEL_ID,
+  assertBuyExecutionModelResolver,
+  normalizeBuyExecutionModelId,
+} = require("../../ports/simulation/buy_execution_model_resolver");
 
 function positiveMoney(value, field) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
@@ -18,16 +22,15 @@ function positiveInteger(value, field) {
 class SimulateDrawdownBuyingUseCase {
   constructor({
     klineReader,
+    executionModelResolver,
     buildPlan = buildDrawdownBuyingPlan,
-    createExecutionModel,
     simulatePortfolio = simulateBuyOrders,
   } = {}) {
     this.klineReader = assertKlineReader(klineReader);
+    this.executionModelResolver = assertBuyExecutionModelResolver(executionModelResolver);
     if (typeof buildPlan !== "function") throw new TypeError("buildPlan must be a function.");
-    if (typeof createExecutionModel !== "function") throw new TypeError("createExecutionModel must be a function.");
     if (typeof simulatePortfolio !== "function") throw new TypeError("simulatePortfolio must be a function.");
     this.buildPlan = buildPlan;
-    this.createExecutionModel = createExecutionModel;
     this.simulatePortfolio = simulatePortfolio;
   }
 
@@ -44,9 +47,11 @@ class SimulateDrawdownBuyingUseCase {
     maxPurchases = 10,
     lotSize = 100,
     priceField = "close",
+    executionModel = DEFAULT_BUY_EXECUTION_MODEL_ID,
   } = {}) {
     const normalizedInitialCapital = positiveMoney(Number(initialCapital), "initialCapital");
     const normalizedLotSize = positiveInteger(lotSize, "lotSize");
+    const normalizedExecutionModel = normalizeBuyExecutionModelId(executionModel);
     const marketData = await this.klineReader.readRange({
       code,
       market,
@@ -75,16 +80,17 @@ class SimulateDrawdownBuyingUseCase {
         drawdownFromReference: signal.drawdownFromReference,
       },
     }));
-    const executionModel = assertBuyExecutionModel(this.createExecutionModel({
+    const resolvedExecutionModel = this.executionModelResolver.resolve({
+      model: normalizedExecutionModel,
       executionConfig: { lotSize: normalizedLotSize },
-    }));
+    });
     const portfolio = this.simulatePortfolio({
       bars,
       orders,
       security: marketData.security,
       initialCash: normalizedInitialCapital,
       priceField,
-      executionModel,
+      executionModel: resolvedExecutionModel,
     });
 
     return {
@@ -96,6 +102,7 @@ class SimulateDrawdownBuyingUseCase {
         ...plan.config,
         initialCapital: normalizedInitialCapital,
         lotSize: normalizedLotSize,
+        executionModel: normalizedExecutionModel,
       },
       signals: plan.signals,
       trades: portfolio.trades,
