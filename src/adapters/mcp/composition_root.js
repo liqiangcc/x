@@ -8,6 +8,7 @@ const { AnalyzeRecoveryPeriodsUseCase } = require("../../application/analytics/a
 const { CalculateBollingerUseCase } = require("../../application/analytics/calculate_bollinger");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
 const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
+const { SimulateDrawdownBuyingUseCase } = require("../../application/simulation/simulate_drawdown_buying");
 const { ExplainStrategySignalUseCase } = require("../../application/strategy/explain_strategy_signal");
 const { GetStrategyCandidatesUseCase } = require("../../application/strategy/get_strategy_candidates");
 const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
@@ -16,6 +17,7 @@ const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawd
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
 const { createMarketGetSummaryTool } = require("./tools/market_get_summary");
+const { createSimulationRunDrawdownBuyingTool } = require("./tools/simulation_run_drawdown_buying");
 const { createStrategyExplainSignalTool } = require("./tools/strategy_explain_signal");
 const { createStrategyGetCandidatesTool } = require("./tools/strategy_get_candidates");
 const { createStrategyListTool } = require("./tools/strategy_list");
@@ -36,6 +38,8 @@ function createMcpCompositionRoot({
   marketKlineTool = null,
   marketSummaryUseCase = null,
   marketSummaryTool = null,
+  simulationUseCase = null,
+  simulationTool = null,
   strategyExplainUseCase = null,
   strategyExplainTool = null,
   strategyCandidatesUseCase = null,
@@ -111,6 +115,14 @@ function createMcpCompositionRoot({
     resolvedMarketSummaryTool = createMarketGetSummaryTool({ useCase: resolvedUseCase });
   }
 
+  let resolvedSimulationTool = simulationTool;
+  if (!resolvedSimulationTool) {
+    const resolvedUseCase = simulationUseCase ?? new SimulateDrawdownBuyingUseCase({
+      klineReader: getKlineReader(),
+    });
+    resolvedSimulationTool = createSimulationRunDrawdownBuyingTool({ useCase: resolvedUseCase });
+  }
+
   let resolvedStrategyExplainTool = strategyExplainTool;
   if (!resolvedStrategyExplainTool) {
     const resolvedUseCase = strategyExplainUseCase ?? new ExplainStrategySignalUseCase({
@@ -140,6 +152,7 @@ function createMcpCompositionRoot({
   resolvedRegistry.register(resolvedRecoveryPeriodsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
   resolvedRegistry.register(resolvedMarketSummaryTool);
+  resolvedRegistry.register(resolvedSimulationTool);
   resolvedRegistry.register(resolvedStrategyExplainTool);
   resolvedRegistry.register(resolvedStrategyCandidatesTool);
   resolvedRegistry.register(resolvedStrategyListTool);
