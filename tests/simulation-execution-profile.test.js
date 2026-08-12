@@ -11,6 +11,7 @@ const {
   DEFAULT_EXECUTION_PROFILE_CATALOG,
   DOMESTIC_STOCK_ETF_EXECUTION_PROFILE,
   LEGACY_A_SHARE_EXECUTION_PROFILE,
+  T0_ETF_EXECUTION_PROFILE,
   createExecutionProfileCatalog,
 } = require("../src/simulation/execution/execution_profile_catalog");
 
@@ -63,13 +64,15 @@ test("ExecutionProfile contract rejects malformed market rules before model cons
   );
 });
 
-test("default execution profile catalog is the single source for legacy and domestic stock ETF market assumptions", () => {
+test("default execution profile catalog is the single source for A-share and ETF market assumptions", () => {
   assert.deepEqual(DEFAULT_EXECUTION_PROFILE_CATALOG.list().map((item) => item.id), [
     "legacy_a_share",
     "domestic_stock_etf",
+    "t0_etf",
   ]);
   assert.equal(DEFAULT_EXECUTION_PROFILE_CATALOG.get("legacy_a_share"), LEGACY_A_SHARE_EXECUTION_PROFILE);
   assert.equal(DEFAULT_EXECUTION_PROFILE_CATALOG.get("domestic_stock_etf"), DOMESTIC_STOCK_ETF_EXECUTION_PROFILE);
+  assert.equal(DEFAULT_EXECUTION_PROFILE_CATALOG.get("t0_etf"), T0_ETF_EXECUTION_PROFILE);
   assert.equal(DEFAULT_EXECUTION_PROFILE_CATALOG.get("frictionless"), null);
 
   assert.equal(LEGACY_A_SHARE_EXECUTION_PROFILE.assetClass, "a_share");
@@ -80,8 +83,16 @@ test("default execution profile catalog is the single source for legacy and dome
   assert.equal(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.assetClass, "domestic_stock_etf");
   assert.equal(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.lotRules.buyLotSize, 100);
   assert.equal(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.priceRules.tickSize, 0.001);
+  assert.equal(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.settlement.sharesAvailable, SHARE_AVAILABILITY.NEXT_TRADING_DAY);
   assert.equal(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.feeRules.stampDutyRate, 0);
   assert.ok(DOMESTIC_STOCK_ETF_EXECUTION_PROFILE.qualityIssues.includes("etf_profile_does_not_cover_t_plus_zero_etf_categories"));
+
+  assert.equal(T0_ETF_EXECUTION_PROFILE.assetClass, "t0_eligible_etf");
+  assert.equal(T0_ETF_EXECUTION_PROFILE.lotRules.buyLotSize, 100);
+  assert.equal(T0_ETF_EXECUTION_PROFILE.priceRules.tickSize, 0.001);
+  assert.equal(T0_ETF_EXECUTION_PROFILE.settlement.sharesAvailable, SHARE_AVAILABILITY.SAME_DAY);
+  assert.equal(T0_ETF_EXECUTION_PROFILE.feeRules.stampDutyRate, 0);
+  assert.ok(T0_ETF_EXECUTION_PROFILE.qualityIssues.includes("t0_etf_profile_requires_exchange_eligible_instrument"));
 });
 
 test("execution profile catalog rejects duplicate ids and supports extension without changing the resolver contract", () => {
