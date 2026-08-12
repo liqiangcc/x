@@ -8,6 +8,7 @@ const { AnalyzeRecoveryPeriodsUseCase } = require("../../application/analytics/a
 const { CalculateBollingerUseCase } = require("../../application/analytics/calculate_bollinger");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
 const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
+const { ExplainStrategySignalUseCase } = require("../../application/strategy/explain_strategy_signal");
 const { GetStrategyCandidatesUseCase } = require("../../application/strategy/get_strategy_candidates");
 const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
 const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
@@ -15,6 +16,7 @@ const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawd
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
 const { createMarketGetSummaryTool } = require("./tools/market_get_summary");
+const { createStrategyExplainSignalTool } = require("./tools/strategy_explain_signal");
 const { createStrategyGetCandidatesTool } = require("./tools/strategy_get_candidates");
 const { createStrategyListTool } = require("./tools/strategy_list");
 const { McpToolRegistry } = require("./tool_registry");
@@ -34,6 +36,8 @@ function createMcpCompositionRoot({
   marketKlineTool = null,
   marketSummaryUseCase = null,
   marketSummaryTool = null,
+  strategyExplainUseCase = null,
+  strategyExplainTool = null,
   strategyCandidatesUseCase = null,
   strategyCandidatesTool = null,
   strategyListUseCase = null,
@@ -107,6 +111,14 @@ function createMcpCompositionRoot({
     resolvedMarketSummaryTool = createMarketGetSummaryTool({ useCase: resolvedUseCase });
   }
 
+  let resolvedStrategyExplainTool = strategyExplainTool;
+  if (!resolvedStrategyExplainTool) {
+    const resolvedUseCase = strategyExplainUseCase ?? new ExplainStrategySignalUseCase({
+      signalReader: getSignalReader(),
+    });
+    resolvedStrategyExplainTool = createStrategyExplainSignalTool({ useCase: resolvedUseCase });
+  }
+
   let resolvedStrategyCandidatesTool = strategyCandidatesTool;
   if (!resolvedStrategyCandidatesTool) {
     const resolvedUseCase = strategyCandidatesUseCase ?? new GetStrategyCandidatesUseCase({
@@ -128,6 +140,7 @@ function createMcpCompositionRoot({
   resolvedRegistry.register(resolvedRecoveryPeriodsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
   resolvedRegistry.register(resolvedMarketSummaryTool);
+  resolvedRegistry.register(resolvedStrategyExplainTool);
   resolvedRegistry.register(resolvedStrategyCandidatesTool);
   resolvedRegistry.register(resolvedStrategyListTool);
   return Object.freeze({ registry: resolvedRegistry });
