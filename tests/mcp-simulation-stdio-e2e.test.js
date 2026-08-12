@@ -13,7 +13,7 @@ function structuredPayload(result) {
   return JSON.parse(text);
 }
 
-test("stdio MCP client compares stock, T+1 ETF, T+0 ETF, and frictionless execution through the real ledger composition", { timeout: 20_000 }, async () => {
+test("stdio MCP client compares automatic stock, T+1 ETF, T+0 ETF, and frictionless execution through the real ledger composition", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
   const client = new Client(
     { name: "x-mcp-simulation-stdio-e2e", version: "0.1.0" },
@@ -44,7 +44,9 @@ test("stdio MCP client compares stock, T+1 ETF, T+0 ETF, and frictionless execut
       "t0_etf",
       "frictionless",
     ]);
-    assert.equal(simulation.inputSchema.properties.executionModel.default, "legacy_a_share");
+    assert.equal(simulation.inputSchema.properties.executionModel.default, undefined);
+    assert.deepEqual(simulation.inputSchema.properties.securityMetadata.required, ["instrumentType"]);
+    assert.deepEqual(simulation.inputSchema.properties.securityMetadata.properties.instrumentType.enum, ["a_share", "etf"]);
 
     const commonArguments = {
       code: "600001",
@@ -65,12 +67,19 @@ test("stdio MCP client compares stock, T+1 ETF, T+0 ETF, and frictionless execut
       arguments: { ...commonArguments, executionModel },
     }));
 
+    const automaticLegacy = structuredPayload(await client.callTool({
+      name: "simulation_run_drawdown_buying",
+      arguments: {
+        ...commonArguments,
+        securityMetadata: { instrumentType: "a_share", intradayRoundTripEligible: false },
+      },
+    }));
     const legacy = await call("legacy_a_share");
     const etf = await call("domestic_stock_etf");
     const t0Etf = await call("t0_etf");
     const frictionless = await call("frictionless");
 
-    for (const payload of [legacy, etf, t0Etf, frictionless]) {
+    for (const payload of [automaticLegacy, legacy, etf, t0Etf, frictionless]) {
       assert.equal(payload.security.code, "600001");
       assert.equal(payload.security.market, 1);
       assert.equal(payload.period, "daily");
@@ -91,11 +100,21 @@ test("stdio MCP client compares stock, T+1 ETF, T+0 ETF, and frictionless execut
       assert.equal(payload.meta.execution.lotSize, 100);
     }
 
+    assert.deepEqual(automaticLegacy.signals, legacy.signals);
+    assert.equal(automaticLegacy.config.executionModel, "legacy_a_share");
+    assert.equal(automaticLegacy.config.executionModelSelection, "security_metadata");
+    assert.deepEqual(automaticLegacy.meta.executionSelection, {
+      mode: "security_metadata",
+      profileId: "legacy_a_share",
+      securityMetadataSource: "request",
+    });
+
     assert.deepEqual(etf.signals, legacy.signals);
     assert.deepEqual(t0Etf.signals, legacy.signals);
     assert.deepEqual(frictionless.signals, legacy.signals);
 
     assert.equal(legacy.config.executionModel, "legacy_a_share");
+    assert.equal(legacy.config.executionModelSelection, "explicit_override");
     assert.equal(legacy.meta.execution.kind, "legacy_a_share_next_open");
     assert.equal(legacy.meta.execution.tickSize, 0.01);
     assert.equal(legacy.meta.execution.feesIncluded, true);
