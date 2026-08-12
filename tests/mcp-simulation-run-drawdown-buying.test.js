@@ -22,6 +22,7 @@ function useCaseResult() {
       initialCapital: 100000,
       lotSize: 100,
       executionModel: "legacy_a_share",
+      executionModelSelection: "security_metadata",
     },
     signals: [{
       index: 1,
@@ -74,6 +75,11 @@ function useCaseResult() {
       priceView: "legacy_forward_adjusted",
       qualityIssues: [],
       source: { kind: "repo_ledger", contentHash: "hash", path: "data/kline/daily/600/600001.json" },
+      executionSelection: {
+        mode: "security_metadata",
+        profileId: "legacy_a_share",
+        securityMetadataSource: "request",
+      },
       execution: {
         kind: "legacy_a_share_next_open",
         timing: "next_trading_day_open",
@@ -89,7 +95,7 @@ function useCaseResult() {
   };
 }
 
-test("drawdown buying MCP definition is bounded, read-only, and exposes execution models without owning their implementation", () => {
+test("drawdown buying MCP definition keeps automatic security-profile selection separate from explicit execution overrides", () => {
   assert.equal(TOOL_DEFINITION.name, "simulation_run_drawdown_buying");
   assert.equal(TOOL_DEFINITION.inputSchema.type, "object");
   assert.equal(TOOL_DEFINITION.inputSchema.additionalProperties, false);
@@ -105,10 +111,12 @@ test("drawdown buying MCP definition is bounded, read-only, and exposes executio
     "t0_etf",
     "frictionless",
   ]);
-  assert.equal(TOOL_DEFINITION.inputSchema.properties.executionModel.default, "legacy_a_share");
-  assert.match(TOOL_DEFINITION.description, /domestic_stock_etf/);
-  assert.match(TOOL_DEFINITION.description, /t0_etf/);
-  assert.match(TOOL_DEFINITION.description, /exchange-eligible T\+0 ETFs/);
+  assert.equal(TOOL_DEFINITION.inputSchema.properties.executionModel.default, undefined);
+  assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.securityMetadata.required, ["instrumentType"]);
+  assert.deepEqual(TOOL_DEFINITION.inputSchema.properties.securityMetadata.properties.instrumentType.enum, ["a_share", "etf"]);
+  assert.equal(TOOL_DEFINITION.inputSchema.properties.securityMetadata.additionalProperties, false);
+  assert.match(TOOL_DEFINITION.description, /Execution-profile selection is separate/);
+  assert.match(TOOL_DEFINITION.description, /rather than inferred from a code prefix/);
   assert.match(TOOL_DEFINITION.description, /frictionless/);
   assert.equal(TOOL_DEFINITION.annotations.readOnlyHint, true);
   assert.equal(TOOL_DEFINITION.annotations.destructiveHint, false);
@@ -116,7 +124,7 @@ test("drawdown buying MCP definition is bounded, read-only, and exposes executio
   assert.equal(TOOL_DEFINITION.annotations.openWorldHint, false);
 });
 
-test("drawdown buying MCP handler delegates unchanged execution model selection to the application use case", async () => {
+test("drawdown buying MCP handler delegates security metadata and explicit overrides unchanged to application", async () => {
   const calls = [];
   const expected = useCaseResult();
   const tool = createSimulationRunDrawdownBuyingTool({
@@ -140,6 +148,7 @@ test("drawdown buying MCP handler delegates unchanged execution model selection 
     maxPurchases: 8,
     lotSize: 100,
     priceField: "close",
+    securityMetadata: { instrumentType: "etf", intradayRoundTripEligible: true },
     executionModel: "t0_etf",
   };
   const result = await tool.handler(input);
@@ -154,17 +163,17 @@ test("drawdown buying MCP handler maps application errors to stable tool errors"
   const tool = createSimulationRunDrawdownBuyingTool({
     useCase: {
       async execute() {
-        throw new TypeError("executionModel must be one of: legacy_a_share, domestic_stock_etf, t0_etf, frictionless.");
+        throw new TypeError("ETF security metadata must explicitly declare intradayRoundTripEligible.");
       },
     },
   });
 
-  const result = await tool.handler({ code: "600001", market: 1, endDate: "2026-08-12" });
+  const result = await tool.handler({ code: "510300", market: 1, endDate: "2026-08-12" });
   assert.equal(result.isError, true);
   assert.deepEqual(result.structuredContent, {
     error: {
       code: "invalid_arguments",
-      message: "executionModel must be one of: legacy_a_share, domestic_stock_etf, t0_etf, frictionless.",
+      message: "ETF security metadata must explicitly declare intradayRoundTripEligible.",
     },
   });
   assert.deepEqual(JSON.parse(result.content[0].text), result.structuredContent);
