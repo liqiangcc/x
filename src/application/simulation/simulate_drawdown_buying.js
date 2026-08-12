@@ -4,10 +4,15 @@ const { buildDrawdownBuyingPlan } = require("../../business/simulation/drawdown_
 const { simulateBuyOrders } = require("../../simulation/portfolio/buy_only_portfolio_simulator");
 const { assertKlineReader } = require("../../ports/market/kline_reader");
 const {
-  DEFAULT_BUY_EXECUTION_MODEL_ID,
+  assertSecurityMetadataReader,
+} = require("../../ports/market/security_metadata_reader");
+const {
   assertBuyExecutionModelResolver,
   normalizeBuyExecutionModelId,
 } = require("../../ports/simulation/buy_execution_model_resolver");
+const {
+  assertSecurityExecutionProfileResolver,
+} = require("../../ports/simulation/security_execution_profile_resolver");
 
 function positiveMoney(value, field) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${field} must be positive.`);
@@ -19,15 +24,28 @@ function positiveInteger(value, field) {
   return value;
 }
 
+function optionalExecutionModel(value) {
+  if (value === undefined || value === null || value === "") return null;
+  return normalizeBuyExecutionModelId(value);
+}
+
 class SimulateDrawdownBuyingUseCase {
   constructor({
     klineReader,
     executionModelResolver,
+    securityMetadataReader = null,
+    securityExecutionProfileResolver = null,
     buildPlan = buildDrawdownBuyingPlan,
     simulatePortfolio = simulateBuyOrders,
   } = {}) {
     this.klineReader = assertKlineReader(klineReader);
     this.executionModelResolver = assertBuyExecutionModelResolver(executionModelResolver);
+    this.securityMetadataReader = securityMetadataReader === null
+      ? null
+      : assertSecurityMetadataReader(securityMetadataReader);
+    this.securityExecutionProfileResolver = securityExecutionProfileResolver === null
+      ? null
+      : assertSecurityExecutionProfileResolver(securityExecutionProfileResolver);
     if (typeof buildPlan !== "function") throw new TypeError("buildPlan must be a function.");
     if (typeof simulatePortfolio !== "function") throw new TypeError("simulatePortfolio must be a function.");
     this.buildPlan = buildPlan;
@@ -47,11 +65,12 @@ class SimulateDrawdownBuyingUseCase {
     maxPurchases = 10,
     lotSize = 100,
     priceField = "close",
-    executionModel = DEFAULT_BUY_EXECUTION_MODEL_ID,
+    executionModel = null,
+    securityMetadata = null,
   } = {}) {
     const normalizedInitialCapital = positiveMoney(Number(initialCapital), "initialCapital");
     const normalizedLotSize = positiveInteger(lotSize, "lotSize");
-    const normalizedExecutionModel = normalizeBuyExecutionModelId(executionModel);
+    const executionModelOverride = optionalExecutionModel(executionModel);
     const marketData = await this.klineReader.readRange({
       code,
       market,
@@ -60,6 +79,37 @@ class SimulateDrawdownBuyingUseCase {
       period,
       limit: null,
     });
+
+    let resolvedSecurityMetadata = securityMetadata;
+    let executionModelSelection = "explicit_override";
+    let securityMetadataSource = null;
+    let normalizedExecutionModel = executionModelOverride;
+    if (normalizedExecutionModel === null) {
+      executionModelSelection = "security_metadata";
+      if (resolvedSecurityMetadata === null || resolvedSecurityMetadata === undefined) {
+        if (!this.securityMetadataReader) {
+          throw new TypeError("securityMetadataReader is required when executionModel is omitted.");
+        }
+        resolvedSecurityMetadata = await this.securityMetadataReader.readMetadata(marketData.security);
+        securityMetadataSource = "reader";
+      } else {
+        securityMetadataSource = "request";
+      }
+      if (!resolvedSecurityMetadata) {
+        throw new TypeError(
+          "security metadata is required to resolve an execution profile automatically; provide securityMetadata or an explicit executionModel."
+        );
+      }
+      if (!this.securityExecutionProfileResolver) {
+        throw new TypeError("securityExecutionProfileResolver is required when executionModel is omitted.");
+      }
+      normalizedExecutionModel = this.securityExecutionProfileResolver.resolve({
+        security: marketData.security,
+        metadata: resolvedSecurityMetadata,
+      });
+      normalizedExecutionModel = normalizeBuyExecutionModelId(normalizedExecutionModel);
+    }
+
     const bars = Array.isArray(marketData.bars) ? marketData.bars : [];
     const plan = this.buildPlan(bars, {
       initialDrawdown,
@@ -103,6 +153,7 @@ class SimulateDrawdownBuyingUseCase {
         initialCapital: normalizedInitialCapital,
         lotSize: normalizedLotSize,
         executionModel: normalizedExecutionModel,
+        executionModelSelection,
       },
       signals: plan.signals,
       trades: portfolio.trades,
@@ -115,6 +166,11 @@ class SimulateDrawdownBuyingUseCase {
         priceView: marketData.priceView,
         qualityIssues: marketData.qualityIssues,
         source: marketData.source,
+        executionSelection: {
+          mode: executionModelSelection,
+          profileId: normalizedExecutionModel,
+          securityMetadataSource,
+        },
         execution: portfolio.config,
       },
     };
@@ -123,6 +179,7 @@ class SimulateDrawdownBuyingUseCase {
 
 module.exports = {
   SimulateDrawdownBuyingUseCase,
+  optionalExecutionModel,
   positiveInteger,
   positiveMoney,
 };
