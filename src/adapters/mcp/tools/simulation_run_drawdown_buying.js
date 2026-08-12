@@ -2,7 +2,6 @@
 
 const {
   BUY_EXECUTION_MODEL_IDS,
-  DEFAULT_BUY_EXECUTION_MODEL_ID,
 } = require("../../../ports/simulation/buy_execution_model_resolver");
 const { errorPayload, jsonResult } = require("../tool_result");
 
@@ -85,11 +84,27 @@ const INPUT_SCHEMA = Object.freeze({
       default: "close",
       description: "Price field used for drawdown signals and final marking. Execution itself occurs through the selected execution model.",
     },
+    securityMetadata: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        instrumentType: {
+          type: "string",
+          enum: ["a_share", "etf"],
+          description: "Explicit instrument classification used for automatic execution-profile selection.",
+        },
+        intradayRoundTripEligible: {
+          type: "boolean",
+          description: "Whether the instrument is explicitly confirmed eligible for same-day round-trip trading. Required by the application resolver for ETFs.",
+        },
+      },
+      required: ["instrumentType"],
+      description: "Optional explicit security metadata. When executionModel is omitted, this metadata is preferred; otherwise repository security metadata is used. ETF classification must explicitly state intradayRoundTripEligible so T+0 is never guessed from a code prefix.",
+    },
     executionModel: {
       type: "string",
       enum: [...BUY_EXECUTION_MODEL_IDS],
-      default: DEFAULT_BUY_EXECUTION_MODEL_ID,
-      description: "Execution assumptions for the same business policy. legacy_a_share uses the repository's approximate A-share rules; domestic_stock_etf uses an approximate domestic stock-ETF T+1 profile; t0_etf uses the shared ETF execution flow with same-day share availability and must only be selected for an ETF confirmed to be eligible for exchange T+0 trading; frictionless preserves next-trading-day-open timing while removing fees, slippage and market restrictions for comparison.",
+      description: "Optional explicit execution-model override for controlled research comparisons. When omitted, the application resolves the profile from security metadata. legacy_a_share uses approximate A-share rules; domestic_stock_etf uses an approximate domestic stock-ETF T+1 profile; t0_etf must only be selected for an ETF confirmed eligible for exchange T+0 trading; frictionless removes fees, slippage and market restrictions while preserving next-trading-day-open timing.",
     },
   },
   required: ["code", "market", "endDate"],
@@ -121,6 +136,16 @@ const OUTPUT_SCHEMA = Object.freeze({
           type: "object",
           additionalProperties: true,
           properties: {
+            executionSelection: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                mode: { type: "string" },
+                profileId: { type: "string" },
+                securityMetadataSource: { type: ["string", "null"] },
+              },
+              required: ["mode", "profileId", "securityMetadataSource"],
+            },
             execution: {
               type: "object",
               additionalProperties: true,
@@ -144,7 +169,7 @@ const OUTPUT_SCHEMA = Object.freeze({
               ],
             },
           },
-          required: ["execution"],
+          required: ["executionSelection", "execution"],
         },
       },
       required: ["security", "period", "startDate", "endDate", "config", "signals", "trades", "summary", "meta"],
@@ -171,7 +196,7 @@ const OUTPUT_SCHEMA = Object.freeze({
 const TOOL_DEFINITION = Object.freeze({
   name: TOOL_NAME,
   title: "Simulate Drawdown Buying",
-  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. The business policy is unchanged across execution models: legacy_a_share applies approximate A-share execution, domestic_stock_etf applies an approximate domestic stock-ETF T+1 profile, t0_etf applies the same generic ETF execution flow with same-day share availability only for exchange-eligible T+0 ETFs, and frictionless keeps next-trading-day-open timing while removing trading frictions for comparison. This is read-only analysis, not trade execution.",
+  description: "Run a deterministic historical drawdown-buying research simulation against repository-backed Kline data. Execution-profile selection is separate from execution mechanics: when executionModel is omitted, the application resolves legacy_a_share, domestic_stock_etf, or t0_etf from explicit or repository security metadata, and ETF T+0 eligibility must be explicitly known rather than inferred from a code prefix. executionModel remains an explicit research override, including frictionless comparison. This is read-only analysis, not trade execution.",
   inputSchema: INPUT_SCHEMA,
   outputSchema: OUTPUT_SCHEMA,
   annotations: Object.freeze({
