@@ -1,20 +1,24 @@
 "use strict";
 
 const { LedgerKlineReader } = require("../ledger/ledger_kline_reader");
+const { BuiltinStrategyReader } = require("../strategy/builtin_strategy_reader");
 const { AnalyzeDrawdownsUseCase } = require("../../application/analytics/analyze_drawdowns");
 const { AnalyzeRecoveryPeriodsUseCase } = require("../../application/analytics/analyze_recovery_periods");
 const { CalculateBollingerUseCase } = require("../../application/analytics/calculate_bollinger");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
 const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
+const { ListStrategiesUseCase } = require("../../application/strategy/list_strategies");
 const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bollinger");
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
 const { createMarketGetSummaryTool } = require("./tools/market_get_summary");
+const { createStrategyListTool } = require("./tools/strategy_list");
 const { McpToolRegistry } = require("./tool_registry");
 
 function createMcpCompositionRoot({
   klineReader = null,
+  strategyReader = null,
   bollingerUseCase = null,
   bollingerTool = null,
   drawdownsUseCase = null,
@@ -25,6 +29,8 @@ function createMcpCompositionRoot({
   marketKlineTool = null,
   marketSummaryUseCase = null,
   marketSummaryTool = null,
+  strategyListUseCase = null,
+  strategyListTool = null,
   registry = null,
 } = {}) {
   const resolvedRegistry = registry ?? new McpToolRegistry();
@@ -36,6 +42,12 @@ function createMcpCompositionRoot({
   const getKlineReader = () => {
     if (!resolvedKlineReader) resolvedKlineReader = new LedgerKlineReader();
     return resolvedKlineReader;
+  };
+
+  let resolvedStrategyReader = strategyReader;
+  const getStrategyReader = () => {
+    if (!resolvedStrategyReader) resolvedStrategyReader = new BuiltinStrategyReader();
+    return resolvedStrategyReader;
   };
 
   let resolvedBollingerTool = bollingerTool;
@@ -78,11 +90,20 @@ function createMcpCompositionRoot({
     resolvedMarketSummaryTool = createMarketGetSummaryTool({ useCase: resolvedUseCase });
   }
 
+  let resolvedStrategyListTool = strategyListTool;
+  if (!resolvedStrategyListTool) {
+    const resolvedUseCase = strategyListUseCase ?? new ListStrategiesUseCase({
+      strategyReader: getStrategyReader(),
+    });
+    resolvedStrategyListTool = createStrategyListTool({ useCase: resolvedUseCase });
+  }
+
   resolvedRegistry.register(resolvedBollingerTool);
   resolvedRegistry.register(resolvedDrawdownsTool);
   resolvedRegistry.register(resolvedRecoveryPeriodsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
   resolvedRegistry.register(resolvedMarketSummaryTool);
+  resolvedRegistry.register(resolvedStrategyListTool);
   return Object.freeze({ registry: resolvedRegistry });
 }
 
