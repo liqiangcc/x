@@ -12,6 +12,10 @@ const EXCHANGE_MARKETS = Object.freeze({
   sse: 1,
   szse: 0,
 });
+const OFFICIAL_HOST_SUFFIXES = Object.freeze({
+  sse: "sse.com.cn",
+  szse: "szse.cn",
+});
 
 function requiredText(value, field) {
   const text = String(value ?? "").trim();
@@ -26,7 +30,26 @@ function objectValue(value, field) {
   return value;
 }
 
-function normalizeSnapshot(value, field) {
+function assertOfficialDocument(exchange, value, field) {
+  const document = requiredText(value, field);
+  let url;
+  try {
+    url = new URL(document);
+  } catch {
+    throw new TypeError(`${field} must be an absolute official exchange URL.`);
+  }
+  if (url.protocol !== "https:") {
+    throw new TypeError(`${field} must use https.`);
+  }
+  const suffix = OFFICIAL_HOST_SUFFIXES[exchange];
+  const hostname = url.hostname.toLowerCase();
+  if (hostname !== suffix && !hostname.endsWith(`.${suffix}`)) {
+    throw new TypeError(`${field} must belong to ${suffix}.`);
+  }
+  return url.toString();
+}
+
+function normalizeSnapshot(value, field, exchange) {
   const snapshot = objectValue(value, field);
   if (snapshot.complete !== true) {
     throw new TypeError(`${field}.complete must be true before membership can be trusted.`);
@@ -39,7 +62,7 @@ function normalizeSnapshot(value, field) {
     complete: true,
     records: snapshot.records,
     source: Object.freeze({
-      document: requiredText(source.document, `${field}.source.document`),
+      document: assertOfficialDocument(exchange, source.document, `${field}.source.document`),
       version: requiredText(source.version, `${field}.source.version`),
       collectedAt: requiredText(source.collectedAt, `${field}.source.collectedAt`),
     }),
@@ -75,8 +98,8 @@ class OfficialExchangeEtfSource {
       this.fetchAllEtfs(),
       this.fetchT0Etfs(),
     ]);
-    const allSnapshot = normalizeSnapshot(rawAll, "allEtfs");
-    const t0Snapshot = normalizeSnapshot(rawT0, "t0Etfs");
+    const allSnapshot = normalizeSnapshot(rawAll, "allEtfs", this.exchange);
+    const t0Snapshot = normalizeSnapshot(rawT0, "t0Etfs", this.exchange);
     const market = EXCHANGE_MARKETS[this.exchange];
     const all = new Map();
 
@@ -135,18 +158,20 @@ assertEtfSecuritySource(new OfficialExchangeEtfSource({
   fetchAllEtfs: async () => ({
     complete: true,
     records: [],
-    source: { document: "test", version: "test", collectedAt: "2026-08-12T00:00:00Z" },
+    source: { document: "https://www.sse.com.cn/test", version: "test", collectedAt: "2026-08-12T00:00:00Z" },
   }),
   fetchT0Etfs: async () => ({
     complete: true,
     records: [],
-    source: { document: "test", version: "test", collectedAt: "2026-08-12T00:00:00Z" },
+    source: { document: "https://www.sse.com.cn/test", version: "test", collectedAt: "2026-08-12T00:00:00Z" },
   }),
 }));
 
 module.exports = {
   EXCHANGE_MARKETS,
+  OFFICIAL_HOST_SUFFIXES,
   OfficialExchangeEtfSource,
+  assertOfficialDocument,
   compositeProvenance,
   normalizeCode,
   normalizeSnapshot,
