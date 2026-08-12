@@ -13,6 +13,7 @@ const {
 } = require("../../market/security_master_record");
 const {
   assertSecurityMasterReader,
+  assertSecurityMasterSnapshotReader,
 } = require("../../ports/market/security_master_reader");
 
 const SECURITY_MASTER_SCHEMA_VERSION = 1;
@@ -48,6 +49,13 @@ function compareEntries(left, right) {
   return rightTo.localeCompare(leftTo);
 }
 
+function compareSnapshotEntries(left, right) {
+  const leftKey = securityIdentityKey(left.record.security);
+  const rightKey = securityIdentityKey(right.record.security);
+  if (leftKey !== rightKey) return leftKey.localeCompare(rightKey);
+  return compareEntries(left, right);
+}
+
 class LedgerSecurityMasterReader {
   constructor({
     dataRoot = path.join("data"),
@@ -56,7 +64,9 @@ class LedgerSecurityMasterReader {
     this.dataRoot = path.resolve(dataRoot);
     this.manifestPath = manifestPath;
     this.signature = null;
+    this.available = false;
     this.records = new Map();
+    this.snapshotSource = null;
   }
 
   #resolveDataPath(relativePath, field = "path") {
@@ -69,16 +79,20 @@ class LedgerSecurityMasterReader {
     return resolved;
   }
 
-  #addRecord(target, record, priority) {
+  #addRecord(target, record, priority, origin) {
     const normalized = normalizeSecurityMasterRecord(record);
     const key = securityIdentityKey(normalized.security);
     const existing = target.get(key) ?? [];
-    existing.push(Object.freeze({ record: normalized, priority }));
+    existing.push(Object.freeze({
+      record: normalized,
+      priority,
+      origin: Object.freeze({ ...origin }),
+    }));
     existing.sort(compareEntries);
     target.set(key, existing);
   }
 
-  #loadUniverseSnapshot(target, recordSet) {
+  #loadUniverseSnapshot(target, recordSet, index) {
     const definition = objectValue(recordSet, "recordSets[]");
     if (definition.kind !== RECORD_SET_KINDS.UNIVERSE_SNAPSHOT) {
       throw new TypeError(`unsupported security master record set kind: ${String(definition.kind)}`);
@@ -104,7 +118,12 @@ class LedgerSecurityMasterReader {
         effectiveTo: definition.effectiveTo ?? null,
         source: definition.source,
         qualityIssues: definition.qualityIssues ?? [],
-      }, 1);
+      }, 1, {
+        kind: "record_set",
+        index,
+        recordSetKind: definition.kind,
+        path: definition.path,
+      });
     }
   }
 
@@ -116,7 +135,13 @@ class LedgerSecurityMasterReader {
     } catch (error) {
       if (error?.code === "ENOENT") {
         this.signature = null;
+        this.available = false;
         this.records = new Map();
+        this.snapshotSource = Object.freeze({
+          kind: "repo_security_master",
+          manifestPath: this.manifestPath,
+          schemaVersion: SECURITY_MASTER_SCHEMA_VERSION,
+        });
         return;
       }
       throw error;
@@ -135,10 +160,21 @@ class LedgerSecurityMasterReader {
     const recordSets = arrayValue(manifest.recordSets ?? [], "recordSets");
     const explicitRecords = arrayValue(manifest.records ?? [], "records");
     const next = new Map();
-    for (const recordSet of recordSets) this.#loadUniverseSnapshot(next, recordSet);
-    for (const record of explicitRecords) this.#addRecord(next, record, 2);
+    recordSets.forEach((recordSet, index) => this.#loadUniverseSnapshot(next, recordSet, index));
+    explicitRecords.forEach((record, index) => this.#addRecord(next, record, 2, {
+      kind: "explicit_record",
+      index,
+    }));
 
     this.records = next;
+    this.available = true;
+    this.snapshotSource = Object.freeze({
+      kind: "repo_security_master",
+      manifestPath: this.manifestPath,
+      schemaVersion: SECURITY_MASTER_SCHEMA_VERSION,
+      recordSetCount: recordSets.length,
+      explicitRecordCount: explicitRecords.length,
+    });
     this.signature = signature;
   }
 
@@ -155,13 +191,28 @@ class LedgerSecurityMasterReader {
     const entry = entries.find(({ record }) => isSecurityMasterRecordEffective(record, normalizedAsOf));
     return entry?.record ?? null;
   }
+
+  readSnapshot() {
+    this.#refresh();
+    const entries = [...this.records.values()]
+      .flat()
+      .slice()
+      .sort(compareSnapshotEntries);
+    return Object.freeze({
+      available: this.available,
+      entries: Object.freeze(entries),
+      source: this.snapshotSource,
+    });
+  }
 }
 
 assertSecurityMasterReader(new LedgerSecurityMasterReader({ dataRoot: path.join("__missing__") }));
+assertSecurityMasterSnapshotReader(new LedgerSecurityMasterReader({ dataRoot: path.join("__missing__") }));
 
 module.exports = {
   LedgerSecurityMasterReader,
   RECORD_SET_KINDS,
   SECURITY_MASTER_SCHEMA_VERSION,
   compareEntries,
+  compareSnapshotEntries,
 };
