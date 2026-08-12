@@ -5,7 +5,15 @@ const path = require("node:path");
 const test = require("node:test");
 const { Client } = require("@modelcontextprotocol/client");
 const { StdioClientTransport } = require("@modelcontextprotocol/client/stdio");
-const { structuredPayload } = require("./mcp-stdio-e2e.test");
+
+function structuredPayload(result) {
+  if (result?.structuredContent && typeof result.structuredContent === "object") {
+    return result.structuredContent;
+  }
+  const text = result?.content?.find((item) => item?.type === "text")?.text;
+  if (typeof text !== "string") throw new TypeError("MCP tool result has no structuredContent or text payload.");
+  return JSON.parse(text);
+}
 
 test("stdio MCP client runs drawdown buying simulation through the real ledger composition", { timeout: 20_000 }, async () => {
   const repositoryRoot = path.resolve(__dirname, "..");
