@@ -6,24 +6,30 @@
 
 ## 1. 目标
 
-把以下三个问题彻底分开：
+把以下四个问题彻底分开：
 
-1. **证券是什么、具备什么交易资格**；
-2. **应该选择哪个 ExecutionProfile**；
-3. **选定 Profile 后如何执行成交**。
+1. **证券是什么、在什么有效期内具备什么交易资格**；
+2. **Application 需要什么稳定证券元数据**；
+3. **应该选择哪个 ExecutionProfile**；
+4. **选定 Profile 后如何执行成交**。
 
 核心原则：
 
-> Business Policy 决定为什么买；SecurityExecutionProfileResolver 决定某证券应该使用哪个真实市场 Profile；BuyExecutionModelResolver 决定如何构造执行模型；ExecutionProfile 描述市场执行规则是什么。
+> Security Master 保存事实与证据；SecurityMetadataReader 做稳定投影；SecurityExecutionProfileResolver 决定证券事实映射到哪个真实市场 Profile；BuyExecutionModelResolver 决定如何构造执行模型；ExecutionProfile 描述市场执行假设；Business Policy 决定为什么买。
 
 当前主链路：
 
 ```text
-Security identity
+Repository Security Master
       |
+      v
+SecurityMasterReader Port
+      |
+      | SecurityMasterRecord
       v
 SecurityMetadataReader Port
       |
+      | execution metadata
       v
 SecurityExecutionProfileResolver Port
       |
@@ -46,7 +52,7 @@ ProfiledBuyExecutionModel
       +-> settlement availability
 ```
 
-业务信号仍独立存在：
+业务信号独立存在：
 
 ```text
 DrawdownBuyingPolicy
@@ -75,56 +81,59 @@ resolved BuyExecutionModel
 
 - 证券是 A 股还是 ETF；
 - ETF 是否具备 T+0 资格；
-- 100 股还是 100 份为一手；
-- tick size；
-- 印花税；
-- T+0 / T+1；
-- 涨跌停/停牌执行限制；
-- 滑点与佣金。
+- lot size / tick size；
+- 印花税、佣金、滑点；
+- T+0 / T+1 settlement；
+- 涨跌停、停牌等执行限制。
 
-### 2.2 SecurityMetadataReader
+### 2.2 Security Master / SecurityMetadataReader
 
-`src/ports/market/security_metadata_reader.js` 定义窄接口：
+Security Master 是证券身份和资格事实的权威数据边界。详细契约见 `docs/SECURITY_MASTER_DESIGN.md`。
 
-```text
-readMetadata(security) -> metadata | null
-```
-
-它只负责读取证券执行分类所需的元数据，不负责：
-
-- 选择 ExecutionProfile；
-- 构造 ExecutionModel；
-- 执行成交；
-- 运行投资策略。
-
-当前默认实现：
+默认仓库链路：
 
 ```text
+data/security_master/manifest.json
+        ↓
+LedgerSecurityMasterReader
+        ↓ SecurityMasterRecord
 LedgerSecurityMetadataReader
-  -> data/universe/summary.json
-  -> data/universe/<date>/stocks.json
+        ↓ execution metadata projection
+Application
 ```
 
-当前仓库 `hs-a` universe 只覆盖沪深 A 股，因此默认 Reader 只会对真实存在于该 snapshot 的证券返回：
+`SecurityMasterRecord` 保存：
 
 ```text
-instrumentType: a_share
-intradayRoundTripEligible: false
+security.code / security.market
+instrumentType
+intradayRoundTripEligible
+effectiveFrom / effectiveTo
+source
+qualityIssues[]
 ```
 
-对于当前 universe 无法证明类型或资格的证券返回 `null`，不根据代码号段猜测 ETF，也不根据“ETF”名称猜测 T+0。
+当前 `data/security_master/manifest.json` 通过显式 `universe_snapshot` record set 引用 `data/universe/20260701/stocks.json`，并在 manifest 中声明该 record set 的分类事实。这样不会复制数千只 A 股，也不会让 Adapter 通过代码号段推断类型。
 
-这意味着未来若仓库新增 ETF master/security metadata，应扩展 Reader/数据源，而不是把代码前缀判断塞进 Application、MCP 或 ExecutionModel。
+未来 ETF 应作为有来源、有有效期、有明确 `intradayRoundTripEligible` 的 Security Master 数据进入；不能根据 `51xxxx`、`15xxxx`、名称包含 `ETF` 等启发式规则猜测。
+
+`SecurityMetadataReader` 只暴露 Application 所需的窄能力：
+
+```text
+readMetadata(security, options?) -> metadata | null
+```
+
+`LedgerSecurityMetadataReader` 只依赖 `SecurityMasterReader Port` 并做投影，不读取文件、不解析 manifest、不知道 universe 结构，也不构造 concrete Security Master adapter。具体 wiring 由 Composition Root 完成。
 
 ### 2.3 SecurityExecutionProfileResolver
 
-`src/ports/simulation/security_execution_profile_resolver.js` 只定义：
+`src/ports/simulation/security_execution_profile_resolver.js` 定义：
 
 ```text
 resolve({ security, metadata }) -> profileId
 ```
 
-默认纯确定性实现：
+默认纯确定性映射：
 
 ```text
 instrumentType = a_share
@@ -148,7 +157,7 @@ intradayRoundTripEligible = true
 - Resolver 不知道费用、滑点、成交、settlement 实现；
 - Resolver 不知道 `frictionless`，因为 frictionless 是研究对照模型，不是证券类别。
 
-因此证券分类与执行机制是两个独立变化轴。
+证券身份和执行资格的基础校验由 `src/market/security_execution_metadata.js` 提供单一权威实现，Security Master 与 Resolver 复用，不再维护两套分类 Logic。
 
 ### 2.4 ExecutionProfile
 
@@ -209,23 +218,7 @@ t0_etf
   restrictionRules: a_share_market
 ```
 
-`domestic_stock_etf` 携带质量声明：
-
-```text
-etf_profile_assumes_domestic_stock_etf_t_plus_one
-etf_profile_does_not_cover_t_plus_zero_etf_categories
-```
-
-`t0_etf` 只表示“已确认具备交易所当日回转资格的 ETF”的执行 Profile，并携带：
-
-```text
-t0_etf_profile_requires_exchange_eligible_instrument
-t0_etf_profile_uses_shared_a_share_market_restriction_approximation
-```
-
-证券是否具备 T+0 资格由 Security Metadata 边界提供证据，再由 `SecurityExecutionProfileResolver` 映射；`ProfiledBuyExecutionModel`、MCP Tool、DrawdownBuyingPolicy 都不得猜测。
-
-截至 2026-08-12，上交所公开规则说明部分 ETF 品种支持当日回转，而并非所有 ETF 都统一为 T+0；具体证券资格应以交易所当前规则和证券属性为准。
+`domestic_stock_etf` 和 `t0_etf` 都携带质量声明，明确当前执行规则是研究用近似模型。证券是否真实具备 T+0 资格必须来自 Security Master / 显式 request metadata，再由 Resolver 映射；ExecutionModel、MCP Tool 和 Business Policy 都不得猜测。
 
 ### 2.6 ProfiledBuyExecutionModel
 
@@ -305,7 +298,7 @@ meta.executionSelection
   securityMetadataSource: request | reader | null
 ```
 
-这样 AI/测试可以区分“自动识别结果”和“研究者主动覆盖”。
+当前自动选择使用 Security Master 的最新可用事实。Security Master 已支持 `effectiveFrom/effectiveTo` 和 `asOf`，但“一个回测区间内执行资格随交易日变化”尚未偷偷塞进现有单-profile simulation；这应由未来独立 temporal execution-profile capability 处理。
 
 ### 3.2 显式研究 override
 
@@ -318,13 +311,11 @@ executionModel = t0_etf
 executionModel = frictionless
 ```
 
-Application 将跳过 SecurityMetadataReader 和 SecurityExecutionProfileResolver，直接交给 `BuyExecutionModelResolver`。
+Application 跳过 SecurityMetadataReader 和 SecurityExecutionProfileResolver，直接交给 `BuyExecutionModelResolver`。
 
 该能力用于受控模型对比，不代表系统声明证券真实类别。
 
-例如在历史回测里把同一份 Kline 分别送入 T+1 ETF、T+0 ETF、frictionless 是执行假设对照；不能据此推断该 Kline 对应证券在现实中就是 ETF 或具有 T+0 资格。
-
-MCP schema 不再给 `executionModel` 设置 `legacy_a_share` 默认值，因为协议层默认值会抢先覆盖 Application 的自动选择语义。
+MCP schema 不给 `executionModel` 设置协议默认值，因为协议层默认值会抢先覆盖 Application 的自动选择语义。
 
 ## 4. 依赖边界
 
@@ -335,9 +326,15 @@ Application -> SecurityMetadataReader Port
 Application -> SecurityExecutionProfileResolver Port
 Application -> BuyExecutionModelResolver Port
 Portfolio   -> BuyExecutionModel Port
+
+Composition Root -> LedgerSecurityMasterReader
 Composition Root -> LedgerSecurityMetadataReader
 Composition Root -> concrete SecurityExecutionProfileResolver
 Composition Root -> concrete BuyExecutionModelResolver
+
+LedgerSecurityMetadataReader -> SecurityMasterReader Port
+LedgerSecurityMasterReader   -> SecurityMasterRecord Logic
+
 BuyExecutionModelResolver -> ExecutionProfileCatalog
 BuyExecutionModelResolver -> ProfiledBuyExecutionModel
 BuyExecutionModelResolver -> explicitly exceptional model factories
@@ -348,21 +345,30 @@ Catalog -> ExecutionProfile Port contract
 禁止：
 
 ```text
+Application -> SecurityMasterReader
+Application -> LedgerSecurityMasterReader
 Application -> LedgerSecurityMetadataReader
 Application -> concrete SecurityExecutionProfileResolver
 Application -> ExecutionProfileCatalog
 Application -> concrete execution models
-MCP Tool    -> LedgerSecurityMetadataReader
-MCP Tool    -> concrete SecurityExecutionProfileResolver
-MCP Tool    -> ExecutionProfileCatalog
-MCP Tool    -> concrete execution models
-Portfolio   -> SecurityMetadataReader
-Portfolio   -> SecurityExecutionProfileResolver
-Portfolio   -> ExecutionProfileCatalog
-Portfolio   -> concrete execution models
+
+MCP Tool -> SecurityMasterReader / Ledger adapters
+MCP Tool -> concrete SecurityExecutionProfileResolver
+MCP Tool -> ExecutionProfileCatalog
+MCP Tool -> concrete execution models
+
+LedgerSecurityMetadataReader -> filesystem / manifest / universe
+LedgerSecurityMetadataReader -> concrete LedgerSecurityMasterReader
+LedgerSecurityMasterReader -> execution profile ids / ExecutionModel
+
+Portfolio -> SecurityMetadataReader
+Portfolio -> SecurityExecutionProfileResolver
+Portfolio -> ExecutionProfileCatalog
+Portfolio -> concrete execution models
+
 SecurityExecutionProfileResolver -> storage/network/MCP/execution mechanics
-Catalog     -> execution flow implementation
-Profile     -> Business Policy
+Catalog -> execution flow implementation
+Profile -> Business Policy
 ```
 
 这些边界由 `tests/simulation-execution-boundary.test.js` 持续检查。
@@ -380,18 +386,21 @@ src/simulation/execution/t0_etf_buy_execution_model.js
 当前职责唯一归属：
 
 ```text
-security metadata read  -> SecurityMetadataReader Adapter
-security -> profile     -> SecurityExecutionProfileResolver
-market assumptions      -> ExecutionProfileCatalog
-profile validation      -> ExecutionProfile contract
-profile-backed flow     -> ProfiledBuyExecutionModel
-profile/model creation  -> BuyExecutionModelResolver
-fees                    -> shared fill / fee mechanism
-slippage                -> shared slippage mechanism
-market blocking         -> registered restriction mechanism
-business trigger        -> DrawdownBuyingPolicy
-orchestration           -> Application / Portfolio
-protocol                 -> MCP Adapter
+security identity / eligibility validation -> security_execution_metadata Logic
+security fact schema / effective period     -> SecurityMasterRecord Logic
+repository security facts                   -> LedgerSecurityMasterReader
+application metadata projection             -> LedgerSecurityMetadataReader
+security -> profile                         -> SecurityExecutionProfileResolver
+market assumptions                          -> ExecutionProfileCatalog
+profile validation                          -> ExecutionProfile contract
+profile-backed flow                         -> ProfiledBuyExecutionModel
+profile/model creation                      -> BuyExecutionModelResolver
+fees                                        -> shared fill / fee mechanism
+slippage                                    -> shared slippage mechanism
+market blocking                             -> registered restriction mechanism
+business trigger                            -> DrawdownBuyingPolicy
+orchestration                               -> Application / Portfolio
+protocol                                    -> MCP Adapter
 ```
 
 任何新增证券类别不得在 Adapter、Application 或 Business Policy 中复制这些职责。
@@ -404,9 +413,10 @@ protocol                 -> MCP Adapter
 
 例如新增 ETF master 数据、某证券 T+0 eligibility：
 
-1. 扩展证券元数据数据源；
-2. 由 `SecurityMetadataReader` 映射成稳定 metadata；
-3. 若已有 Profile 足够表达，不修改任何 ExecutionModel。
+1. 通过 Security Master 数据源同步事实；
+2. 归一化为 `SecurityMasterRecord`；
+3. 由 `SecurityMetadataReader` 投影成稳定 metadata；
+4. 若已有 Profile 足够表达，不修改任何 ExecutionModel。
 
 ### 6.2 需要一个新的 Profile
 
@@ -428,37 +438,46 @@ protocol                 -> MCP Adapter
 
 当前已经验证：
 
-- `SecurityMetadataReader` 与 `SecurityExecutionProfileResolver` 都是独立 Port；
-- 默认 Ledger Reader 只基于真实 `hs-a` universe 声明 A-share，不猜 ETF；
+- Security Master Record 保存来源、有效期和质量信息；
+- `SecurityMasterReader` 是独立 Port；
+- `LedgerSecurityMasterReader` 可从 repository manifest 归一化 record set / explicit records；
+- 显式记录优先于较粗粒度 record set；
+- Reader 支持 `asOf` 查询，未知证券返回 `null`；
+- Security Master 数据源路径不能逃逸 `dataRoot`；
+- `LedgerSecurityMetadataReader` 只依赖 SecurityMasterReader Port，不访问 filesystem；
+- `SecurityMetadataReader` 与 `SecurityExecutionProfileResolver` 都保持独立边界；
 - ETF 缺少 `intradayRoundTripEligible` 时 fail closed；
 - A-share / T+1 ETF / T+0 ETF 映射由纯 resolver 完成；
 - Application 省略 `executionModel` 时走自动 metadata resolution；
 - Application 显式传 `executionModel` 时完全绕过证券分类；
 - `frictionless` 只作为显式研究 override；
-- Legacy A-share、Domestic stock ETF、T+0 ETF 仍共享 `ProfiledBuyExecutionModel`；
+- Legacy A-share、Domestic stock ETF、T+0 ETF 共享 `ProfiledBuyExecutionModel`；
 - T+0 ETF 没有新增 concrete execution model class；
-- MCP schema 不再声明 `executionModel` 默认值；
+- MCP schema 不声明 `executionModel` 默认值；
 - MCP 支持显式 `securityMetadata`，但不自己分类证券；
-- real stdio E2E 同时覆盖自动 A-share 选择与四种显式执行模型对照；
-- architecture fitness test 禁止 Application/MCP 依赖 concrete metadata reader、concrete security resolver、catalog 或 execution model；
+- architecture fitness test 禁止 Application/MCP 依赖 Security Master concrete adapter、metadata concrete adapter、catalog 或 execution model；
 - Composition Root 是 concrete wiring 的唯一入口。
 
 ## 8. 下一阶段
 
-当前最大的剩余缺口已经从“Resolver 是否存在”变成“证券元数据是否足够完整”。
+Security Master 契约和读取边界已经建立，下一缺口不再是“如何分类”，而是“**如何持续保证 Security Master 数据本身可信**”。
 
-当前仓库只拥有 `hs-a` universe，因此下一阶段优先级应是：
+优先进入：
 
 ```text
-Security master / instrument metadata
+SecurityMasterSource / repository inputs
         ↓
-ETF instrument classification
+SecurityMaster quality validator
         ↓
-T+0 eligibility metadata with provenance/effective date
+  schema / provenance
+  effective-period overlap
+  duplicate/conflict detection
+  referenced-file integrity
+  profile resolvability
         ↓
-LedgerSecurityMetadataReader
+CI / doctor report
         ↓
-SecurityExecutionProfileResolver
+后续 ETF metadata source adapter / sync pipeline
 ```
 
-建议不要先增加更多代码号段判断。真正可扩展的下一步是建立一个**带来源、有效日期和资格字段的 Security Master 数据契约**，让证券分类成为可审计数据，而不是散落在代码中的启发式规则。
+先建立确定性的质量校验能力，再接外部 ETF 数据源。这样外部来源、同步控制和数据规则仍能保持关注点分离，也避免错误 Security Master 数据直接影响自动 execution-profile 选择。
