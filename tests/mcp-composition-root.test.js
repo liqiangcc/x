@@ -87,6 +87,7 @@ test("MCP composition root shares one KlineReader across market and analytics us
   const { registry } = createMcpCompositionRoot({ klineReader });
   assert.deepEqual(registry.listDefinitions().map((definition) => definition.name), [
     "analytics_get_drawdowns",
+    "analytics_get_recovery_periods",
     "market_get_kline",
     "market_get_summary",
   ]);
@@ -109,6 +110,14 @@ test("MCP composition root shares one KlineReader across market and analytics us
     adjustment: "ledger_default",
   });
   const drawdownResult = await registry.invoke("analytics_get_drawdowns", {
+    code: "600001",
+    market: 1,
+    startDate: "2026-01-02",
+    endDate: "2026-01-06",
+    minDrawdown: 0.2,
+    priceField: "close",
+  });
+  const recoveryResult = await registry.invoke("analytics_get_recovery_periods", {
     code: "600001",
     market: 1,
     startDate: "2026-01-02",
@@ -142,6 +151,14 @@ test("MCP composition root shares one KlineReader across market and analytics us
       period: "daily",
       limit: null,
     },
+    {
+      code: "600001",
+      market: 1,
+      startDate: "2026-01-02",
+      endDate: "2026-01-06",
+      period: "daily",
+      limit: null,
+    },
   ]);
   assert.equal(marketResult.isError, undefined);
   assert.deepEqual(marketResult.structuredContent.bars.map((bar) => bar.date), ["2026-01-05", "2026-01-06"]);
@@ -154,20 +171,36 @@ test("MCP composition root shares one KlineReader across market and analytics us
   assert.equal(drawdownResult.structuredContent.summary.eventCount, 1);
   assert.equal(drawdownResult.structuredContent.events[0].drawdown, -0.2);
   assert.equal(drawdownResult.structuredContent.events[0].status, "recovered");
+  assert.equal(recoveryResult.isError, undefined);
+  assert.equal(recoveryResult.structuredContent.summary.recoveredCount, 1);
+  assert.equal(recoveryResult.structuredContent.periods[0].declineTradingDays, 1);
+  assert.equal(recoveryResult.structuredContent.periods[0].recoveryTradingDays, 1);
+  assert.equal(recoveryResult.structuredContent.periods[0].underwaterTradingDays, 2);
 });
 
 test("MCP composition root accepts prebuilt tools without constructing business dependencies", async () => {
   const drawdownsTool = fakeTool("injected_drawdowns", async () => ({ content: [], structuredContent: { ok: true } }));
+  const recoveryPeriodsTool = fakeTool("injected_recovery", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
-  const { registry } = createMcpCompositionRoot({ drawdownsTool, marketKlineTool, marketSummaryTool });
+  const { registry } = createMcpCompositionRoot({
+    drawdownsTool,
+    recoveryPeriodsTool,
+    marketKlineTool,
+    marketSummaryTool,
+  });
 
   assert.deepEqual(registry.listDefinitions(), [
     drawdownsTool.definition,
+    recoveryPeriodsTool.definition,
     marketKlineTool.definition,
     marketSummaryTool.definition,
   ]);
   assert.deepEqual(await registry.invoke("injected_drawdowns"), {
+    content: [],
+    structuredContent: { ok: true },
+  });
+  assert.deepEqual(await registry.invoke("injected_recovery"), {
     content: [],
     structuredContent: { ok: true },
   });
