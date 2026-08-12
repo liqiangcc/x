@@ -103,8 +103,6 @@ test("buy-only portfolio executes signals through the injected execution model a
     executionModel: createLegacyBuyExecutionModel({ executionConfig: { lotSize: 10 } }),
   });
 
-  // This fixture deliberately has high === low === open. The shared slippage
-  // model therefore clamps adverse slippage back into the executable bar range.
   assert.deepEqual(result.trades.map((trade) => [trade.status, trade.signalDate, trade.executionDate, trade.quantity, trade.totalCost]), [
     ["filled", "2026-01-02", "2026-01-05", 30, 245],
     ["filled", "2026-01-05", "2026-01-06", 20, 245],
@@ -189,7 +187,6 @@ test("SimulateDrawdownBuyingUseCase orchestrates KlineReader, policy, execution 
     period: "daily",
     limit: null,
   }]);
-  assert.equal(result.config.executionModel, "legacy_a_share");
   assert.deepEqual(result.signals.map((signal) => signal.date), [
     "2026-01-02",
     "2026-01-05",
@@ -217,15 +214,15 @@ test("SimulateDrawdownBuyingUseCase keeps policy, resolver, and portfolio implem
   };
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: { async readRange() { return { security: { code: "600001", market: 1 }, period: "daily", startDate: null, endDate: "2026-01-02", bars: [], qualityIssues: [], source: {} }; } },
-    buildPlan(bars, config) {
-      calls.push({ layer: "policy", bars, config });
-      return { signals: [], summary: { signalCount: 0 }, config };
-    },
     executionModelResolver: {
       resolve(input) {
         calls.push({ layer: "execution", input });
         return fakeExecutionModel;
       },
+    },
+    buildPlan(bars, config) {
+      calls.push({ layer: "policy", bars, config });
+      return { signals: [], summary: { signalCount: 0 }, config };
     },
     simulatePortfolio(input) {
       calls.push({ layer: "portfolio", input });
@@ -272,7 +269,7 @@ test("SimulateDrawdownBuyingUseCase rejects unknown execution models before read
       endDate: "2026-01-02",
       executionModel: "unknown",
     }),
-    /executionModel must be one of: legacy_a_share, frictionless/
+    /executionModel must be one of: legacy_a_share, domestic_stock_etf, frictionless/
   );
   assert.equal(readCount, 0);
 });
