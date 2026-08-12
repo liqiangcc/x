@@ -1,6 +1,7 @@
 "use strict";
 
 const { assertSignalReader } = require("../../ports/strategy/signal_reader");
+const { projectSignalCandidate } = require("./signal_candidate_projection");
 const {
   normalizeOptionalIsoDate,
   normalizeStrategyId,
@@ -20,25 +21,6 @@ function normalizeOffset(value) {
     throw new TypeError("offset must be a non-negative integer.");
   }
   return normalized;
-}
-
-function projectCandidate(candidate, { includeEvidence }) {
-  const item = {
-    rank: Number.isInteger(candidate?.rank) ? candidate.rank : null,
-    securityKey: String(candidate?.securityKey ?? ""),
-    code: String(candidate?.code ?? ""),
-    market: Number.isInteger(candidate?.market) ? candidate.market : Number(candidate?.market),
-    rankingValues: Array.isArray(candidate?.rankingValues)
-      ? candidate.rankingValues.map((value) => Number.isFinite(value) ? value : null)
-      : [],
-    qualityIssues: [...new Set((candidate?.qualityIssues ?? []).filter(Boolean))].sort(),
-  };
-  if (includeEvidence) {
-    item.evidence = candidate?.evidence && typeof candidate.evidence === "object"
-      ? candidate.evidence
-      : {};
-  }
-  return item;
 }
 
 class GetStrategyCandidatesUseCase {
@@ -72,7 +54,7 @@ class GetStrategyCandidatesUseCase {
       strategyId: result.strategyId,
       date: result.date,
       build: result.build,
-      candidates: (result.candidates ?? []).map((candidate) => projectCandidate(candidate, { includeEvidence })),
+      candidates: (result.candidates ?? []).map((candidate) => projectSignalCandidate(candidate, { includeEvidence })),
       page: result.page,
       meta: {
         source: result.source,
@@ -87,5 +69,5 @@ module.exports = {
   normalizeOffset,
   normalizeOptionalIsoDate,
   normalizeStrategyId,
-  projectCandidate,
+  projectCandidate: projectSignalCandidate,
 };
