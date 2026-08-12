@@ -24,27 +24,38 @@ function freezeIssue(issue) {
   return Object.freeze(normalized);
 }
 
-function failedLoadReport(error) {
+function emptySummary() {
+  return Object.freeze({
+    recordCount: 0,
+    validRecordCount: 0,
+    invalidRecordCount: 0,
+    securityCount: 0,
+    errorCount: 1,
+    warningCount: 0,
+    profileResolutionCount: 0,
+    profileResolutionErrorCount: 0,
+  });
+}
+
+function singleIssueReport({ code, message, source = null }) {
   const issue = freezeIssue({
     severity: "error",
-    code: "security_master_snapshot_load_failed",
-    message: error.message,
+    code,
+    message,
     entryIndexes: [],
   });
   return Object.freeze({
     ok: false,
     issues: Object.freeze([issue]),
-    summary: Object.freeze({
-      recordCount: 0,
-      validRecordCount: 0,
-      invalidRecordCount: 0,
-      securityCount: 0,
-      errorCount: 1,
-      warningCount: 0,
-      profileResolutionCount: 0,
-      profileResolutionErrorCount: 0,
-    }),
-    meta: Object.freeze({ source: null }),
+    summary: emptySummary(),
+    meta: Object.freeze({ source }),
+  });
+}
+
+function failedLoadReport(error) {
+  return singleIssueReport({
+    code: "security_master_snapshot_load_failed",
+    message: error.message,
   });
 }
 
@@ -78,30 +89,24 @@ class ValidateSecurityMasterUseCase {
       return failedLoadReport(new TypeError("security master snapshot must be an object."));
     }
     if (snapshot.available !== true) {
-      const issue = freezeIssue({
-        severity: "error",
+      return singleIssueReport({
         code: "security_master_unavailable",
         message: "Security master manifest is unavailable.",
-        entryIndexes: [],
+        source: snapshot.source ?? null,
       });
-      return Object.freeze({
-        ok: false,
-        issues: Object.freeze([issue]),
-        summary: Object.freeze({
-          recordCount: 0,
-          validRecordCount: 0,
-          invalidRecordCount: 0,
-          securityCount: 0,
-          errorCount: 1,
-          warningCount: 0,
-          profileResolutionCount: 0,
-          profileResolutionErrorCount: 0,
-        }),
-        meta: Object.freeze({ source: snapshot.source ?? null }),
+    }
+    if (!Array.isArray(snapshot.entries)) {
+      return failedLoadReport(new TypeError("security master snapshot entries must be an array."));
+    }
+    if (snapshot.entries.length === 0) {
+      return singleIssueReport({
+        code: "security_master_empty",
+        message: "Security master contains no auditable records.",
+        source: snapshot.source ?? null,
       });
     }
 
-    const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
+    const entries = snapshot.entries;
     const base = this.validate(entries);
     const issues = [...base.issues];
     let profileResolutionCount = 0;
@@ -162,5 +167,7 @@ class ValidateSecurityMasterUseCase {
 
 module.exports = {
   ValidateSecurityMasterUseCase,
+  emptySummary,
   failedLoadReport,
+  singleIssueReport,
 };
