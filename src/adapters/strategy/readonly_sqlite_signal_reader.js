@@ -27,6 +27,14 @@ function normalizeStrategyId(value) {
   return normalized;
 }
 
+function normalizeSecurityKey(value) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || normalized.length > 160) {
+    throw new TypeError("securityKey must be a non-empty string up to 160 characters.");
+  }
+  return normalized;
+}
+
 function normalizeLimit(value) {
   const normalized = value ?? 50;
   if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
@@ -57,6 +65,43 @@ function parseCandidate(row, rank) {
     ...payload,
     securityKey: payload.securityKey ?? row.security_key,
     rank,
+  };
+}
+
+function buildPayload(build) {
+  if (!build) return null;
+  return {
+    id: build.id,
+    strategyVersion: build.strategy_version,
+    dataVersion: build.data_version,
+    algorithmVersion: build.algorithm_version,
+    status: build.status,
+    signalCount: build.signal_count,
+  };
+}
+
+function sourcePayload() {
+  return { kind: "simulator_strategy_signal_store", readonly: true };
+}
+
+function latestReadyBuild(db, strategyId) {
+  return db.prepare(`SELECT id, strategy_id, strategy_version, data_version, status,
+      algorithm_version, signal_count, created_at
+    FROM strategy_builds
+    WHERE strategy_id = ? AND status = 'ready'
+    ORDER BY created_at DESC, rowid DESC
+    LIMIT 1`).get(strategyId) ?? null;
+}
+
+function pagePayload({ offset, limit, returned, total }) {
+  const nextOffset = offset + returned;
+  return {
+    offset,
+    limit,
+    returned,
+    total,
+    hasMore: nextOffset < total,
+    nextOffset: nextOffset < total ? nextOffset : null,
   };
 }
 
@@ -96,13 +141,7 @@ class ReadonlySqliteSignalReader {
     const db = this.open();
 
     try {
-      const build = db.prepare(`SELECT id, strategy_id, strategy_version, data_version, status,
-          algorithm_version, signal_count, created_at
-        FROM strategy_builds
-        WHERE strategy_id = ? AND status = 'ready'
-        ORDER BY created_at DESC, rowid DESC
-        LIMIT 1`).get(normalizedStrategyId);
-
+      const build = latestReadyBuild(db, normalizedStrategyId);
       if (!build) {
         return {
           status: "not_built",
@@ -110,15 +149,8 @@ class ReadonlySqliteSignalReader {
           date: normalizedDate,
           build: null,
           candidates: [],
-          page: {
-            offset: normalizedOffset,
-            limit: normalizedLimit,
-            returned: 0,
-            total: 0,
-            hasMore: false,
-            nextOffset: null,
-          },
-          source: { kind: "simulator_strategy_signal_store", readonly: true },
+          page: pagePayload({ offset: normalizedOffset, limit: normalizedLimit, returned: 0, total: 0 }),
+          source: sourcePayload(),
         };
       }
 
@@ -131,24 +163,10 @@ class ReadonlySqliteSignalReader {
           status: "ready",
           strategyId: normalizedStrategyId,
           date: null,
-          build: {
-            id: build.id,
-            strategyVersion: build.strategy_version,
-            dataVersion: build.data_version,
-            algorithmVersion: build.algorithm_version,
-            status: build.status,
-            signalCount: build.signal_count,
-          },
+          build: buildPayload(build),
           candidates: [],
-          page: {
-            offset: normalizedOffset,
-            limit: normalizedLimit,
-            returned: 0,
-            total: 0,
-            hasMore: false,
-            nextOffset: null,
-          },
-          source: { kind: "simulator_strategy_signal_store", readonly: true },
+          page: pagePayload({ offset: normalizedOffset, limit: normalizedLimit, returned: 0, total: 0 }),
+          source: sourcePayload(),
         };
       }
 
@@ -161,31 +179,80 @@ class ReadonlySqliteSignalReader {
         ORDER BY rowid
         LIMIT ? OFFSET ?`).all(build.id, targetDate, normalizedLimit, normalizedOffset);
       const candidates = rows.map((row, index) => parseCandidate(row, normalizedOffset + index + 1));
-      const returned = candidates.length;
-      const nextOffset = normalizedOffset + returned;
 
       return {
         status: "ready",
         strategyId: normalizedStrategyId,
         date: targetDate,
-        build: {
-          id: build.id,
-          strategyVersion: build.strategy_version,
-          dataVersion: build.data_version,
-          algorithmVersion: build.algorithm_version,
-          status: build.status,
-          signalCount: build.signal_count,
-        },
+        build: buildPayload(build),
         candidates,
-        page: {
+        page: pagePayload({
           offset: normalizedOffset,
           limit: normalizedLimit,
-          returned,
+          returned: candidates.length,
           total,
-          hasMore: nextOffset < total,
-          nextOffset: nextOffset < total ? nextOffset : null,
-        },
-        source: { kind: "simulator_strategy_signal_store", readonly: true },
+        }),
+        source: sourcePayload(),
+      };
+    } catch (error) {
+      if (error?.code?.startsWith?.("signal_store_")) throw error;
+      throw signalStoreError("signal_store_incompatible", "Strategy signal store schema is incompatible with this reader.", error);
+    } finally {
+      db.close();
+    }
+  }
+
+  async getStrategySignal({ strategyId, date, securityKey } = {}) {
+    const normalizedStrategyId = normalizeStrategyId(strategyId);
+    const normalizedDate = isoDate(date);
+    if (!normalizedDate) throw new TypeError("date is required.");
+    const normalizedSecurityKey = normalizeSecurityKey(securityKey);
+    const db = this.open();
+
+    try {
+      const build = latestReadyBuild(db, normalizedStrategyId);
+      if (!build) {
+        return {
+          status: "not_built",
+          strategyId: normalizedStrategyId,
+          date: normalizedDate,
+          securityKey: normalizedSecurityKey,
+          build: null,
+          candidate: null,
+          source: sourcePayload(),
+        };
+      }
+
+      const row = db.prepare(`SELECT s.security_key, s.payload_json,
+          (SELECT COUNT(*)
+             FROM strategy_signals ranked
+            WHERE ranked.build_id = s.build_id
+              AND ranked.trading_date = s.trading_date
+              AND ranked.rowid <= s.rowid) AS signal_rank
+        FROM strategy_signals s
+        WHERE s.build_id = ? AND s.trading_date = ? AND s.security_key = ?
+        LIMIT 1`).get(build.id, normalizedDate, normalizedSecurityKey);
+
+      if (!row) {
+        return {
+          status: "not_found",
+          strategyId: normalizedStrategyId,
+          date: normalizedDate,
+          securityKey: normalizedSecurityKey,
+          build: buildPayload(build),
+          candidate: null,
+          source: sourcePayload(),
+        };
+      }
+
+      return {
+        status: "ready",
+        strategyId: normalizedStrategyId,
+        date: normalizedDate,
+        securityKey: normalizedSecurityKey,
+        build: buildPayload(build),
+        candidate: parseCandidate(row, Number(row.signal_rank)),
+        source: sourcePayload(),
       };
     } catch (error) {
       if (error?.code?.startsWith?.("signal_store_")) throw error;
@@ -199,10 +266,15 @@ class ReadonlySqliteSignalReader {
 module.exports = {
   DEFAULT_SIGNAL_DATABASE_PATH,
   ReadonlySqliteSignalReader,
+  buildPayload,
   isoDate,
+  latestReadyBuild,
   normalizeLimit,
   normalizeOffset,
+  normalizeSecurityKey,
   normalizeStrategyId,
+  pagePayload,
   parseCandidate,
   signalStoreError,
+  sourcePayload,
 };
