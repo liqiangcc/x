@@ -1,5 +1,10 @@
 "use strict";
 
+const {
+  RESTRICTION_RULE_KINDS,
+  SHARE_AVAILABILITY,
+  assertExecutionProfile,
+} = require("../../ports/simulation/execution_profile");
 const { DEFAULT_SIMULATOR_CONFIG } = require("../../simulator/config/defaults");
 const { OrderSide } = require("../../simulator/core/enums");
 const { normalizeLegacyRules, validateOrderQuantity } = require("../../simulator/data/legacy_rules");
@@ -13,33 +18,46 @@ const {
   skippedBuyExecutionResult,
 } = require("./execution_model_support");
 
+const EXECUTION_BLOCK_RULES = Object.freeze({
+  [RESTRICTION_RULE_KINDS.NONE]: () => null,
+  [RESTRICTION_RULE_KINDS.A_SHARE_MARKET]: executionBlockReason,
+});
+
 function normalizeTickSize(value, fallback = 0.01) {
   const normalized = Number(value ?? fallback);
   if (!Number.isFinite(normalized) || normalized <= 0) throw new TypeError("tickSize must be positive.");
   return normalized;
 }
 
-function assertProfile(profile) {
-  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
-    throw new TypeError("execution profile must be an object.");
-  }
-  for (const field of ["kind", "ruleApproximation"]) {
-    if (typeof profile[field] !== "string" || !profile[field]) {
-      throw new TypeError(`execution profile ${field} must be a non-empty string.`);
-    }
-  }
-  return profile;
+function profileExecutionDefaults(profile) {
+  const resolvedProfile = assertExecutionProfile(profile);
+  return {
+    lotSize: resolvedProfile.lotRules.buyLotSize,
+    tPlusOne: resolvedProfile.settlement.sharesAvailable === SHARE_AVAILABILITY.NEXT_TRADING_DAY,
+    ...(resolvedProfile.priceRules.slippageRate === undefined
+      ? {}
+      : { slippageRate: resolvedProfile.priceRules.slippageRate }),
+    ...(resolvedProfile.feeRules.commissionRate === undefined
+      ? {}
+      : { commissionRate: resolvedProfile.feeRules.commissionRate }),
+    ...(resolvedProfile.feeRules.minimumCommissionYuan === undefined
+      ? {}
+      : { minimumCommissionYuan: resolvedProfile.feeRules.minimumCommissionYuan }),
+    ...(resolvedProfile.feeRules.stampDutyRate === undefined
+      ? {}
+      : { stampDutyRate: resolvedProfile.feeRules.stampDutyRate }),
+  };
 }
 
 function normalizeProfileExecutionConfig({ input = {}, profile } = {}) {
-  const resolvedProfile = assertProfile(profile);
+  const resolvedProfile = assertExecutionProfile(profile);
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("executionConfig must be an object.");
   }
   const defaults = DEFAULT_SIMULATOR_CONFIG.execution;
   const rules = normalizeLegacyRules({
     ...defaults,
-    ...(resolvedProfile.executionDefaults ?? {}),
+    ...profileExecutionDefaults(resolvedProfile),
     ...input,
   });
   return Object.freeze({
@@ -49,23 +67,33 @@ function normalizeProfileExecutionConfig({ input = {}, profile } = {}) {
     commissionRate: rules.commissionRate,
     minimumCommissionYuan: rules.minimumCommissionFen / 100,
     stampDutyRate: rules.stampDutyRate,
-    tickSize: normalizeTickSize(input.tickSize, resolvedProfile.tickSize ?? 0.01),
+    tickSize: normalizeTickSize(input.tickSize, resolvedProfile.priceRules.tickSize),
     qualityIssues: Object.freeze([
       ...new Set([...(rules.qualityIssues ?? []), ...(resolvedProfile.qualityIssues ?? [])]),
     ].sort()),
   });
 }
 
+function resolveExecutionBlockRule(profile) {
+  const resolvedProfile = assertExecutionProfile(profile);
+  const blockRule = EXECUTION_BLOCK_RULES[resolvedProfile.restrictionRules.kind];
+  if (typeof blockRule !== "function") {
+    throw new TypeError(`Unsupported execution restriction rule: ${resolvedProfile.restrictionRules.kind}.`);
+  }
+  return blockRule;
+}
+
 function createProfiledBuyExecutionModel({ executionConfig = {}, profile } = {}) {
-  const resolvedProfile = assertProfile(profile);
+  const resolvedProfile = assertExecutionProfile(profile);
   const config = normalizeProfileExecutionConfig({ input: executionConfig, profile: resolvedProfile });
-  const blockReason = typeof resolvedProfile.executionBlockReason === "function"
-    ? resolvedProfile.executionBlockReason
-    : executionBlockReason;
+  const blockReason = resolveExecutionBlockRule(resolvedProfile);
+  const marketRestrictionsIncluded = resolvedProfile.restrictionRules.kind !== RESTRICTION_RULE_KINDS.NONE;
 
   return Object.freeze({
     describe() {
       return Object.freeze({
+        profileId: resolvedProfile.id,
+        assetClass: resolvedProfile.assetClass,
         kind: resolvedProfile.kind,
         timing: "next_trading_day_open",
         executionPriceField: "open",
@@ -78,7 +106,7 @@ function createProfiledBuyExecutionModel({ executionConfig = {}, profile } = {})
         tickSize: config.tickSize,
         feesIncluded: config.commissionRate > 0 || config.minimumCommissionYuan > 0 || config.stampDutyRate > 0,
         slippageIncluded: config.slippageRate > 0,
-        marketRestrictionsIncluded: true,
+        marketRestrictionsIncluded,
         qualityIssues: config.qualityIssues,
       });
     },
@@ -128,8 +156,10 @@ function createProfiledBuyExecutionModel({ executionConfig = {}, profile } = {})
 }
 
 module.exports = {
-  assertProfile,
+  EXECUTION_BLOCK_RULES,
   createProfiledBuyExecutionModel,
   normalizeProfileExecutionConfig,
   normalizeTickSize,
+  profileExecutionDefaults,
+  resolveExecutionBlockRule,
 };
