@@ -1,21 +1,10 @@
 "use strict";
 
-const { normalizeDate } = require("../../core/date");
 const { assertSignalReader } = require("../../ports/strategy/signal_reader");
-
-function normalizeOptionalIsoDate(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const normalized = normalizeDate(value);
-  return `${normalized.slice(0, 4)}-${normalized.slice(4, 6)}-${normalized.slice(6, 8)}`;
-}
-
-function normalizeStrategyId(value) {
-  const normalized = String(value ?? "").trim();
-  if (!normalized || normalized.length > 128) {
-    throw new TypeError("strategyId must be a non-empty string up to 128 characters.");
-  }
-  return normalized;
-}
+const {
+  normalizeOptionalIsoDate,
+  normalizeStrategyId,
+} = require("./signal_query_params");
 
 function normalizeLimit(value) {
   const normalized = value ?? 50;
