@@ -115,7 +115,7 @@ test("security execution profile resolver fails closed for incomplete or contrad
   );
 });
 
-test("simulation application resolves security metadata before asking the execution-model resolver for mechanics", async () => {
+test("simulation application resolves security metadata at the normalized backtest end date before execution mechanics", async () => {
   const calls = [];
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
@@ -135,8 +135,8 @@ test("simulation application resolves security metadata before asking the execut
       },
     },
     securityMetadataReader: {
-      async readMetadata(security) {
-        calls.push({ layer: "metadata", security });
+      async readMetadata(security, options) {
+        calls.push({ layer: "metadata", security, options });
         return { instrumentType: "etf", intradayRoundTripEligible: true };
       },
     },
@@ -194,6 +194,7 @@ test("simulation application resolves security metadata before asking the execut
     "portfolio",
   ]);
   assert.deepEqual(calls[1].security, { code: "513500", market: 1 });
+  assert.deepEqual(calls[1].options, { asOf: "2026-01-05" });
   assert.deepEqual(calls[3].input, {
     model: "t0_etf",
     executionConfig: { lotSize: 100 },
@@ -205,6 +206,61 @@ test("simulation application resolves security metadata before asking the execut
     profileId: "t0_etf",
     securityMetadataSource: "reader",
   });
+});
+
+test("simulation automatic profile selection fails closed when no metadata is effective at the backtest end date", async () => {
+  const metadataCalls = [];
+  let profileResolutions = 0;
+  let executionResolutions = 0;
+  const useCase = new SimulateDrawdownBuyingUseCase({
+    klineReader: {
+      async readRange() {
+        return {
+          security: { code: "513500", market: 1 },
+          period: "daily",
+          startDate: "2025-01-02",
+          endDate: "2025-12-31",
+          bars: [],
+          qualityIssues: [],
+          source: { kind: "test" },
+        };
+      },
+    },
+    securityMetadataReader: {
+      async readMetadata(security, options) {
+        metadataCalls.push({ security, options });
+        return null;
+      },
+    },
+    securityExecutionProfileResolver: {
+      resolve() {
+        profileResolutions += 1;
+        return "t0_etf";
+      },
+    },
+    executionModelResolver: {
+      resolve() {
+        executionResolutions += 1;
+        return { kind: "unexpected" };
+      },
+    },
+  });
+
+  await assert.rejects(
+    () => useCase.execute({
+      code: "513500",
+      market: 1,
+      startDate: "2025-01-02",
+      endDate: "2025-12-31",
+    }),
+    /security metadata is required to resolve an execution profile automatically/
+  );
+  assert.deepEqual(metadataCalls, [{
+    security: { code: "513500", market: 1 },
+    options: { asOf: "2025-12-31" },
+  }]);
+  assert.equal(profileResolutions, 0);
+  assert.equal(executionResolutions, 0);
 });
 
 test("explicit execution override bypasses security classification while preserving application orchestration", async () => {
