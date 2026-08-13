@@ -1,0 +1,34 @@
+name: SSE ETF Export Discovery
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/sse-etf-export-discovery.yml
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Discover official SSE ETF export contract
+        run: node scripts/discover_sse_etf_export.js
+
+      - name: Upload discovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sse-etf-export-discovery
+          path: artifacts/sse-etf-export-discovery
+          if-no-files-found: warn
+          retention-days: 7
