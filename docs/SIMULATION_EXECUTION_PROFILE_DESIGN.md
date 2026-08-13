@@ -1,6 +1,7 @@
 # Simulation Execution Profile 设计
 
 > 日期：2026-08-12  
+> 更新：2026-08-13  
 > 状态：已实现  
 > 范围：`simulation_run_drawdown_buying` 使用的证券执行属性识别、ExecutionProfile 选择、买入执行模型边界，以及后续新增市场规则时的扩展方式。
 
@@ -271,11 +272,14 @@ public model/profile id
 省略 `executionModel`：
 
 ```text
-KlineReader -> canonical security identity
+KlineReader -> canonical security identity + normalized backtest endDate
       ↓
 request.securityMetadata ?
       ├─ yes -> use request metadata
-      └─ no  -> SecurityMetadataReader.readMetadata(security)
+      └─ no  -> SecurityMetadataReader.readMetadata(
+                   security,
+                   { asOf: normalized backtest endDate }
+                 )
       ↓
 SecurityExecutionProfileResolver.resolve(...)
       ↓
@@ -298,7 +302,9 @@ meta.executionSelection
   securityMetadataSource: request | reader | null
 ```
 
-当前自动选择使用 Security Master 的最新可用事实。Security Master 已支持 `effectiveFrom/effectiveTo` 和 `asOf`，但“一个回测区间内执行资格随交易日变化”尚未偷偷塞进现有单-profile simulation；这应由未来独立 temporal execution-profile capability 处理。
+自动选择以 KlineReader 返回的规范化 `endDate` 作为 Security Master 的 metadata cutoff，并通过 `{ asOf: endDate }` 查询该时点有效的证券事实。若该时点不存在有效记录，Reader 返回 `null`，Application fail closed；不得回退到回测结束日之后才生效的最新记录。因此历史模拟不会因为仓库后来新增了证券分类事实而产生未来信息泄漏。
+
+当前 simulation 仍然是“一个回测请求选择一个 Profile”。如果 `effectiveFrom/effectiveTo` 在回测区间内部发生变化，现有单-profile simulation 不会按每个 signal / trade 日期动态切换 Profile；这属于后续独立 temporal execution-profile capability。本次只消除“回测结束日之后的 metadata 被读入”的时间穿越，不假装解决区间内部规则变化。
 
 ### 3.2 显式研究 override
 
@@ -449,6 +455,8 @@ protocol                                    -> MCP Adapter
 - ETF 缺少 `intradayRoundTripEligible` 时 fail closed；
 - A-share / T+1 ETF / T+0 ETF 映射由纯 resolver 完成；
 - Application 省略 `executionModel` 时走自动 metadata resolution；
+- 自动 metadata resolution 使用规范化回测 `endDate` 作为 Security Master `asOf`；
+- 回测结束日不存在有效 Security Master 记录时 fail closed，不回退到最新或未来记录；
 - Application 显式传 `executionModel` 时完全绕过证券分类；
 - `frictionless` 只作为显式研究 override；
 - Legacy A-share、Domestic stock ETF、T+0 ETF 共享 `ProfiledBuyExecutionModel`；
