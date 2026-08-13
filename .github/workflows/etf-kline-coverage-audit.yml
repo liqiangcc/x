@@ -1,0 +1,106 @@
+name: ETF Kline Coverage Audit
+
+on:
+  push:
+    branches:
+      - feat/mcp-architecture-design
+    paths:
+      - .github/workflows/etf-kline-coverage-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Audit real SSE ETF Security Master against Kline ledger
+        shell: bash
+        run: |
+          node <<'NODE'
+          "use strict";
+
+          const { LedgerSecurityMasterReader } = require("./src/adapters/ledger/ledger_security_master_reader");
+          const { LedgerSecurityMetadataReader } = require("./src/adapters/ledger/ledger_security_metadata_reader");
+          const { LedgerKlineReader } = require("./src/adapters/ledger/ledger_kline_reader");
+          const {
+            createSecurityExecutionProfileResolver,
+          } = require("./src/simulation/execution/security_execution_profile_resolver");
+
+          const ETF_RECORD_PATH = "security_master/records/etf_sse.json";
+          const masterReader = new LedgerSecurityMasterReader();
+          const metadataReader = new LedgerSecurityMetadataReader({ securityMasterReader: masterReader });
+          const klineReader = new LedgerKlineReader();
+          const profileResolver = createSecurityExecutionProfileResolver();
+
+          const snapshot = masterReader.readSnapshot();
+          const unique = new Map();
+          for (const entry of snapshot.entries) {
+            if (entry.origin?.path !== ETF_RECORD_PATH) continue;
+            const security = entry.record.security;
+            unique.set(`${security.market}:${security.code}`, security);
+          }
+
+          async function inspect(security) {
+            const metadata = metadataReader.readMetadata(security);
+            const profileId = profileResolver.resolve({ security, metadata });
+            const history = await klineReader.readRange({
+              ...security,
+              endDate: "9999-12-31",
+              period: "daily",
+              limit: null,
+            });
+            const bars = history.bars ?? [];
+            return {
+              security,
+              profileId,
+              metadataEffectiveFrom: metadata?.effectiveFrom ?? null,
+              metadataEffectiveTo: metadata?.effectiveTo ?? null,
+              barCount: bars.length,
+              firstDate: bars[0]?.date ?? null,
+              lastDate: bars.at(-1)?.date ?? null,
+              klinePath: history.source?.path ?? null,
+              qualityIssues: history.qualityIssues ?? [],
+            };
+          }
+
+          (async () => {
+            const rows = await Promise.all([...unique.values()].map(inspect));
+            const withKline = rows.filter((row) => row.barCount > 0);
+            const runnable = rows.filter((row) => row.barCount >= 2);
+            const profiles = {};
+            for (const profileId of ["t0_etf", "domestic_stock_etf"]) {
+              const classified = rows.filter((row) => row.profileId === profileId);
+              const covered = classified.filter((row) => row.barCount > 0);
+              const executable = classified.filter((row) => row.barCount >= 2);
+              profiles[profileId] = {
+                securityCount: classified.length,
+                withKlineCount: covered.length,
+                runnableCount: executable.length,
+                samples: executable.slice(0, 20),
+              };
+            }
+
+            const result = {
+              securityMaster: {
+                sourcePath: ETF_RECORD_PATH,
+                securityCount: rows.length,
+              },
+              klineOverlap: {
+                withKlineCount: withKline.length,
+                runnableCount: runnable.length,
+              },
+              profiles,
+            };
+            console.log("ETF_KLINE_COVERAGE_JSON=" + JSON.stringify(result));
+          })().catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
