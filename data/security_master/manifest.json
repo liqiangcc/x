@@ -19,6 +19,10 @@
       "qualityIssues": [
         "classification_inherited_from_hs_a_universe_snapshot"
       ]
+    },
+    {
+      "kind": "record_file",
+      "path": "security_master/records/etf_sse.json"
     }
   ],
   "records": []
