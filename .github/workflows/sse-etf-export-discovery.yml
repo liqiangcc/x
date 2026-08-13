@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - .github/workflows/sse-etf-export-discovery.yml
+      - scripts/discover_sse_etf_export.js
 
 jobs:
   discover:
