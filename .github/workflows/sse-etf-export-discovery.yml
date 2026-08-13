@@ -9,6 +9,11 @@ on:
       - scripts/discover_sse_fund_categories.js
       - scripts/discover_sse_etf_export_response.js
       - scripts/inspect_sse_xls_export.js
+      - scripts/capture_official_etf_snapshot.js
+      - scripts/sync_etf_security_master.js
+      - src/adapters/market/dry_run_security_master_writer.js
+      - src/sources/exchange/official_snapshot_transport_resolver.js
+      - src/sources/exchange/verified_xls_snapshot_transport.js
 
 jobs:
   discover:
@@ -57,6 +62,136 @@ jobs:
             artifacts/sse-etf-export-discovery/all-etfs-export.bin \
             artifacts/sse-etf-export-discovery/t0-etfs-export.bin \
             | tee artifacts/sse-etf-export-discovery/xls-shape.json
+
+      - name: Prepare verified capture metadata
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const response = JSON.parse(fs.readFileSync(
+            'artifacts/sse-etf-export-discovery/export-responses.json',
+            'utf8'
+          ));
+          const all = response.variants.allEtfs;
+          const t0 = response.variants.t0Etfs;
+          const values = {
+            SSE_CAPTURED_AT: response.collectedAt,
+            SSE_ALL_COUNT: all.expectedRecordCount,
+            SSE_T0_COUNT: t0.expectedRecordCount,
+            SSE_ALL_HASH: all.export.probe.contentHash,
+            SSE_T0_HASH: t0.export.probe.contentHash,
+            SSE_SNAPSHOT_VERSION: 'sse-fundlist-v20260304',
+          };
+          const lines = Object.entries(values).map(([key, value]) => {
+            const normalized = String(value).replace(/[\r\n]/g, '');
+            return `${key}=${normalized}`;
+          });
+          fs.appendFileSync(process.env.GITHUB_ENV, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Capture verified official SSE snapshots
+        run: |
+          node scripts/capture_official_etf_snapshot.js \
+            --exchange sse \
+            --dataset all_etfs \
+            --input artifacts/sse-etf-export-discovery/all-etfs-export.bin \
+            --document https://etf.sse.com.cn/fundlist/ \
+            --version "$SSE_SNAPSHOT_VERSION" \
+            --collected-at "$SSE_CAPTURED_AT" \
+            --expected-record-count "$SSE_ALL_COUNT" \
+            --expected-content-hash "$SSE_ALL_HASH" \
+            --output artifacts/sse-etf-export-discovery/all-etfs-snapshot.json
+
+          node scripts/capture_official_etf_snapshot.js \
+            --exchange sse \
+            --dataset t0_etfs \
+            --input artifacts/sse-etf-export-discovery/t0-etfs-export.bin \
+            --document https://etf.sse.com.cn/fundlist/ \
+            --version "$SSE_SNAPSHOT_VERSION" \
+            --collected-at "$SSE_CAPTURED_AT" \
+            --expected-record-count "$SSE_T0_COUNT" \
+            --expected-content-hash "$SSE_T0_HASH" \
+            --output artifacts/sse-etf-export-discovery/t0-etfs-snapshot.json
+
+      - name: Dry-run real SSE Security Master sync
+        run: |
+          node scripts/sync_etf_security_master.js \
+            --exchange sse \
+            --all-snapshot artifacts/sse-etf-export-discovery/all-etfs-snapshot.json \
+            --t0-snapshot artifacts/sse-etf-export-discovery/t0-etfs-snapshot.json \
+            --dry-run \
+            | tee artifacts/sse-etf-export-discovery/security-master-dry-run.json
+
+      - name: Verify real SSE dry-run report and zero repository writes
+        run: |
+          node <<'NODE' | tee artifacts/sse-etf-export-discovery/security-master-dry-run-verification.json
+          const fs = require('node:fs');
+          const response = JSON.parse(fs.readFileSync(
+            'artifacts/sse-etf-export-discovery/export-responses.json',
+            'utf8'
+          ));
+          const allSnapshot = JSON.parse(fs.readFileSync(
+            'artifacts/sse-etf-export-discovery/all-etfs-snapshot.json',
+            'utf8'
+          ));
+          const t0Snapshot = JSON.parse(fs.readFileSync(
+            'artifacts/sse-etf-export-discovery/t0-etfs-snapshot.json',
+            'utf8'
+          ));
+          const dryRun = JSON.parse(fs.readFileSync(
+            'artifacts/sse-etf-export-discovery/security-master-dry-run.json',
+            'utf8'
+          ));
+
+          const allCount = response.variants.allEtfs.expectedRecordCount;
+          const t0Count = response.variants.t0Etfs.expectedRecordCount;
+          const t1Count = allCount - t0Count;
+          if (!dryRun.ok) throw new Error('real SSE Security Master dry-run failed quality validation.');
+          if (allSnapshot.records.length !== allCount) {
+            throw new Error(`all ETF snapshot count mismatch: ${allSnapshot.records.length} != ${allCount}`);
+          }
+          if (t0Snapshot.records.length !== t0Count) {
+            throw new Error(`T+0 ETF snapshot count mismatch: ${t0Snapshot.records.length} != ${t0Count}`);
+          }
+          if (dryRun.writes.length !== 1 || dryRun.writes[0].dryRun !== true) {
+            throw new Error('dry-run must produce exactly one non-persistent write intent.');
+          }
+          const summary = dryRun.writes[0].metadata?.summary;
+          if (!summary) throw new Error('dry-run write intent is missing source summary.');
+          if (
+            summary.etfCount !== allCount
+            || summary.t0Count !== t0Count
+            || summary.t1Count !== t1Count
+          ) {
+            throw new Error(`source summary mismatch: ${JSON.stringify(summary)}`);
+          }
+          const validation = dryRun.validation?.summary;
+          if (!validation) throw new Error('dry-run validation summary is missing.');
+          if (
+            validation.recordCount !== allCount
+            || validation.profileResolutionCount !== allCount
+            || validation.profileResolutionErrorCount !== 0
+            || validation.errorCount !== 0
+          ) {
+            throw new Error(`quality/profile validation mismatch: ${JSON.stringify(validation)}`);
+          }
+
+          process.stdout.write(`${JSON.stringify({
+            ok: true,
+            officialCounts: { allEtfs: allCount, t0Etfs: t0Count, t1Etfs: t1Count },
+            capturedCounts: {
+              allEtfs: allSnapshot.records.length,
+              t0Etfs: t0Snapshot.records.length,
+            },
+            validation,
+            writeIntent: dryRun.writes[0],
+          }, null, 2)}\n`);
+          NODE
+
+          if [ -n "$(git status --porcelain -- data/security_master)" ]; then
+            echo 'dry-run mutated data/security_master' >&2
+            git status --short -- data/security_master >&2
+            exit 1
+          fi
 
       - name: Upload discovery evidence
         if: always()
