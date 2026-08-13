@@ -5,8 +5,11 @@ const {
 } = require("../../market/security_master_record");
 const {
   normalizeEtfSecurityFact,
-  normalizeExchange,
 } = require("../../market/etf_security_fact_normalizer");
+const {
+  assertOfficialExchangeDocument,
+  normalizeOfficialExchange,
+} = require("../../market/official_exchange_provenance");
 const {
   assertEtfSecuritySource,
 } = require("../../ports/market/etf_security_source");
@@ -14,10 +17,6 @@ const {
 const EXCHANGE_MARKETS = Object.freeze({
   sse: 1,
   szse: 0,
-});
-const OFFICIAL_HOST_SUFFIXES = Object.freeze({
-  sse: "sse.com.cn",
-  szse: "szse.cn",
 });
 
 function requiredText(value, field) {
@@ -33,25 +32,6 @@ function objectValue(value, field) {
   return value;
 }
 
-function assertOfficialDocument(exchange, value, field) {
-  const document = requiredText(value, field);
-  let url;
-  try {
-    url = new URL(document);
-  } catch {
-    throw new TypeError(`${field} must be an absolute official exchange URL.`);
-  }
-  if (url.protocol !== "https:") {
-    throw new TypeError(`${field} must use https.`);
-  }
-  const suffix = OFFICIAL_HOST_SUFFIXES[exchange];
-  const hostname = url.hostname.toLowerCase();
-  if (hostname !== suffix && !hostname.endsWith(`.${suffix}`)) {
-    throw new TypeError(`${field} must belong to ${suffix}.`);
-  }
-  return url.toString();
-}
-
 function normalizeSnapshot(value, field, exchange) {
   const snapshot = objectValue(value, field);
   if (snapshot.complete !== true) {
@@ -61,13 +41,21 @@ function normalizeSnapshot(value, field, exchange) {
     throw new TypeError(`${field}.records must be an array.`);
   }
   const source = objectValue(snapshot.source, `${field}.source`);
+  const contentHash = source.contentHash === undefined || source.contentHash === null
+    ? null
+    : requiredText(source.contentHash, `${field}.source.contentHash`);
   return Object.freeze({
     complete: true,
     records: snapshot.records,
     source: Object.freeze({
-      document: assertOfficialDocument(exchange, source.document, `${field}.source.document`),
+      document: assertOfficialExchangeDocument(
+        exchange,
+        source.document,
+        `${field}.source.document`
+      ),
       version: requiredText(source.version, `${field}.source.version`),
       collectedAt: normalizeCollectedAt(source.collectedAt),
+      ...(contentHash === null ? {} : { contentHash }),
     }),
   });
 }
@@ -87,9 +75,16 @@ function compositeProvenance(exchange, allSnapshot, t0Snapshot) {
   });
 }
 
+function transportEvidence(allSnapshot, t0Snapshot) {
+  return Object.freeze({
+    allContentHash: allSnapshot.source.contentHash ?? null,
+    t0ContentHash: t0Snapshot.source.contentHash ?? null,
+  });
+}
+
 class OfficialExchangeEtfSource {
   constructor({ exchange, fetchAllEtfs, fetchT0Etfs } = {}) {
-    this.exchange = normalizeExchange(exchange);
+    this.exchange = normalizeOfficialExchange(exchange);
     if (typeof fetchAllEtfs !== "function") throw new TypeError("fetchAllEtfs must be a function.");
     if (typeof fetchT0Etfs !== "function") throw new TypeError("fetchT0Etfs must be a function.");
     this.fetchAllEtfs = fetchAllEtfs;
@@ -151,7 +146,10 @@ class OfficialExchangeEtfSource {
         t0Count: t0Codes.size,
         t1Count: records.length - t0Codes.size,
       }),
-      source: provenance,
+      source: Object.freeze({
+        ...provenance,
+        evidence: transportEvidence(allSnapshot, t0Snapshot),
+      }),
     });
   }
 }
@@ -172,10 +170,9 @@ assertEtfSecuritySource(new OfficialExchangeEtfSource({
 
 module.exports = {
   EXCHANGE_MARKETS,
-  OFFICIAL_HOST_SUFFIXES,
   OfficialExchangeEtfSource,
-  assertOfficialDocument,
   compositeProvenance,
   normalizeCode,
   normalizeSnapshot,
+  transportEvidence,
 };
