@@ -45,8 +45,11 @@ jobs:
       - name: Capture real SSE ETF export responses
         run: node scripts/discover_sse_etf_export_response.js
 
-      - name: Install pinned XLS parser for discovery only
-        run: npm install --no-save --ignore-scripts https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+      - name: Install pinned XLS parser and generate lockfiles
+        run: |
+          npm install --save-exact --ignore-scripts https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+          cp package.json artifacts/sse-etf-export-discovery/package.with-xlsx.json
+          cp package-lock.json artifacts/sse-etf-export-discovery/package-lock.with-xlsx.json
 
       - name: Inspect real SSE XLS workbook shape
         run: |
