@@ -5,10 +5,10 @@
   "period": "daily",
   "universe": "market",
   "market": "hs-a",
-  "status": "running",
+  "status": "completed",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 5,
+  "chain_depth": 6,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -935,7 +935,6 @@
     "600297",
     "600321",
     "600387",
-    "600395",
     "600401",
     "600432",
     "600466",
@@ -975,32 +974,23 @@
     "603056",
     "603603",
     "603963",
-    "688086",
-    "688107",
-    "688298",
-    "688320",
-    "688337"
+    "688086"
   ],
   "last_batch_source": "failed",
   "last_summary": {
     "status": "completed",
-    "total_codes": 5,
-    "success": 5,
+    "total_codes": 0,
+    "success": 0,
     "migrated_existing": 0,
     "skipped_existing": 0,
     "failed": 0,
     "success_rate": 1,
     "failure_reasons": [],
-    "engine_counts": {
-      "aws-router": 4,
-      "local": 1
-    },
-    "region_counts": {
-      "ap-northeast-3": 4
-    }
+    "engine_counts": {},
+    "region_counts": {}
   },
   "created_at": "2026-08-13T08:55:52Z",
-  "updated_at": "2026-08-13T12:53:26Z",
+  "updated_at": "2026-08-13T12:55:04Z",
   "counts": {
     "pending": 0,
     "completed": 241,
