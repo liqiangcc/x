@@ -9,11 +9,12 @@ function source(relativePath) {
   return fs.readFileSync(path.join(__dirname, "..", relativePath), "utf8");
 }
 
-test("ETF source, normalization, sync, and ledger persistence keep separate concerns", () => {
+test("ETF source, normalization, sync, and persistence adapters keep separate concerns", () => {
   const normalizer = source("src/market/etf_security_fact_normalizer.js");
   const sourceAdapter = source("src/sources/exchange/official_etf_source.js");
   const syncApplication = source("src/application/market/sync_etf_security_master.js");
-  const writer = source("src/adapters/ledger/ledger_security_master_writer.js");
+  const ledgerWriter = source("src/adapters/ledger/ledger_security_master_writer.js");
+  const dryRunWriter = source("src/adapters/market/dry_run_security_master_writer.js");
 
   for (const forbidden of [
     "node:fs",
@@ -42,9 +43,21 @@ test("ETF source, normalization, sync, and ledger persistence keep separate conc
   assert.equal(syncApplication.includes("node:fs"), false);
   assert.equal(syncApplication.includes("node:path"), false);
 
-  assert.equal(writer.includes("node:fs"), true);
-  assert.equal(writer.includes("ports/market/security_master_writer"), true);
-  assert.equal(writer.includes("execution_profile"), false);
-  assert.equal(writer.includes("drawdown"), false);
-  assert.equal(writer.includes("mcp"), false);
+  assert.equal(ledgerWriter.includes("node:fs"), true);
+  assert.equal(ledgerWriter.includes("ports/market/security_master_writer"), true);
+  assert.equal(ledgerWriter.includes("execution_profile"), false);
+  assert.equal(ledgerWriter.includes("drawdown"), false);
+  assert.equal(ledgerWriter.includes("mcp"), false);
+
+  assert.equal(dryRunWriter.includes("ports/market/security_master_writer"), true);
+  for (const forbidden of [
+    "node:fs",
+    "ledger_security_master_writer",
+    "official_etf_source",
+    "execution_profile",
+    "drawdown",
+    "mcp",
+  ]) {
+    assert.equal(dryRunWriter.includes(forbidden), false, forbidden);
+  }
 });
