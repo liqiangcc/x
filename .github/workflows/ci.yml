@@ -29,6 +29,9 @@ jobs:
       - name: Validate security master
         run: node scripts/validate_security_master.js
 
+      - name: Audit SSE ETF Kline coverage
+        run: node scripts/audit_etf_kline_coverage.js
+
       - name: CLI smoke test
         run: |
           bin/x doctor
