@@ -42,15 +42,25 @@ function parseArgs(argv) {
 }
 
 async function fetchOfficial(url, { referer = PAGE_URL } = {}) {
-  const response = await fetch(url, {
-    redirect: "follow",
-    headers: {
-      accept: "*/*",
-      "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-      referer,
-      "user-agent": "Mozilla/5.0 (X Security Master source verification; +https://github.com/liqiangcc/x)",
-    },
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        accept: "*/*",
+        "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+        referer,
+        "user-agent": "Mozilla/5.0 (X Security Master source verification; +https://github.com/liqiangcc/x)",
+      },
+    });
+  } catch (error) {
+    const cause = error?.cause;
+    const detail = cause
+      ? `; cause=${cause.code || cause.name || "unknown"}: ${cause.message || String(cause)}`
+      : "";
+    throw new Error(`GET ${url} failed before an HTTP response${detail}`, { cause: error });
+  }
+
   const buffer = Buffer.from(await response.arrayBuffer());
   if (!response.ok) {
     throw new Error(`GET ${url} failed with HTTP ${response.status}; body sha=${sha256(buffer)}`);
@@ -64,12 +74,44 @@ async function fetchOfficial(url, { referer = PAGE_URL } = {}) {
   };
 }
 
-function extractFundlistScript(html) {
-  const matches = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']*fundlist\.js[^"']*)["'][^>]*>/gi)];
-  if (matches.length !== 1) {
-    throw new Error(`expected exactly one fundlist.js script, got ${matches.length}`);
+function extractScriptSources(html) {
+  const sources = [];
+  const seen = new Set();
+  const tags = html.match(/<script\b[^>]*>/gi) ?? [];
+  for (const tag of tags) {
+    const match = /\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(tag);
+    const value = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    sources.push(value);
   }
-  return new URL(matches[0][1], PAGE_URL).href;
+  return sources;
+}
+
+function extractFundlistScript(html) {
+  const scriptSources = extractScriptSources(html);
+  const candidates = scriptSources.filter((value) => /(?:^|\/)fundlist\.js(?:\?|$)/i.test(value));
+
+  // Some legacy pages embed the controller path outside a canonical script tag.
+  // Keep this as evidence-based fallback: it still requires the literal fundlist.js
+  // reference to exist in the downloaded official HTML.
+  if (candidates.length === 0) {
+    const broadMatches = html.match(/(?:https?:\/\/|\/)[^"'<>\s]*fundlist\.js(?:\?[^"'<>\s]*)?/gi) ?? [];
+    for (const value of broadMatches) {
+      if (!candidates.includes(value)) candidates.push(value);
+    }
+  }
+
+  if (candidates.length !== 1) {
+    const error = new Error(`expected exactly one fundlist.js reference, got ${candidates.length}`);
+    error.discovery = { scriptSources, fundlistCandidates: candidates };
+    throw error;
+  }
+  return {
+    url: new URL(candidates[0], PAGE_URL).href,
+    scriptSources,
+    fundlistCandidates: candidates,
+  };
 }
 
 function surroundingSnippets(text, pattern = KEYWORD_PATTERN, radius = 220) {
@@ -115,7 +157,7 @@ function extractCandidateUrls(text, baseUrl) {
     try {
       candidates.add(new URL(value, baseUrl).href);
     } catch {
-      // Keep discovery fail-safe: malformed string literals are evidence only, not requests.
+      // Malformed string literals are evidence only, never request targets.
     }
   }
   return [...candidates].sort();
@@ -125,6 +167,18 @@ async function writeFile(dir, name, value) {
   const target = path.join(dir, name);
   await fs.writeFile(target, value);
   return target;
+}
+
+function pageEvidence(page) {
+  return {
+    requestedUrl: PAGE_URL,
+    finalUrl: page.url,
+    status: page.status,
+    contentType: page.contentType,
+    contentDisposition: page.contentDisposition,
+    byteLength: page.buffer.length,
+    contentHash: sha256(page.buffer),
+  };
 }
 
 async function main() {
@@ -139,21 +193,37 @@ async function main() {
 
   const page = await fetchOfficial(PAGE_URL, { referer: "https://etf.sse.com.cn/" });
   const html = page.buffer.toString("utf8");
-  const fundlistScriptUrl = extractFundlistScript(html);
-  const controller = await fetchOfficial(fundlistScriptUrl, { referer: PAGE_URL });
+
+  // Persist the raw official page before controller parsing. Even a discovery
+  // failure therefore leaves auditable evidence for the next parser revision.
+  await writeFile(outputDir, "fundlist.html", page.buffer);
+
+  let controllerRef;
+  try {
+    controllerRef = extractFundlistScript(html);
+  } catch (error) {
+    const partial = {
+      collectedAt: new Date().toISOString(),
+      page: pageEvidence(page),
+      controller: null,
+      evidence: {
+        scriptSources: error.discovery?.scriptSources ?? extractScriptSources(html),
+        fundlistCandidates: error.discovery?.fundlistCandidates ?? [],
+        pageKeywordSnippets: surroundingSnippets(html),
+      },
+      error: error.message,
+    };
+    await writeFile(outputDir, "discovery.json", `${JSON.stringify(partial, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(partial, null, 2)}\n`);
+    throw error;
+  }
+
+  const controller = await fetchOfficial(controllerRef.url, { referer: PAGE_URL });
   const js = controller.buffer.toString("utf8");
 
   const discovery = {
     collectedAt: new Date().toISOString(),
-    page: {
-      requestedUrl: PAGE_URL,
-      finalUrl: page.url,
-      status: page.status,
-      contentType: page.contentType,
-      contentDisposition: page.contentDisposition,
-      byteLength: page.buffer.length,
-      contentHash: sha256(page.buffer),
-    },
+    page: pageEvidence(page),
     controller: {
       url: controller.url,
       status: controller.status,
@@ -163,13 +233,14 @@ async function main() {
       contentHash: sha256(controller.buffer),
     },
     evidence: {
+      scriptSources: controllerRef.scriptSources,
+      fundlistCandidates: controllerRef.fundlistCandidates,
       interestingStringLiterals: extractInterestingStringLiterals(js),
       candidateUrls: extractCandidateUrls(js, controller.url),
       keywordSnippets: surroundingSnippets(js),
     },
   };
 
-  await writeFile(outputDir, "fundlist.html", page.buffer);
   await writeFile(outputDir, "fundlist.js", controller.buffer);
   await writeFile(outputDir, "discovery.json", `${JSON.stringify(discovery, null, 2)}\n`);
 
@@ -180,3 +251,8 @@ main().catch((error) => {
   process.stderr.write(`${error.stack || error.message}\n`);
   process.exitCode = 1;
 });
+
+module.exports = {
+  extractFundlistScript,
+  extractScriptSources,
+};
