@@ -50,7 +50,9 @@ test("official ETF snapshot transport owns IO only and stays outside Security Ma
 
   // Transport extracts only explicit exchange fields. T+0 eligibility remains
   // set-membership logic in OfficialExchangeEtfSource, never a name/prefix guess.
-  assert.equal(transport.includes("startsWith"), false);
+  // Generic startsWith() calls are valid for unrelated normalization such as
+  // SHA-256 prefixes, so guard only against startsWith() on security-code values.
+  assert.equal(/\b(?:code|securityCode)\s*\.\s*startsWith\s*\(/.test(transport), false);
   assert.equal(transport.includes("includes(\"ETF\")"), false);
   assert.equal(transport.includes("intradayRoundTripEligible"), false);
 });
