@@ -30,10 +30,10 @@ function extensionHint(fileName) {
 }
 
 function isZip(buffer) {
-  return buffer.length >= 4
-    && buffer[0] === 0x50
-    && buffer[1] === 0x4b
-    && [0x03, 0x05, 0x07].includes(buffer[2]);
+  if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) return false;
+  return (buffer[2] === 0x03 && buffer[3] === 0x04)
+    || (buffer[2] === 0x05 && buffer[3] === 0x06)
+    || (buffer[2] === 0x07 && buffer[3] === 0x08);
 }
 
 function isOleCompoundFile(buffer) {
