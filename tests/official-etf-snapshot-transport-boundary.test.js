@@ -11,6 +11,8 @@ function source(relativePath) {
 
 test("official ETF snapshot transport owns IO only and stays outside Security Master and execution concerns", () => {
   const transport = source("src/sources/exchange/official_export_file_transport.js");
+  const probe = source("src/sources/exchange/official_export_probe.js");
+  const probeCli = source("scripts/probe_official_etf_export.js");
   const transportPort = source("src/ports/market/etf_snapshot_transport.js");
   const officialSource = source("src/sources/exchange/official_etf_source.js");
 
@@ -29,7 +31,15 @@ test("official ETF snapshot transport owns IO only and stays outside Security Ma
     "adapters/mcp",
   ]) {
     assert.equal(transport.includes(forbidden), false, forbidden);
+    assert.equal(probe.includes(forbidden), false, `probe: ${forbidden}`);
+    assert.equal(probeCli.includes(forbidden), false, `probe CLI: ${forbidden}`);
   }
+
+  // Probe logic is deterministic over bytes. Only its CLI owns file IO.
+  for (const forbidden of ["node:fs", "node:http", "node:https", "application/", "adapters/"]) {
+    assert.equal(probe.includes(forbidden), false, `probe: ${forbidden}`);
+  }
+  assert.equal(probeCli.includes("node:fs/promises"), true);
 
   for (const forbidden of ["node:fs", "node:http", "node:https", "application/", "adapters/"]) {
     assert.equal(transportPort.includes(forbidden), false, forbidden);
@@ -40,6 +50,7 @@ test("official ETF snapshot transport owns IO only and stays outside Security Ma
   // JSON, a future HTTP API, or any particular local path.
   for (const forbidden of [
     "official_export_file_transport",
+    "official_export_probe",
     "node:fs",
     ".csv",
     ".xlsx",
