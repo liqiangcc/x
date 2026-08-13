@@ -4,8 +4,8 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const {
-  fetchOfficial,
-} = require("./discover_sse_etf_export");
+  fetchOfficialSse,
+} = require("./sse_official_https_client");
 const {
   CATEGORY_URL,
   normalizeCategories,
@@ -107,12 +107,12 @@ function responseMeta(response, requestedUrl) {
 
 async function captureVariant(outputDir, { id, swingTrade }) {
   const listUrl = buildListUrl({ swingTrade });
-  const listResponse = await fetchOfficial(listUrl, { referer: PAGE_URL });
+  const listResponse = await fetchOfficialSse(listUrl, { referer: PAGE_URL });
   const listEvidence = extractListEvidence(listResponse.buffer);
   await fs.writeFile(path.join(outputDir, `${id}-list.raw`), listResponse.buffer);
 
   const exportUrl = buildExportUrl({ swingTrade });
-  const exportResponse = await fetchOfficial(exportUrl, { referer: PAGE_URL });
+  const exportResponse = await fetchOfficialSse(exportUrl, { referer: PAGE_URL });
   const exportFileName = `${id}-export.bin`;
   await fs.writeFile(path.join(outputDir, exportFileName), exportResponse.buffer);
   const probe = probeOfficialExportBuffer(exportResponse.buffer, { fileName: exportFileName });
@@ -141,7 +141,7 @@ async function main() {
   );
   await fs.mkdir(outputDir, { recursive: true });
 
-  const categoryResponse = await fetchOfficial(CATEGORY_URL, { referer: PAGE_URL });
+  const categoryResponse = await fetchOfficialSse(CATEGORY_URL, { referer: PAGE_URL });
   const categories = normalizeCategories(parseJsonOrJsonp(categoryResponse.buffer));
   const category = requiredEtfCategory(categories);
 
