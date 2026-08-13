@@ -32,5 +32,6 @@ jobs:
         run: |
           bin/x doctor
           bin/x --help
+          node scripts/probe_official_etf_export.js --help
           node scripts/capture_official_etf_snapshot.js --help
           node scripts/sync_etf_security_master.js --help
