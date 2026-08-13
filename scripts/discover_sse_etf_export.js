@@ -2,8 +2,14 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const dns = require("node:dns");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+
+// SSE currently publishes IPv4 and IPv6 records, while GitHub-hosted runner
+// connectivity varies by region. Prefer IPv4 for this diagnostic-only probe so
+// transient IPv6 routing does not masquerade as a source-contract failure.
+dns.setDefaultResultOrder("ipv4first");
 
 const PAGE_URL = "https://etf.sse.com.cn/fundlist/";
 const DEFAULT_OUTPUT_DIR = "artifacts/sse-etf-export-discovery";
@@ -14,9 +20,15 @@ const API_NAMES = Object.freeze([
   "getFundList",
   "getFundListNoPagination",
 ]);
+const DEFAULT_FETCH_ATTEMPTS = 3;
+const DEFAULT_FETCH_TIMEOUT_MS = 15000;
 
 function sha256(buffer) {
   return `sha256:${crypto.createHash("sha256").update(buffer).digest("hex")}`;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function usage() {
@@ -47,37 +59,55 @@ function parseArgs(argv) {
   return result;
 }
 
-async function fetchOfficial(url, { referer = PAGE_URL } = {}) {
-  let response;
-  try {
-    response = await fetch(url, {
-      redirect: "follow",
-      headers: {
-        accept: "*/*",
-        "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-        referer,
-        "user-agent": "Mozilla/5.0 (X Security Master source verification; +https://github.com/liqiangcc/x)",
-      },
-    });
-  } catch (error) {
-    const cause = error?.cause;
-    const detail = cause
-      ? `; cause=${cause.code || cause.name || "unknown"}: ${cause.message || String(cause)}`
-      : "";
-    throw new Error(`GET ${url} failed before an HTTP response${detail}`, { cause: error });
-  }
+function networkErrorMessage(url, error, attempt, attempts) {
+  const cause = error?.cause;
+  const detail = cause
+    ? `${cause.code || cause.name || "unknown"}: ${cause.message || String(cause)}`
+    : error?.message || String(error);
+  return `GET ${url} attempt ${attempt}/${attempts} failed before an HTTP response; cause=${detail}`;
+}
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed with HTTP ${response.status}; body sha=${sha256(buffer)}`);
+async function fetchOfficial(url, {
+  referer = PAGE_URL,
+  attempts = DEFAULT_FETCH_ATTEMPTS,
+  timeoutMs = DEFAULT_FETCH_TIMEOUT_MS,
+} = {}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(url, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: {
+          accept: "*/*",
+          "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+          referer,
+          "user-agent": "Mozilla/5.0 (X Security Master source verification; +https://github.com/liqiangcc/x)",
+        },
+      });
+    } catch (error) {
+      lastError = new Error(networkErrorMessage(url, error, attempt, attempts), { cause: error });
+      if (attempt < attempts) {
+        await delay(500 * attempt);
+        continue;
+      }
+      throw lastError;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (!response.ok) {
+      throw new Error(`GET ${url} failed with HTTP ${response.status}; body sha=${sha256(buffer)}`);
+    }
+    return {
+      url: response.url,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      contentDisposition: response.headers.get("content-disposition"),
+      buffer,
+    };
   }
-  return {
-    url: response.url,
-    status: response.status,
-    contentType: response.headers.get("content-type"),
-    contentDisposition: response.headers.get("content-disposition"),
-    buffer,
-  };
+  throw lastError ?? new Error(`GET ${url} failed without a response.`);
 }
 
 function extractScriptSources(html) {
@@ -245,7 +275,24 @@ async function main() {
   const outputDir = path.resolve(options.outputDir);
   await fs.mkdir(outputDir, { recursive: true });
 
-  const page = await fetchOfficial(PAGE_URL, { referer: "https://etf.sse.com.cn/" });
+  let page;
+  try {
+    page = await fetchOfficial(PAGE_URL, { referer: "https://etf.sse.com.cn/" });
+  } catch (error) {
+    const networkFailure = {
+      collectedAt: new Date().toISOString(),
+      page: null,
+      controller: null,
+      api: null,
+      evidence: null,
+      error: error.message,
+      classification: "source_network_unavailable",
+    };
+    await writeFile(outputDir, "discovery.json", `${JSON.stringify(networkFailure, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(networkFailure, null, 2)}\n`);
+    throw error;
+  }
+
   const html = page.buffer.toString("utf8");
   await writeFile(outputDir, "fundlist.html", page.buffer);
 
@@ -272,6 +319,7 @@ async function main() {
         sourceDiscovery: error.discovery ?? null,
       },
       error: error.message,
+      classification: "source_contract_unresolved",
     };
     await writeFile(outputDir, "discovery.json", `${JSON.stringify(partial, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify(partial, null, 2)}\n`);
@@ -324,5 +372,6 @@ module.exports = {
   extractLazyLoadSources,
   extractScriptSources,
   extractSwingTradeValue,
+  fetchOfficial,
   pageJavaScriptSources,
 };
