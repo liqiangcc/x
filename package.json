@@ -26,7 +26,8 @@
     "ajv": "^8.20.0",
     "better-sqlite3": "^12.11.1",
     "fastify": "^5.10.0",
-    "undici": "^7.28.0"
+    "undici": "^7.28.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
