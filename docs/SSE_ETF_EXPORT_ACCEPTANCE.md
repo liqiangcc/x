@@ -1,8 +1,8 @@
 # SSE ETF 官方导出兼容性验收
 
 > 日期：2026-08-13  
-> 状态：验收入口已实现；等待真实导出文件完成最终格式定型  
-> 范围：只判断上交所 ETF 官方导出文件的真实格式、完整性证据与现有 Transport 兼容性，不修改 ETF 业务事实、Security Master、ExecutionProfile 或 MCP。
+> 状态：真实导出格式已定型；Verified SSE XLS parser 已接入正式 capture 路径  
+> 范围：只判断上交所 ETF 官方导出文件的真实格式、完整性证据与 Transport 兼容性，不修改 ETF 业务事实、Security Master、ExecutionProfile 或 MCP。
 
 ## 1. 目标
 
@@ -22,27 +22,93 @@ existing transport supported?
 
 文件扩展名只作为 hint，不能作为格式事实。
 
-## 2. 2026-08-13 官方页面观察
+## 2. 2026-08-13 官方页面与真实导出证据
 
-重新检查上交所基金网站：
+上交所 ETF 基金列表页：
 
-- `https://etf.sse.com.cn/fundlist/` 明确显示“导出Excel”；
+```text
+https://etf.sse.com.cn/fundlist/
+```
+
+已经通过受控 GitHub Actions discovery 获取并保存页面、controller、API 定义和真实导出响应证据。
+
+页面事实：
+
+- 页面明确显示“导出Excel”；
 - 同一页面提供“当日回转交易基金”筛选；
-- 页面当前引用版本化脚本：`/xhtml/js/fundlist.js?v=V3.1.0_20260304`；
-- 公开抓取环境可以确认页面与脚本版本，但不能稳定取得点击“导出Excel”后的实际下载 bytes；
-- 因此本阶段不把按钮名称、扩展名或网页内部未公开 AJAX 当作文件格式/API contract。
+- `SWING_TRADE` 官方筛选值为 `是`；
+- 页面懒加载 `/xhtml/js/fundlist.js?v=V3.1.0_20260304`；
+- 页面加载 `/xhtml/js/api.js?v=V202103-01`；
+- ETF 根分类参数为 `CATEGORY=F100`。
 
-这意味着当前正确动作不是直接加入 `xlsx` 依赖，而是先让真实文件可以被确定性地探测和验收。
+官方 API contract 已从官方前端代码和真实请求中确认：
+
+```text
+list:
+https://query.sse.com.cn/commonQuery.do?isPagination=true&sqlId=COMMON_JJZWZ_JJLB_L
+
+non-paged list:
+https://query.sse.com.cn/commonQuery.do?sqlId=COMMON_JJZWZ_JJLB_L
+
+current export:
+https://query.sse.com.cn/commonExcelDd.do
+```
+
+全集导出参数核心为：
+
+```text
+isPagination=false
+sqlId=COMMON_JJZWZ_JJLB_L
+CATEGORY=F100
+SWING_TRADE=
+type=inParams
+```
+
+T+0 导出只在同一官方 contract 上增加：
+
+```text
+SWING_TRADE=是
+```
+
+真实数据规模：
+
+```text
+all_etfs = 917
+t0_etfs  = 192
+```
+
+真实响应均为：
+
+```text
+HTTP 200
+Content-Type: application/vnd.ms-excel;charset=gb2312
+Content-Disposition: attachment; filename=fundDataList.xls
+signature: ole_compound_file
+```
+
+因此已经确认当前 SSE 导出不是 OOXML `.xlsx`，而是 OLE Compound File 内的 legacy Excel BIFF workbook。
+
+2026-08-13 验收时记录的原始文件证据：
+
+```text
+all_etfs
+  byteLength: 182272
+  sha256: 45bbb54598ba6a50af143b096a79fecae693b84cfe24d41f8fb7ae81da65b339
+
+t0_etfs
+  byteLength: 43008
+  sha256: b6914ae1fd6099fc80aa5cba20d37ea698b5592a152b428aa05ccee413423fe5
+```
+
+这些 hash 是一次验收 capture 的审计证据，不应被误解为永久不变的数据版本。
 
 ## 3. Probe CLI
-
-新增：
 
 ```bash
 node scripts/probe_official_etf_export.js --input ~/Downloads/<official-export>
 ```
 
-输出示例：
+Probe 输出：
 
 ```json
 {
@@ -50,24 +116,16 @@ node scripts/probe_official_etf_export.js --input ~/Downloads/<official-export>
   "byteLength": 123456,
   "contentHash": "sha256:...",
   "extensionHint": ".xls",
-  "signature": "utf8_text",
-  "transportSupported": true,
-  "parserFormat": "html_table",
-  "parserRecordCount": 1234,
+  "signature": "ole_compound_file",
+  "transportSupported": false,
+  "parserFormat": null,
+  "parserRecordCount": null,
   "parserError": null,
-  "recommendation": "official_export_file"
+  "recommendation": "verified_xls_parser_required"
 }
 ```
 
-如果希望真实导出必须已经能被当前 Transport 处理：
-
-```bash
-node scripts/probe_official_etf_export.js \
-  --input ~/Downloads/<official-export> \
-  --require-supported
-```
-
-不支持时退出码为 `2`。
+Probe 的职责仍只是 bytes → format evidence。它不会因为仓库已经实现 Verified XLS parser 就把格式识别和 parser selection 混成一个模块。
 
 ## 4. 文件签名判定
 
@@ -88,16 +146,7 @@ tsv
 html_table
 ```
 
-如果网站把 HTML table 保存成 `.xls`，结果仍然是：
-
-```text
-extensionHint = .xls
-signature = utf8_text
-parserFormat = html_table
-transportSupported = true
-```
-
-这种情况**不需要** XLS parser。
+如果网站把 HTML table 保存成 `.xls`，结果仍然按文本处理，不会误走 BIFF parser。
 
 ### 4.2 OOXML workbook
 
@@ -126,14 +175,14 @@ recommendation = verified_xlsx_parser_required
 D0 CF 11 E0 A1 B1 1A E1
 ```
 
-只标记：
+Probe 标记：
 
 ```text
 signature = ole_compound_file
 recommendation = verified_xls_parser_required
 ```
 
-Probe 不宣称 payload 一定是 Excel BIFF，因为 OLE compound file 还可承载其他格式。
+真实 SSE 文件随后又通过 workbook parser 验证为 Excel BIFF，因此仓库才新增 Verified SSE XLS parser。
 
 ### 4.4 Generic ZIP
 
@@ -157,103 +206,105 @@ recommendation = unsupported_binary_format
 
 保持 fail closed。
 
-## 5. 真实 SSE 导出验收流程
+## 5. Verified SSE XLS contract
 
-### Step A：从官方页面导出 ETF 全集
-
-官方页面：
+真实 workbook shape 已验证：
 
 ```text
-https://etf.sse.com.cn/fundlist/
+sheet name: 基金列表
+columns: 7
 ```
 
-保留浏览器下载得到的原始文件，不要先另存为 CSV。
+精确表头：
 
-运行：
+```text
+基金代码
+基金简称
+基金扩位简称
+标的指数
+上市日期
+最新规模(亿元)
+基金管理人
+```
+
+真实 workbook 行数：
+
+```text
+all_etfs: A1:G918 = header + 917 records
+t0_etfs:  A1:G193 = header + 192 records
+```
+
+仓库实现：
+
+```text
+VerifiedXlsSnapshotTransport
+  ↓
+SheetJS 0.20.3 (pinned)
+  ↓
+exact sheet/header/column validation
+  ↓
+standard snapshot
+```
+
+Parser 约束：
+
+- 只接受 `exchange=sse`；
+- 输入必须是真实 OLE Compound File bytes；
+- SheetJS 必须精确为 `0.20.3`；
+- workbook 必须只有一个名为 `基金列表` 的 sheet；
+- 表头必须与上述 7 列完全一致；
+- 数据行最多 7 列；
+- 基金代码必须是明确六位数字；
+- 任一 schema 漂移立即 fail closed。
+
+正式 capture 不直接 import concrete XLS parser，而是：
+
+```text
+capture CLI
+   ↓
+OfficialSnapshotTransportResolver
+   ↓ inspect bytes signature
+   ├─ OLE + SSE → VerifiedXlsSnapshotTransport
+   └─ supported text/JSON → OfficialExportFileTransport
+```
+
+因此 concrete format selection 只存在于 resolver/composition boundary。
+
+## 6. 正式 capture 流程
+
+全集：
 
 ```bash
-node scripts/probe_official_etf_export.js --input <raw-file>
+node scripts/capture_official_etf_snapshot.js \
+  --exchange sse \
+  --dataset all_etfs \
+  --input <official-all-etfs.xls> \
+  --document https://etf.sse.com.cn/fundlist/ \
+  --version <version> \
+  --collected-at <ISO_DATETIME> \
+  --expected-record-count 917 \
+  --expected-content-hash sha256:<hash> \
+  --output <snapshot.json>
 ```
 
-记录：
-
-```text
-byteLength
-contentHash
-extensionHint
-signature
-transportSupported
-parserFormat
-parserRecordCount
-recommendation
-```
-
-### Step B：导出“当日回转交易基金”完整筛选结果
-
-在同一官方页面勾选“当日回转交易基金”，导出完整结果。
-
-再次运行 Probe。
-
-禁止用名称、代码前缀或产品类别本地推断 T+0 集合。
-
-### Step C：核对官网记录数
-
-对 `all_etfs` 与 `t0_etfs` 分别记录官网显示的总条数：
-
-```text
-expectedRecordCount
-```
-
-解析后的：
-
-```text
-parserRecordCount
-```
-
-必须与官网完整结果一致。
-
-### Step D：选择 parser 路径
-
-#### 如果当前 Transport 已支持
-
-直接：
+T+0：
 
 ```bash
-node scripts/capture_official_etf_snapshot.js ...
+node scripts/capture_official_etf_snapshot.js \
+  --exchange sse \
+  --dataset t0_etfs \
+  --input <official-t0-etfs.xls> \
+  --document https://etf.sse.com.cn/fundlist/ \
+  --version <version> \
+  --collected-at <ISO_DATETIME> \
+  --expected-record-count 192 \
+  --expected-content-hash sha256:<hash> \
+  --output <snapshot.json>
 ```
 
-并锁定：
+`expectedRecordCount` 与 `expectedContentHash` 必须来自同一次官方 capture evidence，不能把 2026-08-13 的值永久硬编码进业务逻辑。
 
-```text
-expectedRecordCount
-expectedContentHash
-```
-
-#### 如果是 xlsx_ooxml
-
-下一步仅新增：
-
-```text
-VerifiedXlsxSnapshotTransport / parser
-```
-
-要求：
-
-- 使用真实官方原始文件作为兼容性 evidence；
-- parser 独立于 `OfficialExchangeEtfSource`；
-- 不把 XLSX library 泄漏到 Source/Application；
-- 解析出来仍是同一个 standard snapshot；
-- 明确 worksheet/表头选择规则；
-- 多 sheet、隐藏 sheet、shared strings、日期单元格必须有 fixture；
-- 任何 schema 漂移 fail closed。
-
-#### 如果是 ole_compound_file
-
-先确认内部确实是 Excel BIFF，再新增 verified XLS parser。
-
-禁止只因为扩展名 `.xls` 就引入 BIFF parser。
-
-## 6. Fixture 原则
+## 7. Fixture 原则
 
 真实官方 fixture 用于证明**格式兼容性**，不是作为永久 Security Master 数据源。
 
@@ -274,7 +325,7 @@ manifest 至少包含：
   "observedPageScript": "/xhtml/js/fundlist.js?v=V3.1.0_20260304",
   "contentHash": "sha256:...",
   "byteLength": 0,
-  "signature": "...",
+  "signature": "ole_compound_file",
   "capturedAt": "...",
   "notes": "..."
 }
@@ -282,9 +333,9 @@ manifest 至少包含：
 
 如果完整官方导出不适合直接进入仓库，则只提交经过批准的最小结构 fixture + 原始文件 hash/manifest，原始文件保留在外部审计位置。
 
-## 7. Separation of Concerns
+## 8. Separation of Concerns
 
-本阶段新增边界：
+当前边界：
 
 ```text
 raw file bytes
@@ -293,11 +344,20 @@ OfficialExportProbe      ← deterministic diagnostics
       ↓
 format evidence
 
-CLI
- └─ owns filesystem IO
+Capture CLI
+      ↓
+OfficialSnapshotTransportResolver
+      ├─ generic file transport
+      └─ verified SSE XLS transport
+      ↓
+standard snapshot
+      ↓
+OfficialExchangeEtfSource
+      ↓
+Security Master Quality Gate
 ```
 
-Probe 不允许依赖：
+Probe 不依赖：
 
 ```text
 SecurityMasterWriter
@@ -309,13 +369,20 @@ HTTP
 strategy/business policy
 ```
 
-`OfficialExchangeEtfSource` 也不知道 Probe 是否存在。
+`OfficialExchangeEtfSource` 不知道：
 
-因此未来即使增加：
+```text
+XLS
+SheetJS
+filesystem path
+OfficialSnapshotTransportResolver
+```
+
+因此以后即使增加：
 
 ```text
 VerifiedXlsxSnapshotTransport
-VerifiedXlsSnapshotTransport
+VerifiedSzseXlsSnapshotTransport
 OfficialHttpSnapshotTransport
 ```
 
@@ -329,13 +396,18 @@ simulation
 MCP
 ```
 
-## 8. 当前结论
+## 9. 当前结论
 
 截至 2026-08-13：
 
-1. 官方页面确认存在“导出Excel”；
-2. 官方页面确认存在“当日回转交易基金”筛选；
-3. 页面脚本版本已经记录；
-4. 尚未取得真实下载 bytes，因此没有证据证明导出一定是 XLS、XLSX、HTML 或 CSV；
-5. 仓库现在已经具备真实文件到手后的确定性格式探测与 parser 路由能力；
-6. 在真实 bytes 证明格式之前，不新增 Excel 解析依赖。
+1. 已确认 SSE 官方基金列表页面、controller 和 API contract；
+2. 已确认 ETF 根分类 `CATEGORY=F100`；
+3. 已确认官方 T+0 筛选参数为 `SWING_TRADE=是`；
+4. 已取得真实全集和 T+0 下载 bytes；
+5. 当前真实全集为 917 条，T+0 集合为 192 条；
+6. 两个真实导出均确认为 OLE legacy XLS，而非 XLSX/HTML/CSV；
+7. 已锁定 `基金列表` 单 sheet 与 7 列 schema；
+8. 已固定使用 SheetJS 0.20.3 的 Verified SSE XLS parser；
+9. 已通过 bytes-based resolver 将该 parser 接入正式 capture CLI；
+10. generic transport、ETF Source、Security Master 和 simulation 均未承担 XLS/SSE parser 细节；
+11. 下一阶段应先把同一次真实 all/T0 capture 转成标准 snapshots，并对现有同步链路做 dry-run Quality Gate，再决定是否持久化真实 `etf_sse` Security Master records。
