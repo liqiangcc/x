@@ -1,0 +1,209 @@
+{
+  "targetDate": "2026-08-13",
+  "total": 40,
+  "updated": 40,
+  "skipped": 0,
+  "failed": 0,
+  "items": [
+    {
+      "code": "300261",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300261.json",
+      "status": "updated"
+    },
+    {
+      "code": "300595",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300595.json",
+      "status": "updated"
+    },
+    {
+      "code": "300633",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300633.json",
+      "status": "updated"
+    },
+    {
+      "code": "300636",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300636.json",
+      "status": "updated"
+    },
+    {
+      "code": "300639",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300639.json",
+      "status": "updated"
+    },
+    {
+      "code": "300659",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300659.json",
+      "status": "updated"
+    },
+    {
+      "code": "300760",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300760.json",
+      "status": "updated"
+    },
+    {
+      "code": "300829",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300829.json",
+      "status": "updated"
+    },
+    {
+      "code": "300890",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/300/300890.json",
+      "status": "updated"
+    },
+    {
+      "code": "301152",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301152.json",
+      "status": "updated"
+    },
+    {
+      "code": "301211",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301211.json",
+      "status": "updated"
+    },
+    {
+      "code": "301267",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301267.json",
+      "status": "updated"
+    },
+    {
+      "code": "301278",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301278.json",
+      "status": "updated"
+    },
+    {
+      "code": "301296",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301296.json",
+      "status": "updated"
+    },
+    {
+      "code": "301302",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/301/301302.json",
+      "status": "updated"
+    },
+    {
+      "code": "600037",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600037.json",
+      "status": "updated"
+    },
+    {
+      "code": "600048",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600048.json",
+      "status": "updated"
+    },
+    {
+      "code": "600116",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600116.json",
+      "status": "updated"
+    },
+    {
+      "code": "600127",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600127.json",
+      "status": "updated"
+    },
+    {
+      "code": "600185",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600185.json",
+      "status": "updated"
+    },
+    {
+      "code": "600227",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600227.json",
+      "status": "updated"
+    },
+    {
+      "code": "600238",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600238.json",
+      "status": "updated"
+    },
+    {
+      "code": "600313",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600313.json",
+      "status": "updated"
+    },
+    {
+      "code": "600325",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600325.json",
+      "status": "updated"
+    },
+    {
+      "code": "600400",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600400.json",
+      "status": "updated"
+    },
+    {
+      "code": "600436",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600436.json",
+      "status": "updated"
+    },
+    {
+      "code": "600438",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600438.json",
+      "status": "updated"
+    },
+    {
+      "code": "600491",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600491.json",
+      "status": "updated"
+    },
+    {
+      "code": "600500",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600500.json",
+      "status": "updated"
+    },
+    {
+      "code": "600576",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600576.json",
+      "status": "updated"
+    },
+    {
+      "code": "600606",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600606.json",
+      "status": "updated"
+    },
+    {
+      "code": "600613",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600613.json",
+      "status": "updated"
+    },
+    {
+      "code": "600746",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600746.json",
+      "status": "updated"
+    },
+    {
+      "code": "600763",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600763.json",
+      "status": "updated"
+    },
+    {
+      "code": "600872",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600872.json",
+      "status": "updated"
+    },
+    {
+      "code": "603255",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603255.json",
+      "status": "updated"
+    },
+    {
+      "code": "603567",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603567.json",
+      "status": "updated"
+    },
+    {
+      "code": "603970",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603970.json",
+      "status": "updated"
+    },
+    {
+      "code": "605369",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/605/605369.json",
+      "status": "updated"
+    },
+    {
+      "code": "688391",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688391.json",
+      "status": "updated"
+    }
+  ]
+}
