@@ -311,6 +311,14 @@ jobs:
             exit 1
           fi
 
+      - name: Preserve accepted Security Master outputs and remove staging copy
+        run: |
+          cp artifacts/sse-etf-export-discovery/apply-data/security_master/records/etf_sse.json \
+            artifacts/sse-etf-export-discovery/accepted-etf_sse.json
+          cp artifacts/sse-etf-export-discovery/apply-data/security_master/manifest.json \
+            artifacts/sse-etf-export-discovery/accepted-security-master-manifest.json
+          rm -rf artifacts/sse-etf-export-discovery/apply-data
+
       - name: Upload discovery evidence
         if: always()
         uses: actions/upload-artifact@v4
