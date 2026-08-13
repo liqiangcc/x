@@ -90,7 +90,10 @@ class SimulateDrawdownBuyingUseCase {
         if (!this.securityMetadataReader) {
           throw new TypeError("securityMetadataReader is required when executionModel is omitted.");
         }
-        resolvedSecurityMetadata = await this.securityMetadataReader.readMetadata(marketData.security);
+        resolvedSecurityMetadata = await this.securityMetadataReader.readMetadata(
+          marketData.security,
+          { asOf: marketData.endDate }
+        );
         securityMetadataSource = "reader";
       } else {
         securityMetadataSource = "request";
