@@ -10,6 +10,9 @@ const {
   LedgerSecurityMasterWriter,
 } = require("../src/adapters/ledger/ledger_security_master_writer");
 const {
+  DryRunSecurityMasterWriter,
+} = require("../src/adapters/market/dry_run_security_master_writer");
+const {
   SyncEtfSecurityMasterUseCase,
 } = require("../src/application/market/sync_etf_security_master");
 const {
@@ -19,23 +22,28 @@ const {
 function usage() {
   return [
     "Usage:",
-    "  node scripts/sync_etf_security_master.js --exchange sse|szse --all-snapshot FILE --t0-snapshot FILE [--data-root data]",
+    "  node scripts/sync_etf_security_master.js --exchange sse|szse --all-snapshot FILE --t0-snapshot FILE [--data-root data] [--dry-run]",
     "",
     "Snapshot contract:",
     "  { complete: true, records: [...], source: { document, version, collectedAt } }",
     "",
     "Both snapshots must represent complete official exchange datasets. The source.document URL must belong to the selected exchange domain.",
+    "--dry-run executes the same Source -> Quality Gate -> Writer flow but records write intents only; it never mutates data/security_master.",
   ].join("\n");
 }
 
 function parseArgs(argv) {
-  const options = { dataRoot: "data" };
+  const options = { dataRoot: "data", dryRun: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--help" || arg === "-h") return { help: true };
+    if (arg === "--dry-run") {
+      options.dryRun = true;
+      continue;
+    }
     if (!arg.startsWith("--")) throw new Error(`Unexpected argument: ${arg}`);
     const value = argv[index + 1];
-    if (!value) throw new Error(`Missing value for ${arg}`);
+    if (!value || value.startsWith("--")) throw new Error(`Missing value for ${arg}`);
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
     options[key] = value;
     index += 1;
@@ -47,11 +55,17 @@ async function readJson(filePath) {
   return JSON.parse(await fs.readFile(path.resolve(filePath), "utf8"));
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
+function createSecurityMasterWriter(options) {
+  return options.dryRun
+    ? new DryRunSecurityMasterWriter()
+    : new LedgerSecurityMasterWriter({ dataRoot: options.dataRoot });
+}
+
+async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
   if (options.help) {
     process.stdout.write(`${usage()}\n`);
-    return;
+    return null;
   }
   for (const key of ["exchange", "allSnapshot", "t0Snapshot"]) {
     if (!options[key]) throw new Error(`--${key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)} is required.`);
@@ -64,15 +78,26 @@ async function main() {
   });
   const useCase = new SyncEtfSecurityMasterUseCase({
     sources: [source],
-    securityMasterWriter: new LedgerSecurityMasterWriter({ dataRoot: options.dataRoot }),
+    securityMasterWriter: createSecurityMasterWriter(options),
     securityExecutionProfileResolver: createSecurityExecutionProfileResolver(),
   });
   const result = await useCase.execute();
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (!result.ok) process.exitCode = 1;
+  return result;
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.message}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  createSecurityMasterWriter,
+  main,
+  parseArgs,
+  readJson,
+  usage,
+};
