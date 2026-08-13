@@ -1,0 +1,39 @@
+name: Pin SheetJS Lock
+
+on:
+  push:
+    paths:
+      - .github/workflows/pin-sheetjs-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mcp-architecture-design
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate exact package manifest and lock
+        run: npm install --save-exact --ignore-scripts https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+
+      - name: Commit package files atomically
+        run: |
+          set -euo pipefail
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo 'SheetJS dependency is already pinned.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(etf): pin SheetJS 0.20.3'
+          git push origin HEAD:feat/mcp-architecture-design
