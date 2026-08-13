@@ -232,6 +232,13 @@ function normalizeExportRecord(record, dataset, index) {
   return Object.freeze({ code, listingDate });
 }
 
+function assertParseBuffer(parseBuffer) {
+  if (typeof parseBuffer !== "function") {
+    throw new TypeError("parseBuffer must be a function.");
+  }
+  return parseBuffer;
+}
+
 class OfficialExportFileTransport {
   constructor({
     exchange,
@@ -242,6 +249,7 @@ class OfficialExportFileTransport {
     collectedAt,
     expectedRecordCount,
     expectedContentHash = null,
+    parseBuffer = detectAndParse,
   } = {}) {
     this.exchange = normalizeOfficialExchange(exchange);
     this.dataset = normalizeDataset(dataset);
@@ -251,6 +259,7 @@ class OfficialExportFileTransport {
     this.collectedAt = normalizeCollectedAt(collectedAt);
     this.expectedRecordCount = normalizeExpectedCount(expectedRecordCount, this.dataset);
     this.expectedContentHash = normalizeContentHash(expectedContentHash);
+    this.parseBuffer = assertParseBuffer(parseBuffer);
   }
 
   async readSnapshot() {
@@ -262,7 +271,13 @@ class OfficialExportFileTransport {
       );
     }
 
-    const parsed = detectAndParse(buffer);
+    const parsed = this.parseBuffer(buffer, {
+      exchange: this.exchange,
+      dataset: this.dataset,
+    });
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.records)) {
+      throw new TypeError("parseBuffer must return an object with records[].");
+    }
     const records = parsed.records.map((record, index) =>
       normalizeExportRecord(record, this.dataset, index)
     );
@@ -285,7 +300,7 @@ class OfficialExportFileTransport {
         kind: "official_export_file",
         exchange: this.exchange,
         dataset: this.dataset,
-        format: parsed.format,
+        format: String(parsed.format ?? "unknown"),
         expectedRecordCount: this.expectedRecordCount,
         actualRecordCount: records.length,
         contentHash,
@@ -309,6 +324,7 @@ module.exports = {
   FIELD_ALIASES,
   OfficialExportFileTransport,
   SUPPORTED_DATASETS,
+  assertParseBuffer,
   detectAndParse,
   normalizeContentHash,
   normalizeDataset,
