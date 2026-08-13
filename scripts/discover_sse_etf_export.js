@@ -8,6 +8,12 @@ const path = require("node:path");
 const PAGE_URL = "https://etf.sse.com.cn/fundlist/";
 const DEFAULT_OUTPUT_DIR = "artifacts/sse-etf-export-discovery";
 const KEYWORD_PATTERN = /(export|excel|xlsx?|download|fundlist|commonquery|query\.sse|turnover|回转|导出)/i;
+const API_NAMES = Object.freeze([
+  "exportExcelFundData_new",
+  "exportExcelFundData",
+  "getFundList",
+  "getFundListNoPagination",
+]);
 
 function sha256(buffer) {
   return `sha256:${crypto.createHash("sha256").update(buffer).digest("hex")}`;
@@ -18,8 +24,8 @@ function usage() {
     "Usage:",
     "  node scripts/discover_sse_etf_export.js [--output-dir DIR]",
     "",
-    "Fetches the official SSE ETF fund-list page and its versioned fundlist.js controller,",
-    "then records export-related strings/snippets as auditable discovery evidence.",
+    "Fetches the official SSE ETF fund-list page, its fundlist controller, and api.js,",
+    "then records export-related endpoints/snippets as auditable discovery evidence.",
     "This script does not write Security Master data and does not guess ETF/T+0 eligibility.",
   ].join("\n");
 }
@@ -88,36 +94,55 @@ function extractScriptSources(html) {
   return sources;
 }
 
-function extractFundlistScript(html) {
-  const scriptSources = extractScriptSources(html);
-  const candidates = scriptSources.filter((value) => /(?:^|\/)fundlist\.js(?:\?|$)/i.test(value));
-
-  // Some legacy pages embed the controller path outside a canonical script tag.
-  // Keep this as evidence-based fallback: it still requires the literal fundlist.js
-  // reference to exist in the downloaded official HTML.
-  if (candidates.length === 0) {
-    const broadMatches = html.match(/(?:https?:\/\/|\/)[^"'<>\s]*fundlist\.js(?:\?[^"'<>\s]*)?/gi) ?? [];
-    for (const value of broadMatches) {
-      if (!candidates.includes(value)) candidates.push(value);
+function extractLazyLoadSources(html) {
+  const result = [];
+  const seen = new Set();
+  const blocks = [...html.matchAll(/<[^>]+\bid=["']loadjs["'][^>]*>([\s\S]*?)<\/[^>]+>/gi)];
+  for (const block of blocks) {
+    const text = String(block[1] ?? "").replace(/<[^>]+>/g, "").trim();
+    for (const item of text.split(",")) {
+      const value = item.trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      result.push(value);
     }
   }
+  return result;
+}
 
+function pageJavaScriptSources(html) {
+  const values = [...extractScriptSources(html), ...extractLazyLoadSources(html)];
+  return [...new Set(values)];
+}
+
+function selectSingleSource(html, pattern, label) {
+  const sources = pageJavaScriptSources(html);
+  const candidates = sources.filter((value) => pattern.test(value));
   if (candidates.length !== 1) {
-    const error = new Error(`expected exactly one fundlist.js reference, got ${candidates.length}`);
-    error.discovery = { scriptSources, fundlistCandidates: candidates };
+    const error = new Error(`expected exactly one ${label} reference, got ${candidates.length}`);
+    error.discovery = { sources, candidates };
     throw error;
   }
   return {
     url: new URL(candidates[0], PAGE_URL).href,
-    scriptSources,
-    fundlistCandidates: candidates,
+    sources,
+    candidates,
   };
+}
+
+function extractFundlistScript(html) {
+  return selectSingleSource(html, /(?:^|\/)fundlist\.js(?:\?|$)/i, "fundlist.js");
+}
+
+function extractApiScript(html) {
+  return selectSingleSource(html, /(?:^|\/)api\.js(?:\?|$)/i, "api.js");
 }
 
 function surroundingSnippets(text, pattern = KEYWORD_PATTERN, radius = 220) {
   const lines = text.split(/\r?\n/);
   const snippets = [];
   for (let index = 0; index < lines.length; index += 1) {
+    pattern.lastIndex = 0;
     if (!pattern.test(lines[index])) continue;
     const start = Math.max(0, index - 2);
     const end = Math.min(lines.length, index + 3);
@@ -148,6 +173,11 @@ function extractInterestingStringLiterals(text) {
 
 function extractCandidateUrls(text, baseUrl) {
   const candidates = new Set();
+  const absolutePattern = /https?:\/\/[^\s"'`<>]+/gi;
+  for (const match of text.match(absolutePattern) ?? []) {
+    if (KEYWORD_PATTERN.test(match)) candidates.add(match.replace(/[),;]+$/, ""));
+  }
+
   const stringPattern = /(["'`])([^"'`]{1,500})\1/g;
   let match;
   while ((match = stringPattern.exec(text)) !== null) {
@@ -163,21 +193,45 @@ function extractCandidateUrls(text, baseUrl) {
   return [...candidates].sort();
 }
 
+function extractApiConstantSnippets(text, names = API_NAMES) {
+  const lines = text.split(/\r?\n/);
+  const result = {};
+  for (const name of names) {
+    const matches = [];
+    for (let index = 0; index < lines.length; index += 1) {
+      if (!lines[index].includes(name)) continue;
+      matches.push({
+        line: index + 1,
+        text: lines.slice(Math.max(0, index - 1), Math.min(lines.length, index + 2)).join("\n").trim(),
+      });
+    }
+    result[name] = matches;
+  }
+  return result;
+}
+
+function extractSwingTradeValue(html) {
+  const match = /<input\b[^>]*\bid=["']SWING_TRADE["'][^>]*>/i.exec(html);
+  if (!match) return null;
+  const value = /\bvalue\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(match[0]);
+  return value?.[1] ?? value?.[2] ?? value?.[3] ?? "";
+}
+
 async function writeFile(dir, name, value) {
   const target = path.join(dir, name);
   await fs.writeFile(target, value);
   return target;
 }
 
-function pageEvidence(page) {
+function responseEvidence(response, requestedUrl = response.url) {
   return {
-    requestedUrl: PAGE_URL,
-    finalUrl: page.url,
-    status: page.status,
-    contentType: page.contentType,
-    contentDisposition: page.contentDisposition,
-    byteLength: page.buffer.length,
-    contentHash: sha256(page.buffer),
+    requestedUrl,
+    finalUrl: response.url,
+    status: response.status,
+    contentType: response.contentType,
+    contentDisposition: response.contentDisposition,
+    byteLength: response.buffer.length,
+    contentHash: sha256(response.buffer),
   };
 }
 
@@ -193,23 +247,29 @@ async function main() {
 
   const page = await fetchOfficial(PAGE_URL, { referer: "https://etf.sse.com.cn/" });
   const html = page.buffer.toString("utf8");
-
-  // Persist the raw official page before controller parsing. Even a discovery
-  // failure therefore leaves auditable evidence for the next parser revision.
   await writeFile(outputDir, "fundlist.html", page.buffer);
 
+  const commonEvidence = {
+    scriptSources: extractScriptSources(html),
+    lazyLoadSources: extractLazyLoadSources(html),
+    swingTradeValue: extractSwingTradeValue(html),
+    pageKeywordSnippets: surroundingSnippets(html),
+  };
+
   let controllerRef;
+  let apiRef;
   try {
     controllerRef = extractFundlistScript(html);
+    apiRef = extractApiScript(html);
   } catch (error) {
     const partial = {
       collectedAt: new Date().toISOString(),
-      page: pageEvidence(page),
+      page: responseEvidence(page, PAGE_URL),
       controller: null,
+      api: null,
       evidence: {
-        scriptSources: error.discovery?.scriptSources ?? extractScriptSources(html),
-        fundlistCandidates: error.discovery?.fundlistCandidates ?? [],
-        pageKeywordSnippets: surroundingSnippets(html),
+        ...commonEvidence,
+        sourceDiscovery: error.discovery ?? null,
       },
       error: error.message,
     };
@@ -218,41 +278,51 @@ async function main() {
     throw error;
   }
 
-  const controller = await fetchOfficial(controllerRef.url, { referer: PAGE_URL });
+  const [controller, api] = await Promise.all([
+    fetchOfficial(controllerRef.url, { referer: PAGE_URL }),
+    fetchOfficial(apiRef.url, { referer: PAGE_URL }),
+  ]);
   const js = controller.buffer.toString("utf8");
+  const apiJs = api.buffer.toString("utf8");
 
   const discovery = {
     collectedAt: new Date().toISOString(),
-    page: pageEvidence(page),
-    controller: {
-      url: controller.url,
-      status: controller.status,
-      contentType: controller.contentType,
-      contentDisposition: controller.contentDisposition,
-      byteLength: controller.buffer.length,
-      contentHash: sha256(controller.buffer),
-    },
+    page: responseEvidence(page, PAGE_URL),
+    controller: responseEvidence(controller, controllerRef.url),
+    api: responseEvidence(api, apiRef.url),
     evidence: {
-      scriptSources: controllerRef.scriptSources,
-      fundlistCandidates: controllerRef.fundlistCandidates,
-      interestingStringLiterals: extractInterestingStringLiterals(js),
-      candidateUrls: extractCandidateUrls(js, controller.url),
-      keywordSnippets: surroundingSnippets(js),
+      ...commonEvidence,
+      fundlistCandidates: controllerRef.candidates,
+      apiCandidates: apiRef.candidates,
+      apiConstants: extractApiConstantSnippets(apiJs),
+      apiCandidateUrls: extractCandidateUrls(apiJs, api.url),
+      controllerInterestingStringLiterals: extractInterestingStringLiterals(js),
+      controllerCandidateUrls: extractCandidateUrls(js, controller.url),
+      controllerKeywordSnippets: surroundingSnippets(js),
     },
   };
 
   await writeFile(outputDir, "fundlist.js", controller.buffer);
+  await writeFile(outputDir, "api.js", api.buffer);
   await writeFile(outputDir, "discovery.json", `${JSON.stringify(discovery, null, 2)}\n`);
 
   process.stdout.write(`${JSON.stringify(discovery, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.stack || error.message}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });
+}
 
 module.exports = {
+  API_NAMES,
+  extractApiConstantSnippets,
+  extractApiScript,
   extractFundlistScript,
+  extractLazyLoadSources,
   extractScriptSources,
+  extractSwingTradeValue,
+  pageJavaScriptSources,
 };
