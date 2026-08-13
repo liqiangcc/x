@@ -223,13 +223,18 @@ function extractCandidateUrls(text, baseUrl) {
   return [...candidates].sort();
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function extractApiConstantSnippets(text, names = API_NAMES) {
   const lines = text.split(/\r?\n/);
   const result = {};
   for (const name of names) {
     const matches = [];
+    const exactIdentifier = new RegExp(`\\b${escapeRegExp(name)}\\b`);
     for (let index = 0; index < lines.length; index += 1) {
-      if (!lines[index].includes(name)) continue;
+      if (!exactIdentifier.test(lines[index])) continue;
       matches.push({
         line: index + 1,
         text: lines.slice(Math.max(0, index - 1), Math.min(lines.length, index + 2)).join("\n").trim(),
