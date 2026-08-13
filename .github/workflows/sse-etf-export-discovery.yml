@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/sse-etf-export-discovery.yml
       - scripts/discover_sse_etf_export.js
+      - scripts/discover_sse_fund_categories.js
 
 jobs:
   discover:
@@ -28,17 +29,17 @@ jobs:
           set -x
           getent ahosts etf.sse.com.cn || true
           getent ahosts www.sse.com.cn || true
+          getent ahosts query.sse.com.cn || true
           curl -I -L --connect-timeout 10 --max-time 20 \
             -A 'Mozilla/5.0 (X Security Master source verification)' \
             -e 'https://etf.sse.com.cn/' \
             'https://etf.sse.com.cn/fundlist/' || true
-          curl -I -L --connect-timeout 10 --max-time 20 \
-            -A 'Mozilla/5.0 (X Security Master source verification)' \
-            -e 'https://www.sse.com.cn/' \
-            'https://www.sse.com.cn/assortment/fund/list/' || true
 
       - name: Discover official SSE ETF export contract
         run: node scripts/discover_sse_etf_export.js
+
+      - name: Discover official SSE fund category contract
+        run: node scripts/discover_sse_fund_categories.js
 
       - name: Upload discovery evidence
         if: always()
