@@ -42,9 +42,11 @@ jobs:
             'https://etf.sse.com.cn/fundlist/' || true
 
       - name: Discover official SSE ETF export contract
+        continue-on-error: true
         run: node scripts/discover_sse_etf_export.js
 
       - name: Discover official SSE fund category contract
+        continue-on-error: true
         run: node scripts/discover_sse_fund_categories.js
 
       - name: Capture real SSE ETF export responses
