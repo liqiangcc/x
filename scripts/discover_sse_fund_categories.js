@@ -4,8 +4,8 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const {
-  fetchOfficial,
-} = require("./discover_sse_etf_export");
+  fetchOfficialSse,
+} = require("./sse_official_https_client");
 
 const PAGE_URL = "https://etf.sse.com.cn/fundlist/";
 const CATEGORY_URL = "https://query.sse.com.cn/commonQuery.do?sqlId=COMMON_JJZWZ_JJLB_JJLX_C";
@@ -82,7 +82,7 @@ async function main() {
   );
   await fs.mkdir(outputDir, { recursive: true });
 
-  const response = await fetchOfficial(CATEGORY_URL, { referer: PAGE_URL });
+  const response = await fetchOfficialSse(CATEGORY_URL, { referer: PAGE_URL });
   await fs.writeFile(path.join(outputDir, "fund-categories.raw"), response.buffer);
 
   const payload = parseJsonOrJsonp(response.buffer);
