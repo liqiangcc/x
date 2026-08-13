@@ -4,8 +4,8 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const {
-  OfficialExportFileTransport,
-} = require("../src/sources/exchange/official_export_file_transport");
+  resolveOfficialSnapshotTransport,
+} = require("../src/sources/exchange/official_snapshot_transport_resolver");
 
 function usage() {
   return [
@@ -21,8 +21,10 @@ function usage() {
     "    [--expected-content-hash SHA256] \\",
     "    [--output FILE]",
     "",
-    "The input must be a complete official export represented as JSON, UTF-8 CSV/TSV, or an HTML table.",
-    "Binary XLS/XLSX files are rejected until a dedicated verified parser is added.",
+    "Supported inputs are selected by byte signature, not file extension.",
+    "JSON, UTF-8 CSV/TSV, and HTML tables use the generic official file transport.",
+    "SSE OLE .xls fund-list exports use the verified SSE XLS transport (SheetJS 0.20.3).",
+    "Unverified binary formats remain fail-closed.",
   ].join("\n");
 }
 
@@ -74,7 +76,7 @@ async function main() {
     }
   }
 
-  const transport = new OfficialExportFileTransport({
+  const transport = await resolveOfficialSnapshotTransport({
     exchange: options.exchange,
     dataset: options.dataset,
     filePath: options.input,
