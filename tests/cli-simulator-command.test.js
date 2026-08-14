@@ -157,3 +157,45 @@ test("createSimulatorCommand keeps infrastructure lazy for help, validation, and
     /Unknown simulator command: unknown/
   );
 });
+
+test("createSimulatorCommand composes an injected pair of narrow preflight readers directly", async () => {
+  const calls = [];
+  const output = outputBuffer();
+  const command = createSimulatorCommand({
+    stdout: output.stream,
+    universeReader: {
+      async listAvailableCodes(input) {
+        calls.push(["universe", input]);
+        return {
+          qualityIssues: [],
+          securities: [{ code: "000001" }],
+          source: "injected",
+        };
+      },
+    },
+    tradingCalendarReader: {
+      async readCalendar(input) {
+        calls.push(["calendar", input]);
+        return {
+          dates: ["2026-01-05"],
+          qualityIssues: ["trading_calendar_approximation"],
+        };
+      },
+    },
+  });
+
+  const result = await command([
+    "check",
+    "--start-date",
+    "20260105",
+    "--end-date",
+    "20260105",
+    "--json",
+  ]);
+
+  assert.equal(result.universeSource, "injected");
+  assert.deepEqual(calls, [
+    ["universe", { asOfDate: "20260105" }],
+    ["calendar", { startDate: "20260105", endDate: "20260105" }],
+  ]);
+});
