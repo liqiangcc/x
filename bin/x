@@ -10,6 +10,7 @@ const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
+const { createGitDataCli } = require("../src/adapters/cli/commands/git");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -30,10 +31,7 @@ const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
 } = require("../src/aws/latency");
-const { dataCommitMessage } = require("../src/core/data_commit");
-const { dataCommitPathspecs } = require("../src/core/data_paths");
 const { formatMarketDate } = require("../src/core/date");
-const { existingPathspecs, stagedFiles } = require("../src/core/git");
 const { isStageLogEnabled, stageLog, withStage } = require("../src/core/stage_log");
 const { generateDailyReport } = require("../src/reports/daily");
 const {
@@ -65,6 +63,9 @@ const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
+const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
+const commandGit = gitDataCli.command;
+const commitData = gitDataCli.commitData;
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -2513,9 +2514,6 @@ async function commandBenchmark(argv) {
   if (result.exitCode !== 0) process.exitCode = result.exitCode;
 }
 
-async function existingDataPathspecs(candidates = ["data", "runs", "reports"]) {
-  return existingPathspecs(ROOT, candidates);
-}
 
 function printDailyRunSummary(run, quality, failures) {
   const qualityStatus = quality?.status ?? "recorded";
@@ -2561,55 +2559,6 @@ function printDailyRunSummary(run, quality, failures) {
   }
 }
 
-async function commitData(runId) {
-  const runPath = path.join(DEFAULT_RUNS_DIR, runId, "run.json");
-  const qualityPath = path.join(DEFAULT_RUNS_DIR, runId, "quality.json");
-  const run = await readJson(runPath);
-  const quality = await readJson(qualityPath, { status: "recorded" });
-  const pathspec = await existingDataPathspecs(dataCommitPathspecs(run));
-
-  if (pathspec.length === 0) {
-    console.log("No data paths to commit.");
-    return;
-  }
-
-  await execFileAsync("git", ["add", "--", ...pathspec], { cwd: ROOT });
-  const files = await stagedFiles(ROOT, pathspec);
-  if (files.length === 0) {
-    console.log("No data changes to commit.");
-    return;
-  }
-
-  const message = dataCommitMessage(run, quality);
-  await execFileAsync(
-    "git",
-    ["commit", "-m", message.title, "-m", message.body, "--", ...files],
-    { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 }
-  );
-}
-
-async function commandGit(argv) {
-  const subcommand = argv[0];
-  if (subcommand === "status-data") {
-    const pathspec = await existingDataPathspecs();
-    const { stdout } = await execFileAsync("git", ["status", "--short", "--", ...pathspec], {
-      cwd: ROOT,
-    });
-    process.stdout.write(stdout);
-    return;
-  }
-
-  if (subcommand === "commit-data") {
-    const options = parseOptions(argv.slice(1));
-    if (!options.runId) {
-      throw new Error("git commit-data requires --run-id <run_id>");
-    }
-    await commitData(options.runId);
-    return;
-  }
-
-  throw new Error(`Unknown git command: ${subcommand ?? ""}`);
-}
 
 
 async function main() {
