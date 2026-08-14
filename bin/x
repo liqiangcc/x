@@ -6,6 +6,7 @@ const path = require("node:path");
 const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
+const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -60,6 +61,7 @@ const commandDoctor = createDoctorCommand({ cwd: ROOT });
 const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
+const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
 const DEFAULT_ROUTER_PROBE_ATTEMPTS = "1";
@@ -2146,27 +2148,6 @@ async function hasCompletePoolSnapshot(date, outputDir) {
   }
   return true;
 }
-
-async function commandRun(argv) {
-  const subcommand = argv[0];
-  if (subcommand === "list") {
-    const entries = await fs.readdir(DEFAULT_RUNS_DIR, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries.filter((item) => item.isDirectory()).map((item) => item.name).sort()) {
-      console.log(entry);
-    }
-    return;
-  }
-
-  const runId = argv[1];
-  if (!runId) {
-    throw new Error(`run ${subcommand ?? ""} requires <run_id>`);
-  }
-
-  const fileName = subcommand === "failures" ? "failures.json" : "run.json";
-  const filePath = path.join(DEFAULT_RUNS_DIR, runId, fileName);
-  process.stdout.write(await fs.readFile(filePath, "utf8"));
-}
-
 async function readExistingJson(filePath) {
   try {
     return JSON.parse(await fs.readFile(filePath, "utf8"));
