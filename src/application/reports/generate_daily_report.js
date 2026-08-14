@@ -21,18 +21,10 @@ class GenerateDailyReportUseCase {
     this.writeReport = assertFunction(writeReport, "writeReport");
   }
 
-  async execute({ date, klineDir, outputDir, poolDir } = {}) {
+  async execute({ date } = {}) {
     const normalizedDate = normalizeReportDate(date);
-    const signalReport = await this.runSignals({
-      date: normalizedDate,
-      ...(klineDir === undefined ? {} : { klineDir }),
-      ...(poolDir === undefined ? {} : { poolDir }),
-    });
-
-    return this.writeReport({
-      ...signalReport,
-      ...(outputDir === undefined ? {} : { outputDir }),
-    });
+    const signalReport = await this.runSignals({ date: normalizedDate });
+    return this.writeReport(signalReport);
   }
 }
 
