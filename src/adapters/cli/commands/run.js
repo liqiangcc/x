@@ -41,21 +41,23 @@ async function runRunCommand({
 
 function createRunCommand({
   runsDir,
-  runReader,
+  runListReader,
+  runArtifactReader,
   stdout = process.stdout,
   listRunsUseCase,
   readRunArtifactUseCase,
 } = {}) {
-  let resolvedRunReader = runReader;
-  if (!listRunsUseCase || !readRunArtifactUseCase) {
-    resolvedRunReader ??= createFilesystemRunReader({ runsDir });
-  }
+  let filesystemRunReader = null;
+  const getFilesystemRunReader = () => {
+    filesystemRunReader ??= createFilesystemRunReader({ runsDir });
+    return filesystemRunReader;
+  };
 
   const resolvedListRunsUseCase = listRunsUseCase ?? new ListRunsUseCase({
-    runReader: resolvedRunReader,
+    runReader: runListReader ?? getFilesystemRunReader(),
   });
   const resolvedReadRunArtifactUseCase = readRunArtifactUseCase ?? new ReadRunArtifactUseCase({
-    runReader: resolvedRunReader,
+    runReader: runArtifactReader ?? getFilesystemRunReader(),
   });
 
   return (argv) => runRunCommand({
