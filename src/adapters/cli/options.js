@@ -1,6 +1,6 @@
 "use strict";
 
-const DEFAULT_BOOLEAN_OPTIONS = Object.freeze(new Set([
+const BOOLEAN_OPTIONS = Object.freeze(new Set([
   "latest",
   "commit",
   "force",
@@ -15,7 +15,7 @@ const DEFAULT_BOOLEAN_OPTIONS = Object.freeze(new Set([
   "noProxyPreflight",
 ]));
 
-function parseCliOptions(argv, { defaults = {}, booleanOptions = DEFAULT_BOOLEAN_OPTIONS } = {}) {
+function parseCliOptions(argv, defaults = {}) {
   const options = { _: [], ...defaults };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -25,7 +25,7 @@ function parseCliOptions(argv, { defaults = {}, booleanOptions = DEFAULT_BOOLEAN
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (booleanOptions.has(key)) {
+    if (BOOLEAN_OPTIONS.has(key)) {
       options[key] = true;
       continue;
     }
@@ -41,6 +41,6 @@ function parseCliOptions(argv, { defaults = {}, booleanOptions = DEFAULT_BOOLEAN
 }
 
 module.exports = {
-  DEFAULT_BOOLEAN_OPTIONS,
+  BOOLEAN_OPTIONS,
   parseCliOptions,
 };
