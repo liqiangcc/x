@@ -63,13 +63,18 @@ jobs:
           assert text.count(old) == 1, "commandProxyPool routing anchor changed"
           text = text.replace(old, new, 1)
 
-          pattern = re.compile(r'\n  if \(action === "select"\) \{.*?\n  \}\n\n  const \{ runProxyBenchmark \}', re.S)
+          pattern = re.compile(
+              r'\n  if \(action === "select"\) \{\n'
+              r'    const \{ DEFAULT_STATE_FILE \} = require\("\.\/\.\.\/src\/proxy\/pool"\);.*?\n'
+              r'  \}\n\n  const \{ runProxyBenchmark \}',
+              re.S,
+          )
           text, count = pattern.subn('\n  const { runProxyBenchmark }', text, count=1)
           assert count == 1, "legacy proxy select block changed"
 
-          assert 'await commandProxyPoolSelect(argv.slice(1));' in text
-          assert "writeSelectedProxies" not in text
-          assert text.count("createProxyPoolSelectCommand") == 2
+          assert 'await commandProxyPoolSelect(argv.slice(1));' in text, "new select route missing"
+          assert "writeSelectedProxies" not in text, "legacy select writer still referenced"
+          assert text.count("createProxyPoolSelectCommand") == 2, "select import/binding count changed"
           assert 'if (action === "status")' in text
           assert 'if (action === "refresh-github")' in text
           assert 'if (action === "diagnose")' in text
