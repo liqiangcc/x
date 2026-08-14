@@ -12,6 +12,7 @@ const { AnalyzeRecoveryPeriodsUseCase } = require("../../application/analytics/a
 const { CalculateBollingerUseCase } = require("../../application/analytics/calculate_bollinger");
 const { GetKlineRangeUseCase } = require("../../application/market/get_kline_range");
 const { GetMarketSummaryUseCase } = require("../../application/market/get_market_summary");
+const { GetSecurityUseCase } = require("../../application/market/get_security");
 const {
   ResolveExecutionProfileTimelineUseCase,
 } = require("../../application/simulation/resolve_execution_profile_timeline");
@@ -28,6 +29,7 @@ const { createAnalyticsGetBollingerTool } = require("./tools/analytics_get_bolli
 const { createAnalyticsGetDrawdownsTool } = require("./tools/analytics_get_drawdowns");
 const { createAnalyticsGetRecoveryPeriodsTool } = require("./tools/analytics_get_recovery_periods");
 const { createMarketGetKlineTool } = require("./tools/market_get_kline");
+const { createMarketGetSecurityTool } = require("./tools/market_get_security");
 const { createMarketGetSummaryTool } = require("./tools/market_get_summary");
 const { createSimulationRunDrawdownBuyingTool } = require("./tools/simulation_run_drawdown_buying");
 const { createStrategyExplainSignalTool } = require("./tools/strategy_explain_signal");
@@ -54,6 +56,8 @@ function createMcpCompositionRoot({
   recoveryPeriodsTool = null,
   marketKlineUseCase = null,
   marketKlineTool = null,
+  marketSecurityUseCase = null,
+  marketSecurityTool = null,
   marketSummaryUseCase = null,
   marketSummaryTool = null,
   simulationUseCase = null,
@@ -179,6 +183,14 @@ function createMcpCompositionRoot({
     resolvedMarketKlineTool = createMarketGetKlineTool({ useCase: resolvedUseCase });
   }
 
+  let resolvedMarketSecurityTool = marketSecurityTool;
+  if (!resolvedMarketSecurityTool) {
+    const resolvedUseCase = marketSecurityUseCase ?? new GetSecurityUseCase({
+      securityMasterReader: getSecurityMasterReader(),
+    });
+    resolvedMarketSecurityTool = createMarketGetSecurityTool({ useCase: resolvedUseCase });
+  }
+
   let resolvedMarketSummaryTool = marketSummaryTool;
   if (!resolvedMarketSummaryTool) {
     const resolvedUseCase = marketSummaryUseCase ?? new GetMarketSummaryUseCase({
@@ -227,6 +239,7 @@ function createMcpCompositionRoot({
   resolvedRegistry.register(resolvedDrawdownsTool);
   resolvedRegistry.register(resolvedRecoveryPeriodsTool);
   resolvedRegistry.register(resolvedMarketKlineTool);
+  resolvedRegistry.register(resolvedMarketSecurityTool);
   resolvedRegistry.register(resolvedMarketSummaryTool);
   resolvedRegistry.register(resolvedSimulationTool);
   resolvedRegistry.register(resolvedStrategyExplainTool);
