@@ -8,14 +8,14 @@ const {
 
 function yearlyPositivePct({ dbFile = "mydb.db", metricColumn, stockCode = null } = {}) {
   const useCase = new QueryYearlyPositiveUseCase({
-    sqlExecutor: createSqliteDatabase(),
+    sqlRowReader: createSqliteDatabase(),
   });
   return useCase.execute({ dbFile, metricColumn, stockCode });
 }
 
 function analyzeNewHighs({ dbFile = "mydb.db", year = null, date = null } = {}) {
   const useCase = new QueryNewHighsUseCase({
-    sqlExecutor: createSqliteDatabase(),
+    sqlRowReader: createSqliteDatabase(),
   });
   return useCase.execute({ dbFile, year, date });
 }
