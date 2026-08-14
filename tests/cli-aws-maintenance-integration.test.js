@@ -30,7 +30,10 @@ test("bin/x delegates AWS maintenance commands without absorbing latency or prob
   assert.equal(source.includes("await commandAwsMaintenance(argv);"), true);
   assert.equal(source.includes("async function commandAwsStatus("), false);
   assert.equal(source.includes("async function commandAwsSyncGithubSecrets("), false);
-  assert.equal(source.includes("async function commandAwsLatency("), true);
+  assert.equal(source.includes("createAwsLatencyCommand"), true);
+  assert.equal(source.includes("const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });"), true);
+  assert.equal(source.includes("async function commandAwsLatency("), false);
+  assert.equal(source.includes("await commandAwsLatency(argv.slice(1));"), true);
   assert.equal(source.includes("await commandAwsProbeRouter(argv.slice(1));"), true);
 });
 
