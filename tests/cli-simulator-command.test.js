@@ -140,3 +140,20 @@ test("createSimulatorCommand accepts explicit use cases without constructing pro
     ["check", { startDate: "20260105", endDate: "20260105" }],
   ]);
 });
+
+test("createSimulatorCommand keeps infrastructure lazy for help, validation, and unknown commands", async () => {
+  const output = outputBuffer();
+  const command = createSimulatorCommand({ stdout: output.stream });
+
+  await command(["--help"]);
+  assert.equal(output.text(), `${SIMULATOR_USAGE}\n`);
+
+  await assert.rejects(
+    command(["check", "--start-date", "20260105"]),
+    /simulator check requires --start-date and --end-date/
+  );
+  await assert.rejects(
+    command(["unknown"]),
+    /Unknown simulator command: unknown/
+  );
+});
