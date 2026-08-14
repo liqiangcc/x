@@ -4,6 +4,9 @@ const { Account } = require("../../simulator/core/account");
 const { normalizeSecurityId, securityKey } = require("../../simulator/core/contracts");
 const { roundMoney } = require("../../simulator/core/position");
 const { assertBuyExecutionModel } = require("../../ports/simulation/buy_execution_model");
+const {
+  assertBuyExecutionModelProvider,
+} = require("../../ports/simulation/buy_execution_model_provider");
 
 const PRICE_FIELDS = Object.freeze(["open", "close", "high", "low"]);
 
@@ -52,25 +55,55 @@ function normalizeOrders(orders) {
   });
 }
 
+function normalizeExecutionSelection({ executionModel, executionModelProvider }) {
+  const hasModel = executionModel !== undefined && executionModel !== null;
+  const hasProvider = executionModelProvider !== undefined && executionModelProvider !== null;
+  if (hasModel === hasProvider) {
+    throw new TypeError("exactly one of executionModel or executionModelProvider is required.");
+  }
+  return Object.freeze({
+    executionModel: hasModel ? assertBuyExecutionModel(executionModel) : null,
+    executionModelProvider: hasProvider
+      ? assertBuyExecutionModelProvider(executionModelProvider)
+      : null,
+  });
+}
+
+function describeUsedModel(target, model) {
+  const description = model.describe();
+  const key = JSON.stringify(description);
+  if (!target.has(key)) target.set(key, Object.freeze({ ...description }));
+}
+
 function simulateBuyOrders({
   bars,
   orders,
   security,
   initialCash = 100000,
   priceField = "close",
-  executionModel,
+  executionModel = null,
+  executionModelProvider = null,
 } = {}) {
   const normalizedSecurity = normalizeSecurityId(security);
   const normalizedInitialCash = normalizePositiveMoney(Number(initialCash), "initialCash");
   const normalizedPriceField = normalizePriceField(priceField);
   const rows = normalizeBars(bars, normalizedPriceField);
   const normalizedOrders = normalizeOrders(orders);
-  const resolvedExecutionModel = assertBuyExecutionModel(executionModel);
+  const executionSelection = normalizeExecutionSelection({
+    executionModel,
+    executionModelProvider,
+  });
   const account = new Account({ initialCash: normalizedInitialCash });
   const trades = [];
+  const usedExecutionModels = new Map();
 
   for (const [index, order] of normalizedOrders.entries()) {
-    const execution = resolvedExecutionModel.executeBuy({
+    const selectedExecutionModel = executionSelection.executionModel
+      ?? assertBuyExecutionModel(
+        executionSelection.executionModelProvider.resolveForDate({ date: order.date })
+      );
+    describeUsedModel(usedExecutionModels, selectedExecutionModel);
+    const execution = selectedExecutionModel.executeBuy({
       bars: rows,
       signalDate: order.date,
       requestedBudget: order.budget,
@@ -107,7 +140,18 @@ function simulateBuyOrders({
   });
   const filledTrades = trades.filter((trade) => trade.status === "filled");
   const position = snapshot.positions[0] ?? null;
-  const executionDescription = resolvedExecutionModel.describe();
+  const executionConfig = executionSelection.executionModel
+    ? {
+        priceField: normalizedPriceField,
+        signalPriceField: normalizedPriceField,
+        ...executionSelection.executionModel.describe(),
+      }
+    : {
+        priceField: normalizedPriceField,
+        signalPriceField: normalizedPriceField,
+        executionMode: "date_aware",
+        executionModels: Object.freeze([...usedExecutionModels.values()]),
+      };
 
   return Object.freeze({
     security: normalizedSecurity,
@@ -129,17 +173,15 @@ function simulateBuyOrders({
       unrealizedPnl: snapshot.unrealizedPnl,
       totalReturn: roundMoney(snapshot.equity / normalizedInitialCash - 1),
     }),
-    config: Object.freeze({
-      priceField: normalizedPriceField,
-      signalPriceField: normalizedPriceField,
-      ...executionDescription,
-    }),
+    config: Object.freeze(executionConfig),
   });
 }
 
 module.exports = {
   PRICE_FIELDS,
+  describeUsedModel,
   normalizeBars,
+  normalizeExecutionSelection,
   normalizeOrders,
   normalizePriceField,
   simulateBuyOrders,
