@@ -13,11 +13,11 @@ class RunKlineEngineBenchmarkUseCase {
   }
 
   async execute(request = {}) {
-    const run = await this.benchmarkRunStore.createRun({ kind: "kline-engines" });
     const report = await this.engineBenchmarkRunner.run(request);
     if (!report || typeof report !== "object" || Array.isArray(report)) {
       throw new TypeError("engineBenchmarkRunner.run() must return an object.");
     }
+    const run = await this.benchmarkRunStore.createRun({ kind: "kline-engines" });
     const reportPath = await this.benchmarkRunStore.writeReport({ run, report });
     return {
       exitCode: 0,
