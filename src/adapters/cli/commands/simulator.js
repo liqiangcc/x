@@ -6,7 +6,7 @@ const {
 const {
   StartSimulatorRuntimeUseCase,
 } = require("../../../simulator/application/start_runtime");
-const { parseCliOptions } = require("../options");
+const { parseCliOptions } = require("../option_parser");
 
 const SIMULATOR_USAGE = `Usage:
   x simulator start [--host 127.0.0.1] [--port 3001]
