@@ -72,6 +72,7 @@ test("MCP tool registry rejects malformed, duplicate, and unknown tools", async 
 
 test("MCP composition root keeps market, temporal security classification, execution, strategy catalog, and signal storage boundaries separate", async () => {
   const klineCalls = [];
+  const securityMasterCalls = [];
   const timelineCalls = [];
   const securityProfileCalls = [];
   const strategyCalls = [];
@@ -96,6 +97,29 @@ test("MCP composition root keeps market, temporal security classification, execu
       };
     },
   };
+  const securityRecord = {
+    security: { code: "600001", market: 1 },
+    instrumentType: "a_share",
+    intradayRoundTripEligible: false,
+    effectiveFrom: "2020-01-01",
+    effectiveTo: null,
+    source: fakeSecurityMasterSource(),
+    qualityIssues: [],
+  };
+  const securityMasterReader = {
+    readRecord(security, options) {
+      securityMasterCalls.push({ method: "readRecord", security, options });
+      return security.code === "600001" && security.market === 1 ? securityRecord : null;
+    },
+    readSnapshot() {
+      securityMasterCalls.push({ method: "readSnapshot" });
+      return {
+        available: true,
+        entries: [{ record: securityRecord, priority: 1, origin: { kind: "test" } }],
+        source: { kind: "fake_security_master_snapshot" },
+      };
+    },
+  };
   const securityMasterTimelineReader = {
     async readTimeline(security, range) {
       timelineCalls.push({ security, range });
@@ -106,15 +130,7 @@ test("MCP composition root keeps market, temporal security classification, execu
         segments: [{
           startDate: range.startDate,
           endDate: range.endDate,
-          record: {
-            security,
-            instrumentType: "a_share",
-            intradayRoundTripEligible: false,
-            effectiveFrom: "2020-01-01",
-            effectiveTo: null,
-            source: fakeSecurityMasterSource(),
-            qualityIssues: [],
-          },
+          record: securityRecord,
         }],
         gaps: [],
         source: { kind: "fake_security_master_snapshot" },
@@ -206,6 +222,7 @@ test("MCP composition root keeps market, temporal security classification, execu
 
   const { registry } = createMcpCompositionRoot({
     klineReader,
+    securityMasterReader,
     securityMasterTimelineReader,
     simulationSecurityExecutionProfileResolver,
     strategyReader,
@@ -216,6 +233,7 @@ test("MCP composition root keeps market, temporal security classification, execu
     "analytics_get_drawdowns",
     "analytics_get_recovery_periods",
     "market_get_kline",
+    "market_get_security",
     "market_get_summary",
     "simulation_run_drawdown_buying",
     "strategy_explain_signal",
@@ -231,6 +249,11 @@ test("MCP composition root keeps market, temporal security classification, execu
     period: "daily",
     limit: 2,
     adjustment: "ledger_default",
+  });
+  const securityResult = await registry.invoke("market_get_security", {
+    code: "600001",
+    market: 1,
+    asOf: "2026-01-06",
   });
   const summaryResult = await registry.invoke("market_get_summary", {
     code: "600001",
@@ -299,6 +322,11 @@ test("MCP composition root keeps market, temporal security classification, execu
     assert.equal(call.endDate, "2026-01-06");
     assert.equal(call.period, "daily");
   }
+  assert.deepEqual(securityMasterCalls, [{
+    method: "readRecord",
+    security: { code: "600001", market: 1 },
+    options: { asOf: "2026-01-06" },
+  }]);
   assert.deepEqual(timelineCalls, [{
     security: { code: "600001", market: 1 },
     range: { startDate: "2026-01-02", endDate: "2026-01-06" },
@@ -333,6 +361,8 @@ test("MCP composition root keeps market, temporal security classification, execu
   ]);
   assert.equal(marketResult.isError, undefined);
   assert.deepEqual(marketResult.structuredContent.bars.map((bar) => bar.date), ["2026-01-05", "2026-01-06"]);
+  assert.equal(securityResult.isError, undefined);
+  assert.equal(securityResult.structuredContent.security.instrumentType, "a_share");
   assert.equal(summaryResult.isError, undefined);
   assert.equal(bollingerResult.isError, undefined);
   assert.equal(drawdownResult.isError, undefined);
@@ -372,6 +402,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
   const drawdownsTool = fakeTool("injected_drawdowns", async () => ({ content: [], structuredContent: { ok: true } }));
   const recoveryPeriodsTool = fakeTool("injected_recovery", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketKlineTool = fakeTool("injected_kline", async () => ({ content: [], structuredContent: { ok: true } }));
+  const marketSecurityTool = fakeTool("injected_security", async () => ({ content: [], structuredContent: { ok: true } }));
   const marketSummaryTool = fakeTool("injected_summary", async () => ({ content: [], structuredContent: { ok: true } }));
   const simulationTool = fakeTool("injected_simulation", async () => ({ content: [], structuredContent: { ok: true } }));
   const strategyExplainTool = fakeTool("injected_strategy_explain", async () => ({ content: [], structuredContent: { ok: true } }));
@@ -382,6 +413,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     drawdownsTool,
     recoveryPeriodsTool,
     marketKlineTool,
+    marketSecurityTool,
     marketSummaryTool,
     simulationTool,
     strategyExplainTool,
@@ -394,6 +426,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     drawdownsTool.definition,
     recoveryPeriodsTool.definition,
     marketKlineTool.definition,
+    marketSecurityTool.definition,
     marketSummaryTool.definition,
     simulationTool.definition,
     strategyExplainTool.definition,
@@ -405,6 +438,7 @@ test("MCP composition root accepts prebuilt tools without constructing domain de
     "injected_drawdowns",
     "injected_recovery",
     "injected_kline",
+    "injected_security",
     "injected_summary",
     "injected_simulation",
     "injected_strategy_explain",
