@@ -66,21 +66,22 @@ jobs:
           router = text[start:end]
 
           parse_line = '  const options = parseOptions(argv.slice(1));\n'
-          old_latency_branch = '''  if (subcommand === "latency") {
-            await commandAwsLatency(options);
-            return;
-          }
-          '''
           new_latency_branch = '''  if (subcommand === "latency") {
             await commandAwsLatency(argv.slice(1));
             return;
           }
           '''
+          old_latency_pattern = re.compile(
+            r'\n\s*if \(subcommand === "latency"\) \{\s*'
+            r'await commandAwsLatency\(options\);\s*'
+            r'return;\s*\}\s*',
+            re.S,
+          )
           assert router.count(parse_line) == 1
-          assert router.count(old_latency_branch) == 1
           assert new_latency_branch not in router
           router = router.replace(parse_line, new_latency_branch + '  parseOptions(argv.slice(1));\n', 1)
-          router = router.replace(old_latency_branch, '', 1)
+          router, count = old_latency_pattern.subn('\n', router, count=1)
+          assert count == 1, count
           text = text[:start] + router + text[end:]
 
           assert 'async function commandAwsLatency(' not in text
