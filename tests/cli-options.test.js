@@ -2,10 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const {
-  DEFAULT_BOOLEAN_OPTIONS,
-  parseCliOptions,
-} = require("../src/adapters/cli/options");
+const { parseCliOptions } = require("../src/adapters/cli/options");
 
 test("shared CLI option parser preserves defaults, positional args, booleans, and camelCase keys", () => {
   assert.deepEqual(
@@ -17,7 +14,7 @@ test("shared CLI option parser preserves defaults, positional args, booleans, an
       "--proxy-preflight",
       "tail",
     ], {
-      defaults: { db: "default.db" },
+      db: "default.db",
     }),
     {
       _: ["item", "tail"],
@@ -48,13 +45,4 @@ test("shared CLI option parser preserves legacy option-looking value behavior", 
     parseCliOptions(["--sql", "--json"]),
     { _: [], sql: "--json" }
   );
-});
-
-test("shared CLI option parser supports an explicitly narrowed boolean set", () => {
-  const booleanOptions = new Set(["dryRun"]);
-  assert.deepEqual(
-    parseCliOptions(["--dry-run", "--json", "yes"], { booleanOptions }),
-    { _: [], dryRun: true, json: "yes" }
-  );
-  assert.equal(DEFAULT_BOOLEAN_OPTIONS.has("json"), true);
 });
