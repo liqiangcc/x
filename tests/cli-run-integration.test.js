@@ -40,6 +40,15 @@ test("bin/x run list, show, and failures preserve the read-only CLI contract", a
     const failures = await runCli(["run", "failures", runId]);
     assert.equal(failures.stderr, "");
     assert.equal(failures.stdout, failuresContent);
+
+    await assert.rejects(
+      () => runCli(["run", "show", "../outside"]),
+      (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stderr, /outside runsDir/);
+        return true;
+      }
+    );
   } finally {
     await fs.rm(runDir, { recursive: true, force: true });
   }
