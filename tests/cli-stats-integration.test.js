@@ -26,6 +26,19 @@ async function runCli(args) {
   });
 }
 
+function withoutSqliteExperimentalWarning(stderr) {
+  return String(stderr ?? "")
+    .split("\n")
+    .filter(
+      (line) =>
+        !/^\(node:\d+\) ExperimentalWarning: SQLite is an experimental feature and might change at any time$/.test(
+          line
+        ) &&
+        line !== "(Use `node --trace-warnings ...` to show where the warning was created)"
+    )
+    .join("\n");
+}
+
 async function createStatsFixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-stats-cli-"));
   const dbFile = path.join(root, "stats.db");
@@ -82,7 +95,7 @@ test("bin/x stats returns real rows for CTE-based statistics queries", async () 
       "--db",
       fixture.dbFile,
     ]);
-    assert.equal(yearly.stderr, "");
+    assert.equal(withoutSqliteExperimentalWarning(yearly.stderr), "");
     const yearlyRows = JSON.parse(yearly.stdout);
     assert.deepEqual(yearlyRows.map((row) => row.Year), ["2023", "2024"]);
     assert.deepEqual(yearlyRows.map((row) => row.PositivePercentage), ["100.00%", "100.00%"]);
@@ -95,7 +108,7 @@ test("bin/x stats returns real rows for CTE-based statistics queries", async () 
       "--db",
       fixture.dbFile,
     ]);
-    assert.equal(newHighs.stderr, "");
+    assert.equal(withoutSqliteExperimentalWarning(newHighs.stderr), "");
     const breakoutRows = JSON.parse(newHighs.stdout);
     assert.equal(breakoutRows.length, 1);
     assert.equal(breakoutRows[0].StockCode, "A");
