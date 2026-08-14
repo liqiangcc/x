@@ -9,7 +9,7 @@ const test = require("node:test");
 const { promisify } = require("node:util");
 const {
   createExecGitDataWorkspace,
-} = require("../src/adapters/git/exec_git_data_workspace");
+} = require("../src/adapters/git/exec_git_workspace");
 const {
   createFilesystemRunCommitContextReader,
 } = require("../src/adapters/ledger/filesystem_run_commit_context_reader");
