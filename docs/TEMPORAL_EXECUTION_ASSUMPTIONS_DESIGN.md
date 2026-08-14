@@ -1,7 +1,7 @@
 # Temporal Execution Assumptions Design
 
 > 日期：2026-08-14  
-> 状态：Phase A-C 已实现，Phase D 待实现  
+> 状态：Phase A-D 已实现，Phase E 受可信 revision coverage 前置条件约束  
 > 范围：历史回测中 `ExecutionProfile` 的费用、lot、tick、settlement、restriction 等执行假设如何按有效期变化。本文不定义证券分类，不改变 Business Policy，也不新增 MCP 协议。
 
 ## 1. 问题
@@ -596,23 +596,30 @@ profileId + revisionId
 - Provider 继续独占 execution timing；
 - 不读取 `data/execution_profiles/`，不引入真实历史规则。
 
-### Phase D：repository adapter / quality（下一步）
+### Phase D：repository adapter / quality（已实现）
 
-新增 Ledger reader + `data/execution_profiles/manifest.json` contract 与 CI quality validator。
+已新增：
 
-设计约束：
+```text
+src/adapters/ledger/ledger_execution_profile_timeline_reader.js
+scripts/validate_execution_profiles.js
+tests/simulation-execution-profile-timeline-ledger.test.js
+.github/workflows/ci.yml -> Validate execution profile revisions
+```
 
-- Reader 只返回已验证的 `ExecutionProfileRevision` timeline；
-- manifest 保留不可变有效期与 provenance；
-- 同 profile revision overlap 直接失败；
-- 需要的历史区间有 gap 时 fail closed；
-- 不允许用最新规则向过去补洞；
-- Adapter 不做证券分类，不构造 BuyExecutionModel；
-- MCP 不直接读取该 manifest。
+已固化：
 
-**在没有可信来源前不提交伪造的真实历史规则。**
+- `schemaVersion: 1` + `revisions[]` 为当前最小 repository contract；
+- Ledger Reader 只读取并投影已通过 `normalizeExecutionProfileRevisions` 的 revision；
+- 同一 profile revision overlap、duplicate revisionId、profile mismatch、非法日期与 provenance 缺失继续由唯一 revision normalizer fail closed；
+- timeline 只按 revision 自身有效期裁剪，明确返回 `gaps`；
+- 未来 revision 不会向更早日期回填；
+- 缺失 manifest 被明确建模为 `unconfigured`，Reader 返回完整 coverage gap，不偷偷退回 catalog 当前规则；
+- 一旦仓库提交 manifest，CI validator 要求它非空且结构有效；
+- Adapter 不读 Security Master、不做证券分类、不构造 BuyExecutionModel、不知道 MCP；
+- 当前仍未提交任何未经可信来源验证的真实历史规则。
 
-### Phase E：automatic simulation integration
+### Phase E：automatic simulation integration（受可信 coverage 前置条件约束）
 
 只有当默认回测所需区间拥有可信 revision coverage 后，才把默认 temporal simulation 从：
 
@@ -684,6 +691,36 @@ Phase C 仍明确没有改变：
 - explicit research override；
 - 默认自动回测的数据来源。
 
-**下一次代码提交只做 Phase D**：建立 `ExecutionProfileTimelineReader` 的 Ledger adapter、manifest contract/质量校验和纯 fixture 覆盖，不录入未经可信来源验证的真实历史规则，也不切换默认自动回测。
+已完成 Phase D：
+
+```text
+ExecutionProfileTimelineReader Port
+  -> LedgerExecutionProfileTimelineReader
+  -> data/execution_profiles/manifest.json (optional until trusted data exists)
+  -> normalizeExecutionProfileRevisions
+  -> clipped revision segments + explicit gaps
+
+CI
+  -> scripts/validate_execution_profiles.js
+  -> reject malformed / overlapping / empty committed manifests
+  -> allow absent manifest as explicit unconfigured state
+```
+
+Phase D 仍明确没有改变：
+
+- 默认自动 simulation 路径；
+- Security Master contract；
+- MCP schema；
+- Business Policy；
+- concrete execution model 数量；
+- 真实历史规则数据。
+
+**下一步不是直接切换 Phase E。** 先准备并验证可信的 Execution Profile Revision 数据覆盖：
+
+1. 按稳定 `profileId` 收集可审计的官方/一手规则来源；
+2. 对每个规则变更点确定 `effectiveFrom/effectiveTo`，保留 `provider/document/version/collectedAt`；
+3. 只提交有证据支持的 revision，不用当前规则或猜测日期向历史补洞；
+4. 让现有 CI validator 对实际 manifest 持续执行结构与 overlap 校验；
+5. 当默认回测需要的区间没有 coverage gap 后，再执行 Phase E，把两个时间轴接入默认自动 simulation。
 
 这样继续保持“证券分类时间轴、执行规则时间轴、模型构造、Portfolio 执行”四个变化轴彼此独立。
