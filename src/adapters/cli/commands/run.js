@@ -46,7 +46,11 @@ function createRunCommand({
   listRunsUseCase,
   readRunArtifactUseCase,
 } = {}) {
-  const resolvedRunReader = runReader ?? createFilesystemRunReader({ runsDir });
+  let resolvedRunReader = runReader;
+  if (!listRunsUseCase || !readRunArtifactUseCase) {
+    resolvedRunReader ??= createFilesystemRunReader({ runsDir });
+  }
+
   const resolvedListRunsUseCase = listRunsUseCase ?? new ListRunsUseCase({
     runReader: resolvedRunReader,
   });
