@@ -8,7 +8,7 @@ const { createSqliteDatabase } = require("../../database/sqlite_database");
 const { parseCliOptions } = require("../options");
 
 function parseStatsOptions(argv, defaults = {}) {
-  return parseCliOptions(argv, { defaults });
+  return parseCliOptions(argv, defaults);
 }
 
 function writeJson(stdout, payload) {
