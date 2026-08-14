@@ -5,7 +5,7 @@ const {
   QueryYearlyPositiveUseCase,
 } = require("../../../application/stats/statistics_queries");
 const { createSqliteDatabase } = require("../../database/sqlite_database");
-const { parseCliOptions } = require("../options");
+const { parseCliOptions } = require("../option_parser");
 
 function parseStatsOptions(argv, defaults = {}) {
   return parseCliOptions(argv, defaults);
