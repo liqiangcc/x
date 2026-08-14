@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   checks:
@@ -25,7 +26,19 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+      - name: Validate security master
+        run: node scripts/validate_security_master.js
+
+      - name: Validate execution profile revisions
+        run: node scripts/validate_execution_profiles.js
+
+      - name: Audit SSE ETF Kline coverage
+        run: node scripts/audit_etf_kline_coverage.js
+
       - name: CLI smoke test
         run: |
           bin/x doctor
           bin/x --help
+          node scripts/probe_official_etf_export.js --help
+          node scripts/capture_official_etf_snapshot.js --help
+          node scripts/sync_etf_security_master.js --help
