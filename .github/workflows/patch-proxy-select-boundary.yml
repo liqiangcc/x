@@ -1,0 +1,94 @@
+name: Patch proxy select CLI entry
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-select-boundary
+    paths:
+      - .github/workflows/patch-proxy-select-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-select-boundary
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch bin/x
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("bin/x")
+          text = path.read_text()
+
+          old = 'const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");\n'
+          new = old + 'const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");\n'
+          assert text.count(old) == 1, "proxy verify import anchor changed"
+          assert "createProxyPoolSelectCommand" not in text, "proxy select import already present"
+          text = text.replace(old, new, 1)
+
+          old = 'const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });\n'
+          new = old + 'const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });\n'
+          assert text.count(old) == 1, "proxy verify binding anchor changed"
+          assert "const commandProxyPoolSelect" not in text, "proxy select binding already present"
+          text = text.replace(old, new, 1)
+
+          old = '''async function commandProxyPool(argv) {
+            const action = argv[0];
+            if (action === "verify") {
+              await commandProxyPoolVerify(argv.slice(1));
+              return;
+            }
+            const options = parseOptions(argv.slice(1));'''.replace("            ", "")
+          new = '''async function commandProxyPool(argv) {
+            const action = argv[0];
+            if (action === "verify") {
+              await commandProxyPoolVerify(argv.slice(1));
+              return;
+            }
+            if (action === "select") {
+              await commandProxyPoolSelect(argv.slice(1));
+              return;
+            }
+            const options = parseOptions(argv.slice(1));'''.replace("            ", "")
+          assert text.count(old) == 1, "commandProxyPool routing anchor changed"
+          text = text.replace(old, new, 1)
+
+          pattern = re.compile(r'\n  if \(action === "select"\) \{.*?\n  \}\n\n  const \{ runProxyBenchmark \}', re.S)
+          text, count = pattern.subn('\n  const { runProxyBenchmark }', text, count=1)
+          assert count == 1, "legacy proxy select block changed"
+
+          assert 'await commandProxyPoolSelect(argv.slice(1));' in text
+          assert "writeSelectedProxies" not in text
+          assert text.count("createProxyPoolSelectCommand") == 2
+          assert 'if (action === "status")' in text
+          assert 'if (action === "refresh-github")' in text
+          assert 'if (action === "diagnose")' in text
+          assert 'if (action === "probe")' in text
+          assert 'if (action === "benchmark")' in text
+          assert 'if (action === "warmup")' in text
+
+          path.write_text(text)
+          PY
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --test tests/proxy-selection.test.js tests/application-proxy-selection.test.js tests/proxy-selection-adapters.test.js tests/cli-proxy-pool-select-command.test.js
+          git diff --check
+          git diff -- bin/x
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git commit -m "refactor: route proxy pool select through CLI adapter"
+          git push origin HEAD:refactor/cli-proxy-select-boundary
