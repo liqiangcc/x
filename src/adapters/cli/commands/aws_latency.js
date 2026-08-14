@@ -26,6 +26,7 @@ function requireUseCase(useCase) {
 async function runAwsLatencyCommand({
   argv = [],
   useCase,
+  getUseCase,
   stdout = process.stdout,
 } = {}) {
   const options = parseAwsLatencyOptions(argv);
@@ -37,7 +38,8 @@ async function runAwsLatencyCommand({
     ...benchmarkOptions
   } = options;
 
-  const report = await requireUseCase(useCase).execute({
+  const resolvedUseCase = requireUseCase(useCase ?? getUseCase?.());
+  const report = await resolvedUseCase.execute({
     config,
     output,
     options: benchmarkOptions,
@@ -79,7 +81,7 @@ function createAwsLatencyCommand({
 
   return (argv = []) => runAwsLatencyCommand({
     argv,
-    useCase: getUseCase(),
+    getUseCase,
     stdout,
   });
 }
