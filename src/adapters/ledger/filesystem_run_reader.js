@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const ARTIFACT_FILES = Object.freeze({
   failures: "failures.json",
+  quality: "quality.json",
   run: "run.json",
 });
 
