@@ -28,6 +28,15 @@ function klineBar(date, close) {
   };
 }
 
+function fakeSecurityMasterSource() {
+  return {
+    provider: "test_provider",
+    document: "security-master-test",
+    version: "v1",
+    collectedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
 test("MCP tool registry owns registration and invocation only", async () => {
   const calls = [];
   const tool = fakeTool("example_tool", async (input) => {
@@ -103,7 +112,7 @@ test("MCP composition root keeps market, temporal security classification, execu
             intradayRoundTripEligible: false,
             effectiveFrom: "2020-01-01",
             effectiveTo: null,
-            source: { kind: "fake_security_master" },
+            source: fakeSecurityMasterSource(),
             qualityIssues: [],
           },
         }],
@@ -301,7 +310,13 @@ test("MCP composition root keeps market, temporal security classification, execu
       intradayRoundTripEligible: false,
       effectiveFrom: "2020-01-01",
       effectiveTo: null,
-      source: { kind: "fake_security_master" },
+      source: {
+        kind: "security_master",
+        provider: "test_provider",
+        document: "security-master-test",
+        version: "v1",
+        collectedAt: "2026-01-01T00:00:00.000Z",
+      },
       qualityIssues: [],
     },
   }]);
