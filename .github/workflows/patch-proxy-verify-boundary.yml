@@ -1,0 +1,84 @@
+name: Patch proxy verify CLI entry
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-verify-boundary
+    paths:
+      - .github/workflows/patch-proxy-verify-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-verify-boundary
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch bin/x
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("bin/x")
+          text = path.read_text()
+
+          old = 'const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");\n'
+          new = old + 'const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");\n'
+          assert text.count(old) == 1, "aws latency import anchor changed"
+          assert "createProxyPoolVerifyCommand" not in text, "proxy verify import already present"
+          text = text.replace(old, new, 1)
+
+          old = 'const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });\n'
+          new = old + 'const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });\n'
+          assert text.count(old) == 1, "aws latency binding anchor changed"
+          assert "const commandProxyPoolVerify" not in text, "proxy verify binding already present"
+          text = text.replace(old, new, 1)
+
+          pattern = re.compile(r'\nasync function writeProxyVerificationReport\(report, requestedOutput\) \{.*?\n\}\n\nasync function commandProxyPool\(argv\) \{', re.S)
+          replacement = '\nasync function commandProxyPool(argv) {'
+          text, count = pattern.subn(replacement, text, count=1)
+          assert count == 1, "writeProxyVerificationReport block changed"
+
+          old = 'async function commandProxyPool(argv) {\n  const action = argv[0];\n  const options = parseOptions(argv.slice(1));'
+          new = 'async function commandProxyPool(argv) {\n  const action = argv[0];\n  if (action === "verify") {\n    await commandProxyPoolVerify(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));'
+          assert text.count(old) == 1, "commandProxyPool routing anchor changed"
+          text = text.replace(old, new, 1)
+
+          pattern = re.compile(
+              r'  const \{ runProxyBenchmark, validateAllProxies \} = require\("\.\/\.\.\/src\/proxy\/pool"\);\n'
+              r'  if \(action === "verify"\) \{.*?\n  \}\n'
+              r'  const samples =',
+              re.S,
+          )
+          replacement = '  const { runProxyBenchmark } = require("./../src/proxy/pool");\n  const samples ='
+          text, count = pattern.subn(replacement, text, count=1)
+          assert count == 1, "legacy verify branch changed"
+
+          assert "async function writeProxyVerificationReport(" not in text
+          assert "validateAllProxies" not in text
+          assert 'await commandProxyPoolVerify(argv.slice(1));' in text
+          assert text.count("createProxyPoolVerifyCommand") == 2
+
+          path.write_text(text)
+          PY
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --test tests/cli-proxy-pool-verify-command.test.js
+          git diff --check
+          git diff -- bin/x
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git commit -m "refactor: route proxy pool verify through CLI adapter"
+          git push origin HEAD:refactor/cli-proxy-verify-boundary
