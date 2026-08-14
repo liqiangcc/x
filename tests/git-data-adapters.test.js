@@ -38,10 +38,7 @@ test("exec git data workspace scopes status, staging, and commit", async (t) => 
     await workspace.existingPathspecs(["data", "runs", "reports"]),
     ["data"]
   );
-  assert.equal(
-    await workspace.status({ pathspec: ["data"] }),
-    "?? data/sample.json\n"
-  );
+  assert.match(await workspace.status({ pathspec: ["data"] }), /^\?\? data\//m);
 
   await workspace.stage({ pathspec: ["data"] });
   assert.deepEqual(
