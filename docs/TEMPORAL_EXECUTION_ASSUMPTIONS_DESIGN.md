@@ -1,7 +1,7 @@
 # Temporal Execution Assumptions Design
 
 > 日期：2026-08-14  
-> 状态：设计完成，待增量实现  
+> 状态：Phase A-B 已实现，Phase C 待实现  
 > 范围：历史回测中 `ExecutionProfile` 的费用、lot、tick、settlement、restriction 等执行假设如何按有效期变化。本文不定义证券分类，不改变 Business Policy，也不新增 MCP 协议。
 
 ## 1. 问题
@@ -18,7 +18,7 @@ security facts over time
 
 当前 Provider 自己复用共享 `resolveNextExecutionBar` Logic 决定规则生效日，Portfolio 只传 buy context，不计算成交日期。
 
-但仍有第二个独立时间维度没有建模：**同一个 profile id 的执行参数本身也可能随历史日期变化**。
+但仍有第二个独立时间维度需要建模：**同一个 profile id 的执行参数本身也可能随历史日期变化**。
 
 当前 `ExecutionProfileCatalog` 对每个公开 profile id 只保存一份静态对象：
 
@@ -37,7 +37,7 @@ t0_etf
   ...
 ```
 
-因此历史模拟即使正确选择了 `legacy_a_share`，仍然会使用仓库当前这份 `legacy_a_share` 参数覆盖整个历史区间。
+因此历史模拟即使正确选择了 `legacy_a_share`，仍可能使用仓库当前这份 `legacy_a_share` 参数覆盖整个历史区间。
 
 这与证券分类时间轴是两个完全不同的变化轴：
 
@@ -96,9 +96,9 @@ t0_etf
 
 这样 `ProfiledBuyExecutionModel` 仍然只消费纯数据快照，不知道历史查询、存储或来源选择。
 
-### 2.3 新增 `ExecutionProfileRevision` 包装时间与证据
+### 2.3 `ExecutionProfileRevision` 包装时间与证据
 
-建议契约：
+契约：
 
 ```text
 ExecutionProfileRevision
@@ -200,11 +200,11 @@ data/execution_profiles/
 }
 ```
 
-**第一阶段不得为了填满历史区间而编造真实规则日期。** 在没有可信来源覆盖前，只实现契约、Reader、测试 fixture 和质量校验，不把猜测数据接入默认自动回测。
+**不得为了填满历史区间而编造真实规则日期。** 在没有可信来源覆盖前，只实现契约、Reader、测试 fixture 和质量校验，不把猜测数据接入默认自动回测。
 
 ## 4. Port：ExecutionProfileTimelineReader
 
-建议新增独立 Port：
+独立 Port：
 
 ```text
 readTimeline({
@@ -257,7 +257,7 @@ B. Execution assumptions timeline
    profileId + date -> ExecutionProfileRevision
 ```
 
-新增 Application capability，建议名：
+Application capability：
 
 ```text
 ResolveExecutionAssumptionTimelineUseCase
@@ -303,13 +303,7 @@ Application 不解析文件、不硬编码规则日期、不构造 concrete mode
 
 ## 6. Model construction 边界
 
-当前 `BuyExecutionModelResolver`：
-
-```text
-resolve({ model, executionConfig })
-```
-
-最小演进建议：
+Phase B 已实现，`BuyExecutionModelResolver` 当前支持：
 
 ```text
 resolve({
@@ -339,7 +333,7 @@ frictionless
 
 不得接受外部 `executionProfile`，因为它不是 profile-backed 市场规则，而是显式研究对照模型。
 
-这样仍然保持：
+Resolver **不接收** `asOfDate/effectiveFrom/effectiveTo/revisionId`，也不依赖 revision reader/provider。因此仍然保持：
 
 > Resolver 负责“如何构造模型”，Timeline/Application 负责“哪份规则快照在这个日期有效”。
 
@@ -359,7 +353,7 @@ Port 不需要变化。
 { startDate, endDate, profileId }
 ```
 
-未来自动历史路径使用：
+Phase C 自动历史路径将支持：
 
 ```text
 {
@@ -375,7 +369,7 @@ Port 不需要变化。
 
 1. 调用唯一的 `resolveNextExecutionBar` Logic；
 2. 取 candidate execution date，若没有下一 bar 则保持现有 no-fill fallback 语义；
-3. 按 effective date 找到 assumption segment；
+3. 按 execution date 找到 assumption segment；
 4. 用 `profileId + revisionId` 作为模型缓存 key；
 5. 调用 `BuyExecutionModelResolver.resolve({ model: profileId, executionProfile, executionConfig })`；
 6. 返回 BuyExecutionModel。
@@ -447,7 +441,7 @@ request metadata
 
 这样调用方覆盖证券分类时，不会顺便冻结整个历史区间的市场费用规则。
 
-这是后续集成步骤，不在第一批 contract 实现里悄悄改变现有行为。
+这是后续集成步骤，不在 Phase C 中顺手改变协议语义。
 
 ### 9.3 explicit `executionModel`
 
@@ -503,7 +497,7 @@ Business Policy -> profile revision / market rules
 MCP Tool -> execution rule files / revision reader
 Portfolio -> execution timing / execution rule repository
 ExecutionProfileTimelineReader -> security classification
-BuyExecutionModelResolver -> filesystem / network / Security Master
+BuyExecutionModelResolver -> filesystem / network / Security Master / temporal revision lookup
 ProfiledBuyExecutionModel -> effective-date lookup
 ```
 
@@ -545,9 +539,9 @@ account / order loop
 
 ## 13. 增量实现顺序
 
-### Phase A：contract only
+### Phase A：contract only（已实现）
 
-先实现：
+已实现：
 
 ```text
 ExecutionProfileRevision normalizer/assertion
@@ -557,7 +551,7 @@ pure timeline validation/intersection Logic
 
 只使用测试 fixture，不改变默认 simulation。
 
-验收：
+验收覆盖：
 
 - 有效 revision；
 - 非法日期区间；
@@ -567,20 +561,21 @@ pure timeline validation/intersection Logic
 - provenance 缺失；
 - 两个 timeline 的 change boundary 正确交集。
 
-### Phase B：model construction extension
+### Phase B：model construction extension（已实现）
 
-扩展 `BuyExecutionModelResolver` 支持已解析 `executionProfile` snapshot。
+`BuyExecutionModelResolver` 已支持调用方提供已解析 `executionProfile` snapshot。
 
-补测试：
+已固化：
 
 - supplied profile snapshot 构造通用 Profiled model；
 - profile id mismatch fail closed；
 - `frictionless` 拒绝 profile snapshot；
-- legacy static catalog path 完全兼容。
+- legacy static catalog path 完全兼容；
+- Resolver 不接收日期，不选择 revision。
 
-### Phase C：provider support
+### Phase C：provider support（下一步）
 
-让 `TimelineBuyExecutionModelProvider` 支持 revision-aware segments，并按：
+让 `TimelineBuyExecutionModelProvider` 支持 revision-aware assumption segments，并按：
 
 ```text
 profileId + revisionId
@@ -589,6 +584,8 @@ profileId + revisionId
 缓存模型。
 
 保持 `resolveForBuy({ bars, signalDate })` Port 不变，并继续由 Provider 拥有 execution timing。
+
+Phase C 只完成“已解析 assumption segment -> model”的接缝，不读取 `data/execution_profiles/`，不引入真实历史规则。
 
 ### Phase D：repository adapter / quality
 
@@ -612,24 +609,60 @@ execution assumption timeline
 
 并保持 MCP schema 不变。
 
-## 14. 第一批实现范围
+## 14. 当前实现状态与下一步
 
-下一次代码提交只做 Phase A：
+已完成 Phase A：
 
 ```text
-ExecutionProfileRevision Logic
-ExecutionProfileTimelineReader Port
-pure timeline intersection/coverage tests
-architecture fitness tests
+src/simulation/execution/execution_profile_revision.js
+src/ports/simulation/execution_profile_timeline_reader.js
+src/simulation/execution/execution_assumption_timeline.js
+```
+
+已完成 Phase B：
+
+```text
+BuyExecutionModelResolver.resolve({
+  model,
+  executionProfile?,
+  executionConfig
+})
+```
+
+其边界是：
+
+```text
+resolved snapshot -> model construction
+```
+
+而不是：
+
+```text
+date -> revision selection
+```
+
+**下一次代码提交只做 Phase C**：
+
+```text
+TimelineBuyExecutionModelProvider
+  -> resolve candidate execution date
+  -> locate revision-aware assumption segment
+  -> cache by profileId + revisionId
+  -> BuyExecutionModelResolver.resolve({
+       model: profileId,
+       executionProfile,
+       executionConfig
+     })
 ```
 
 明确不做：
 
 - 真实历史费率录入；
 - 网络抓取；
+- repository adapter；
 - MCP schema 变化；
-- 默认回测行为变化；
+- 默认回测行为切换；
 - 新 concrete execution model；
 - Security Master 字段扩张。
 
-这样可以先把新的变化轴固定下来，再决定真实市场规则的数据来源与同步策略。
+这样继续保持“证券分类时间轴、执行规则时间轴、模型构造、Portfolio 执行”四个变化轴彼此独立。
