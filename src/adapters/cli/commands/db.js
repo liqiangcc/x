@@ -6,6 +6,21 @@ const {
 } = require("../../../application/database/database_commands");
 const { createSqliteDatabase } = require("../../database/sqlite_database");
 
+const BOOLEAN_OPTIONS = new Set([
+  "latest",
+  "commit",
+  "force",
+  "forcePool",
+  "forceUniverse",
+  "forceStrategyCodes",
+  "strategyOnly",
+  "allCodes",
+  "json",
+  "allowPartial",
+  "proxyPreflight",
+  "noProxyPreflight",
+]);
+
 function parseDbOptions(argv, defaults = {}) {
   const options = { _: [], ...defaults };
   for (let index = 0; index < argv.length; index += 1) {
@@ -16,6 +31,11 @@ function parseDbOptions(argv, defaults = {}) {
     }
 
     const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+    if (BOOLEAN_OPTIONS.has(key)) {
+      options[key] = true;
+      continue;
+    }
+
     const nextArg = argv[index + 1];
     if (!nextArg) {
       throw new Error(`Missing value for ${arg}`);
@@ -103,6 +123,7 @@ function createDbCommand({
 }
 
 module.exports = {
+  BOOLEAN_OPTIONS,
   createDbCommand,
   parseDbOptions,
   runDbCommand,
