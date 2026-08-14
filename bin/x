@@ -11,6 +11,7 @@ const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
 const { createGitDataCli } = require("../src/adapters/cli/commands/git");
+const { createBenchmarkCommand } = require("../src/adapters/cli/commands/benchmark");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -66,6 +67,7 @@ const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandGit = gitDataCli.command;
 const commitData = gitDataCli.commitData;
+const commandBenchmark = createBenchmarkCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -2458,61 +2460,6 @@ async function commandProxyPool(argv) {
   throw new Error(`Unknown proxy pool command: ${action ?? ""}`);
 }
 
-async function commandBenchmark(argv) {
-  const kind = argv[0];
-  if (kind === "kline-engines") {
-    const options = parseOptions(argv.slice(1));
-    if (options.config) options.config = rootPath(options.config);
-    const { runEngineBenchmark } = require("./../src/kline/engine_benchmark");
-    const report = await runEngineBenchmark(options);
-    const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    const runDir = path.join(DEFAULT_RUNS_DIR, "benchmark", "kline-engines", runId);
-    const reportFile = path.join(runDir, "report.json");
-    await fs.mkdir(runDir, { recursive: true });
-    await fs.writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-    report.report = rel(reportFile);
-    if (options.json) {
-      printJson(report);
-    } else {
-      console.log(`Kline engine benchmark: ${report.input} ${report.period} lmt=${report.lmt}`);
-      console.log("engine\tsuccess\tavg_ms\tp50_ms\tp95_ms\tp99_ms\terrors");
-      for (const [engine, summary] of Object.entries(report.summary)) {
-        console.log([engine, `${summary.success}/${summary.attempts}`, summary.avg_ms ?? "n/a", summary.p50_ms ?? "n/a", summary.p95_ms ?? "n/a", summary.p99_ms ?? "n/a", JSON.stringify(summary.error_counts)].join("\t"));
-      }
-      console.log(`Report: ${report.report}`);
-    }
-    return;
-  }
-  if (kind !== "proxy-sync") throw new Error(`Unknown benchmark: ${kind ?? ""}`);
-  const options = parseOptions(argv.slice(1), { period: "daily", samples: "100" });
-  if (!options.codes) throw new Error("benchmark proxy-sync requires --codes <codes.json>.");
-  const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  const runDir = path.join(DEFAULT_RUNS_DIR, "benchmark", "proxy-sync", runId);
-  const outputDir = path.join(runDir, "data");
-  await fs.mkdir(runDir, { recursive: true });
-  const args = [rootPath(options.codes), "--period", options.period, "--policy", "proxy-only", "--refresh-mode", "incremental", "--limit", String(options.samples), "--output-dir", outputDir, "--concurrency", "auto", "--retry-attempts", "0", "--proxy-preflight"];
-  if (options.expectedLatestDate) args.push("--expected-latest-date", options.expectedLatestDate, "--freshness-codes", rootPath(options.codes));
-  const startedAt = Date.now();
-  const result = await runNodeAllowFailure("fetch/query_pool_klines.js", args);
-  const summaryPath = path.join(outputDir, options.period, `summary.${options.period}.json`);
-  let summary = null;
-  try { summary = await readJson(summaryPath); } catch {}
-  const report = {
-    benchmark: "proxy-sync",
-    codes: rootPath(options.codes),
-    duration_ms: Date.now() - startedAt,
-    error: summary ? null : result.stderr || result.stdout || null,
-    exit_code: result.exitCode,
-    period: options.period,
-    samples: Number(options.samples),
-    summary,
-  };
-  const reportFile = path.join(runDir, "report.json");
-  await fs.writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  report.report = rel(reportFile);
-  printJson(report);
-  if (result.exitCode !== 0) process.exitCode = result.exitCode;
-}
 
 
 function printDailyRunSummary(run, quality, failures) {
