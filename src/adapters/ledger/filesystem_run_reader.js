@@ -9,11 +9,15 @@ const ARTIFACT_FILES = Object.freeze({
 });
 
 function assertRunsDir(runsDir) {
-  const resolved = path.resolve(String(runsDir ?? "").trim());
-  if (!String(runsDir ?? "").trim()) {
+  const text = String(runsDir ?? "").trim();
+  if (!text) {
     throw new TypeError("runsDir is required.");
   }
-  return resolved;
+  return path.resolve(text);
+}
+
+function isInside(rootDir, targetDir) {
+  return targetDir.startsWith(`${rootDir}${path.sep}`);
 }
 
 function artifactPath(runsDir, runId, artifact) {
@@ -21,12 +25,24 @@ function artifactPath(runsDir, runId, artifact) {
   if (!fileName) {
     throw new TypeError(`Unsupported run artifact: ${artifact}`);
   }
-  const runDir = path.resolve(runsDir, runId);
-  const runsPrefix = `${runsDir}${path.sep}`;
-  if (!runDir.startsWith(runsPrefix)) {
+
+  const resolvedRunsDir = path.resolve(runsDir);
+  const runDir = path.resolve(resolvedRunsDir, String(runId ?? ""));
+  if (!isInside(resolvedRunsDir, runDir)) {
     throw new TypeError("runId resolves outside runsDir.");
   }
   return path.join(runDir, fileName);
+}
+
+async function assertRealRunDirInsideRunsDir(runsDir, runDir) {
+  const [realRunsDir, realRunDir] = await Promise.all([
+    fs.realpath(runsDir),
+    fs.realpath(runDir),
+  ]);
+  if (!isInside(realRunsDir, realRunDir)) {
+    throw new TypeError("runId resolves outside runsDir.");
+  }
+  return realRunDir;
 }
 
 function createFilesystemRunReader({ runsDir } = {}) {
@@ -43,10 +59,12 @@ function createFilesystemRunReader({ runsDir } = {}) {
     },
 
     async readArtifact({ runId, artifact } = {}) {
-      return fs.readFile(
-        artifactPath(resolvedRunsDir, runId, artifact),
-        "utf8"
+      const lexicalPath = artifactPath(resolvedRunsDir, runId, artifact);
+      const realRunDir = await assertRealRunDirInsideRunsDir(
+        resolvedRunsDir,
+        path.dirname(lexicalPath)
       );
+      return fs.readFile(path.join(realRunDir, path.basename(lexicalPath)), "utf8");
     },
   };
 }
@@ -55,4 +73,5 @@ module.exports = {
   ARTIFACT_FILES,
   artifactPath,
   createFilesystemRunReader,
+  isInside,
 };
