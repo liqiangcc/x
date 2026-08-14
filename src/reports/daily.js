@@ -118,15 +118,19 @@ async function writeDailyReport({
   };
 }
 
-function createDailyReportUseCase() {
+function createDailyReportUseCase({
+  klineDir = path.join(ROOT, "data", "kline"),
+  outputDir = path.join(ROOT, "reports"),
+  poolDir = path.join(ROOT, "data", "pool"),
+} = {}) {
   return new GenerateDailyReportUseCase({
-    runSignals: runDailySignals,
-    writeReport: writeDailyReport,
+    runSignals: ({ date }) => runDailySignals({ date, klineDir, poolDir }),
+    writeReport: (signalReport) => writeDailyReport({ ...signalReport, outputDir }),
   });
 }
 
-async function generateDailyReport(options = {}) {
-  return createDailyReportUseCase().execute(options);
+async function generateDailyReport({ date, klineDir, outputDir, poolDir } = {}) {
+  return createDailyReportUseCase({ klineDir, outputDir, poolDir }).execute({ date });
 }
 
 module.exports = {
