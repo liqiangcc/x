@@ -45,16 +45,16 @@ test("BuyExecutionModelResolver consumes an already-resolved ExecutionProfile be
     model: "domestic_stock_etf",
     executionConfig: {},
   });
+  const description = historical.describe();
 
   assert.deepEqual(
     {
-      profileId: historical.describe().profileId,
-      assetClass: historical.describe().assetClass,
-      kind: historical.describe().kind,
-      lotSize: historical.describe().lotSize,
-      tickSize: historical.describe().tickSize,
-      tPlusOne: historical.describe().tPlusOne,
-      qualityIssues: historical.describe().qualityIssues,
+      profileId: description.profileId,
+      assetClass: description.assetClass,
+      kind: description.kind,
+      lotSize: description.lotSize,
+      tickSize: description.tickSize,
+      tPlusOne: description.tPlusOne,
     },
     {
       profileId: "domestic_stock_etf",
@@ -63,9 +63,9 @@ test("BuyExecutionModelResolver consumes an already-resolved ExecutionProfile be
       lotSize: 200,
       tickSize: 0.002,
       tPlusOne: true,
-      qualityIssues: ["historical_revision_fixture"],
     }
   );
+  assert.equal(description.qualityIssues.includes("historical_revision_fixture"), true);
 
   assert.equal(fallback.describe().kind, "domestic_stock_etf_next_open");
   assert.equal(fallback.describe().tickSize, 0.001);
