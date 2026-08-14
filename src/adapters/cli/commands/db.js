@@ -8,7 +8,7 @@ const { createSqliteDatabase } = require("../../database/sqlite_database");
 const {
   BOOLEAN_OPTIONS,
   parseCliOptions,
-} = require("../options");
+} = require("../option_parser");
 
 function parseDbOptions(argv, defaults = {}) {
   return parseCliOptions(argv, defaults);
