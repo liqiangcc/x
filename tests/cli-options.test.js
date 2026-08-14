@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { parseCliOptions } = require("../src/adapters/cli/options");
+const { parseCliOptions } = require("../src/adapters/cli/option_parser");
 
 test("shared CLI option parser preserves defaults, positional args, booleans, and camelCase keys", () => {
   assert.deepEqual(
