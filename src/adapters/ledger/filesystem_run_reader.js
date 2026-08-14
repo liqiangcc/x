@@ -34,15 +34,9 @@ function createFilesystemRunReader({ runsDir } = {}) {
 
   return {
     async listRunIds() {
-      let entries;
-      try {
-        entries = await fs.readdir(resolvedRunsDir, { withFileTypes: true });
-      } catch (error) {
-        if (error.code === "ENOENT") {
-          return [];
-        }
-        throw error;
-      }
+      const entries = await fs
+        .readdir(resolvedRunsDir, { withFileTypes: true })
+        .catch(() => []);
       return entries
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name);
