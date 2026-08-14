@@ -2,6 +2,9 @@
 
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const {
+  GenerateDailyReportUseCase,
+} = require("../application/reports/generate_daily_report");
 const { runDailySignals } = require("../signals/daily");
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -115,21 +118,20 @@ async function writeDailyReport({
   };
 }
 
-async function generateDailyReport({
-  date,
-  klineDir = path.join(ROOT, "data", "kline"),
-  outputDir = path.join(ROOT, "reports"),
-  poolDir = path.join(ROOT, "data", "pool"),
-} = {}) {
-  const signalReport = await runDailySignals({ date, klineDir, poolDir });
-  return writeDailyReport({
-    ...signalReport,
-    outputDir,
+function createDailyReportUseCase() {
+  return new GenerateDailyReportUseCase({
+    runSignals: runDailySignals,
+    writeReport: writeDailyReport,
   });
+}
+
+async function generateDailyReport(options = {}) {
+  return createDailyReportUseCase().execute(options);
 }
 
 module.exports = {
   candidatesToCsv,
+  createDailyReportUseCase,
   generateDailyReport,
   renderSummaryMarkdown,
   writeDailyReport,
