@@ -16,6 +16,13 @@ function openDatabase(dbFile) {
   return new DatabaseSync(dbFile);
 }
 
+function assertSql(sql) {
+  if (!sql || typeof sql !== "string") {
+    throw new Error("queryDatabase requires sql.");
+  }
+  return sql;
+}
+
 function createSqliteDatabase() {
   return {
     initialize({ dbFile = "db/stocks.db", schemaFile = "db/database_schema.sql" } = {}) {
@@ -31,9 +38,7 @@ function createSqliteDatabase() {
     },
 
     execute({ dbFile = "db/stocks.db", sql, params = [] } = {}) {
-      if (!sql || typeof sql !== "string") {
-        throw new Error("queryDatabase requires sql.");
-      }
+      assertSql(sql);
       const database = openDatabase(dbFile);
       try {
         const statement = database.prepare(sql);
@@ -42,6 +47,16 @@ function createSqliteDatabase() {
         }
         statement.run(...params);
         return [];
+      } finally {
+        database.close();
+      }
+    },
+
+    queryRows({ dbFile = "db/stocks.db", sql, params = [] } = {}) {
+      assertSql(sql);
+      const database = openDatabase(dbFile);
+      try {
+        return database.prepare(sql).all(...params);
       } finally {
         database.close();
       }
