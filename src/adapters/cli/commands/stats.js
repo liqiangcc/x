@@ -93,22 +93,22 @@ async function runStatsCommand({
 }
 
 function createStatsCommand({
-  sqlExecutor,
+  sqlRowReader,
   stdout = process.stdout,
   yearlyPositiveUseCase,
   newHighsUseCase,
 } = {}) {
-  let sharedExecutor = sqlExecutor;
-  const getSqlExecutor = () => {
-    sharedExecutor ??= createSqliteDatabase();
-    return sharedExecutor;
+  let sharedRowReader = sqlRowReader;
+  const getSqlRowReader = () => {
+    sharedRowReader ??= createSqliteDatabase();
+    return sharedRowReader;
   };
 
   const resolvedYearlyPositiveUseCase = yearlyPositiveUseCase ?? new QueryYearlyPositiveUseCase({
-    sqlExecutor: getSqlExecutor(),
+    sqlRowReader: getSqlRowReader(),
   });
   const resolvedNewHighsUseCase = newHighsUseCase ?? new QueryNewHighsUseCase({
-    sqlExecutor: getSqlExecutor(),
+    sqlRowReader: getSqlRowReader(),
   });
 
   return (argv) => runStatsCommand({
