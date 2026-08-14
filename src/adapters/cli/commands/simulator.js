@@ -6,21 +6,7 @@ const {
 const {
   StartSimulatorRuntimeUseCase,
 } = require("../../../simulator/application/start_runtime");
-
-const BOOLEAN_OPTIONS = Object.freeze(new Set([
-  "latest",
-  "commit",
-  "force",
-  "forcePool",
-  "forceUniverse",
-  "forceStrategyCodes",
-  "strategyOnly",
-  "allCodes",
-  "json",
-  "allowPartial",
-  "proxyPreflight",
-  "noProxyPreflight",
-]));
+const { parseCliOptions } = require("../options");
 
 const SIMULATOR_USAGE = `Usage:
   x simulator start [--host 127.0.0.1] [--port 3001]
@@ -29,28 +15,7 @@ const SIMULATOR_USAGE = `Usage:
 The simulator reuses data/universe, data/pool and data/kline without modifying them.`;
 
 function parseSimulatorOptions(argv, defaults = {}) {
-  const options = { _: [], ...defaults };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (!arg.startsWith("--")) {
-      options._.push(arg);
-      continue;
-    }
-
-    const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-    if (BOOLEAN_OPTIONS.has(key)) {
-      options[key] = true;
-      continue;
-    }
-
-    const nextArg = argv[index + 1];
-    if (!nextArg) {
-      throw new Error(`Missing value for ${arg}`);
-    }
-    options[key] = nextArg;
-    index += 1;
-  }
-  return options;
+  return parseCliOptions(argv, { defaults });
 }
 
 async function runSimulatorCommand({
