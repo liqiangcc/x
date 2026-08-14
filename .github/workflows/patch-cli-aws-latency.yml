@@ -56,39 +56,36 @@ jobs:
           assert text.count(old_latency_import) == 1
           text = text.replace(old_latency_import, new_latency_import, 1)
 
-          pattern = re.compile(r'\nasync function commandAwsLatency\([^\n]*\) \{.*?\n\}\n', re.S)
-          text, count = pattern.subn('\n', text, count=1)
+          inline = re.compile(r'\nasync function commandAwsLatency\([^\n]*\) \{.*?\n\}\n', re.S)
+          text, count = inline.subn('\n', text, count=1)
           assert count == 1, count
 
-          maintenance_anchor = '''  if (["status", "sync-github-secrets"].includes(subcommand)) {
-            await commandAwsMaintenance(argv);
-            return;
-          }
-          '''
-          latency_branch = '''  if (subcommand === "latency") {
-            await commandAwsLatency(argv.slice(1));
-            return;
-          }
-          '''
-          assert text.count(maintenance_anchor) == 1
-          assert latency_branch not in text
-          text = text.replace(maintenance_anchor, maintenance_anchor + latency_branch, 1)
+          start = text.index('async function commandAws(argv) {')
+          end_marker = '\n}\n\nasync function commandKlineFetch'
+          end = text.index(end_marker, start) + 2
+          router = text[start:end]
 
           parse_line = '  const options = parseOptions(argv.slice(1));\n'
-          assert text.count(parse_line) == 1
-          text = text.replace(parse_line, '  parseOptions(argv.slice(1));\n', 1)
-
           old_latency_branch = '''  if (subcommand === "latency") {
             await commandAwsLatency(options);
             return;
           }
           '''
-          assert text.count(old_latency_branch) == 1
-          text = text.replace(old_latency_branch, '', 1)
+          new_latency_branch = '''  if (subcommand === "latency") {
+            await commandAwsLatency(argv.slice(1));
+            return;
+          }
+          '''
+          assert router.count(parse_line) == 1
+          assert router.count(old_latency_branch) == 1
+          assert new_latency_branch not in router
+          router = router.replace(parse_line, new_latency_branch + '  parseOptions(argv.slice(1));\n', 1)
+          router = router.replace(old_latency_branch, '', 1)
+          text = text[:start] + router + text[end:]
 
           assert 'async function commandAwsLatency(' not in text
           assert 'formatLatencyReport' not in text
-          assert 'await commandAwsLatency(argv.slice(1));' in text
+          assert text.count('await commandAwsLatency(argv.slice(1));') == 1
           assert text.count('runLatencyBenchmark(normalizeLatencyOptions(rawLatencyOptions, config))') == 1
           assert 'await commandAwsProbeRouter(argv.slice(1));' in text
           assert 'await commandAwsMaintenance(argv);' in text
