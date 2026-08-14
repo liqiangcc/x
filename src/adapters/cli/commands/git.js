@@ -44,13 +44,18 @@ async function runCommitData({
 async function runGitCommand({
   argv = [],
   commitDataUseCase,
+  getCommitDataUseCase,
+  getStatusDataUseCase,
   statusDataUseCase,
   stdout = process.stdout,
 } = {}) {
   const subcommand = argv[0];
 
   if (subcommand === "status-data") {
-    const useCase = requireUseCase(statusDataUseCase, "statusDataUseCase");
+    const useCase = requireUseCase(
+      statusDataUseCase ?? getStatusDataUseCase?.(),
+      "statusDataUseCase"
+    );
     const status = await useCase.execute();
     stdout.write(status);
     return status;
@@ -62,7 +67,7 @@ async function runGitCommand({
       throw new Error("git commit-data requires --run-id <run_id>");
     }
     return runCommitData({
-      commitDataUseCase,
+      commitDataUseCase: commitDataUseCase ?? getCommitDataUseCase?.(),
       runId: options.runId,
       stdout,
     });
@@ -81,32 +86,44 @@ function createGitDataCli({
   statusDataUseCase,
 } = {}) {
   let sharedWorkspace = workspace;
+  let resolvedCommitDataUseCase = commitDataUseCase;
+  let resolvedStatusDataUseCase = statusDataUseCase;
+
   const getWorkspace = () => {
     sharedWorkspace ??= createExecGitDataWorkspace({ root });
     return sharedWorkspace;
   };
 
-  const resolvedCommitDataUseCase = commitDataUseCase ?? new CommitRunDataUseCase({
-    runCommitContextReader: runCommitContextReader
-      ?? createFilesystemRunCommitContextReader({ runsDir }),
-    workspace: getWorkspace(),
-  });
-  const resolvedStatusDataUseCase = statusDataUseCase ?? new GetDataStatusUseCase({
-    workspace: getWorkspace(),
-  });
+  const getCommitDataUseCase = () => {
+    resolvedCommitDataUseCase ??= new CommitRunDataUseCase({
+      runCommitContextReader: runCommitContextReader
+        ?? createFilesystemRunCommitContextReader({ runsDir }),
+      workspace: getWorkspace(),
+    });
+    return resolvedCommitDataUseCase;
+  };
+
+  const getStatusDataUseCase = () => {
+    resolvedStatusDataUseCase ??= new GetDataStatusUseCase({
+      workspace: getWorkspace(),
+    });
+    return resolvedStatusDataUseCase;
+  };
 
   return {
     command(argv) {
       return runGitCommand({
         argv,
-        commitDataUseCase: resolvedCommitDataUseCase,
-        statusDataUseCase: resolvedStatusDataUseCase,
+        commitDataUseCase,
+        getCommitDataUseCase,
+        getStatusDataUseCase,
+        statusDataUseCase,
         stdout,
       });
     },
     commitData(runId) {
       return runCommitData({
-        commitDataUseCase: resolvedCommitDataUseCase,
+        commitDataUseCase: getCommitDataUseCase(),
         runId,
         stdout,
       });
