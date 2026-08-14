@@ -8,6 +8,10 @@ const test = require("node:test");
 const {
   createSqliteDatabase,
 } = require("../src/adapters/database/sqlite_database");
+const {
+  initDatabase,
+  queryDatabase,
+} = require("../src/db/sqlite");
 
 test("sqlite database adapter initializes schema and executes read/write SQL", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-db-adapter-"));
@@ -43,6 +47,29 @@ test("sqlite database adapter initializes schema and executes read/write SQL", a
     assert.equal(rows.length, 1);
     assert.equal(rows[0].value, "alpha");
     assert.equal(typeof rows[0].id, "number");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("legacy sqlite facade delegates to the database adapter", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-db-legacy-"));
+  const dbFile = path.join(root, "test.db");
+  const schemaFile = path.join(root, "schema.sql");
+  try {
+    await fs.writeFile(
+      schemaFile,
+      "CREATE TABLE items (value TEXT NOT NULL);\n",
+      "utf8"
+    );
+    assert.deepEqual(initDatabase({ dbFile, schemaFile }), { dbFile, schemaFile });
+    assert.deepEqual(
+      queryDatabase({ dbFile, sql: "INSERT INTO items(value) VALUES ('legacy')" }),
+      []
+    );
+    const rows = queryDatabase({ dbFile, sql: "SELECT value FROM items" });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].value, "legacy");
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
