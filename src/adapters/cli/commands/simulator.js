@@ -6,18 +6,6 @@ const {
 const {
   StartSimulatorRuntimeUseCase,
 } = require("../../../simulator/application/start_runtime");
-const {
-  ExistingKlineRepository,
-} = require("../../../simulator/adapters/ledger/existing_kline_repository");
-const {
-  ExistingUniverseRepository,
-} = require("../../../simulator/adapters/ledger/existing_universe");
-const {
-  createLegacyTradingCalendarReader,
-} = require("../../../simulator/adapters/ledger/legacy_trading_calendar_reader");
-const {
-  createNpmRuntimeLauncher,
-} = require("../../../simulator/adapters/process/npm_runtime_launcher");
 
 const BOOLEAN_OPTIONS = Object.freeze(new Set([
   "latest",
@@ -68,7 +56,9 @@ function parseSimulatorOptions(argv, defaults = {}) {
 async function runSimulatorCommand({
   argv = [],
   checkDataReadinessUseCase,
+  getCheckDataReadinessUseCase,
   databasePath = "var/simulator/simulator.db",
+  getStartRuntimeUseCase,
   startRuntimeUseCase,
   stdout = process.stdout,
 } = {}) {
@@ -81,10 +71,11 @@ async function runSimulatorCommand({
   const options = parseSimulatorOptions(argv.slice(1));
 
   if (subcommand === "start") {
-    if (!startRuntimeUseCase || typeof startRuntimeUseCase.execute !== "function") {
+    const useCase = startRuntimeUseCase ?? getStartRuntimeUseCase?.();
+    if (!useCase || typeof useCase.execute !== "function") {
       throw new TypeError("startRuntimeUseCase must expose execute().");
     }
-    return startRuntimeUseCase.execute({
+    return useCase.execute({
       host: options.host ?? "127.0.0.1",
       port: options.port ?? "3001",
     });
@@ -94,11 +85,12 @@ async function runSimulatorCommand({
     if (!options.startDate || !options.endDate) {
       throw new Error("simulator check requires --start-date and --end-date");
     }
-    if (!checkDataReadinessUseCase || typeof checkDataReadinessUseCase.execute !== "function") {
+    const useCase = checkDataReadinessUseCase ?? getCheckDataReadinessUseCase?.();
+    if (!useCase || typeof useCase.execute !== "function") {
       throw new TypeError("checkDataReadinessUseCase must expose execute().");
     }
 
-    const check = await checkDataReadinessUseCase.execute({
+    const check = await useCase.execute({
       startDate: options.startDate,
       endDate: options.endDate,
     });
@@ -139,34 +131,55 @@ function createSimulatorCommand({
   tradingCalendarReader,
 } = {}) {
   let resolvedStartUseCase = startRuntimeUseCase;
-  if (!resolvedStartUseCase) {
-    resolvedStartUseCase = new StartSimulatorRuntimeUseCase({
-      runtimeLauncher: runtimeLauncher ?? createNpmRuntimeLauncher({ cwd: root }),
-    });
+  let resolvedCheckUseCase = checkDataReadinessUseCase;
+
+  function getStartRuntimeUseCase() {
+    if (!resolvedStartUseCase) {
+      const {
+        createNpmRuntimeLauncher,
+      } = require("../../../simulator/adapters/process/npm_runtime_launcher");
+      resolvedStartUseCase = new StartSimulatorRuntimeUseCase({
+        runtimeLauncher: runtimeLauncher ?? createNpmRuntimeLauncher({ cwd: root }),
+      });
+    }
+    return resolvedStartUseCase;
   }
 
-  let resolvedCheckUseCase = checkDataReadinessUseCase;
-  if (!resolvedCheckUseCase) {
-    const resolvedMarketDataRepository = marketDataRepository ?? new ExistingKlineRepository({
-      klineRoot: klineDir,
-    });
-    resolvedCheckUseCase = new CheckSimulatorDataReadinessUseCase({
-      universeReader: universeReader ?? new ExistingUniverseRepository({
+  function getCheckDataReadinessUseCase() {
+    if (!resolvedCheckUseCase) {
+      const {
+        ExistingKlineRepository,
+      } = require("../../../simulator/adapters/ledger/existing_kline_repository");
+      const {
+        ExistingUniverseRepository,
+      } = require("../../../simulator/adapters/ledger/existing_universe");
+      const {
+        createLegacyTradingCalendarReader,
+      } = require("../../../simulator/adapters/ledger/legacy_trading_calendar_reader");
+      const resolvedMarketDataRepository = marketDataRepository ?? new ExistingKlineRepository({
         klineRoot: klineDir,
-        poolRoot: poolDir,
-        universeRoot: universeDir,
-      }),
-      tradingCalendarReader: tradingCalendarReader ?? createLegacyTradingCalendarReader({
-        marketDataRepository: resolvedMarketDataRepository,
-      }),
-    });
+      });
+      resolvedCheckUseCase = new CheckSimulatorDataReadinessUseCase({
+        universeReader: universeReader ?? new ExistingUniverseRepository({
+          klineRoot: klineDir,
+          poolRoot: poolDir,
+          universeRoot: universeDir,
+        }),
+        tradingCalendarReader: tradingCalendarReader ?? createLegacyTradingCalendarReader({
+          marketDataRepository: resolvedMarketDataRepository,
+        }),
+      });
+    }
+    return resolvedCheckUseCase;
   }
 
   return (argv) => runSimulatorCommand({
     argv,
-    checkDataReadinessUseCase: resolvedCheckUseCase,
+    checkDataReadinessUseCase,
+    getCheckDataReadinessUseCase,
     databasePath,
-    startRuntimeUseCase: resolvedStartUseCase,
+    getStartRuntimeUseCase,
+    startRuntimeUseCase,
     stdout,
   });
 }
