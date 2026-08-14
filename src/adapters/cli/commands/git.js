@@ -6,7 +6,7 @@ const {
 } = require("../../../application/git/data_commands");
 const {
   createExecGitDataWorkspace,
-} = require("../../git/exec_git_data_workspace");
+} = require("../../git/exec_git_workspace");
 const {
   createFilesystemRunCommitContextReader,
 } = require("../../ledger/filesystem_run_commit_context_reader");
