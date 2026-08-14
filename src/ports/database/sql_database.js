@@ -2,6 +2,7 @@
 
 const DATABASE_INITIALIZER_METHODS = Object.freeze(["initialize"]);
 const SQL_EXECUTOR_METHODS = Object.freeze(["execute"]);
+const SQL_ROW_READER_METHODS = Object.freeze(["queryRows"]);
 
 function assertMethods(implementation, methods, label) {
   if (!implementation || typeof implementation !== "object") {
@@ -29,9 +30,19 @@ function assertSqlExecutor(implementation) {
   return assertMethods(implementation, SQL_EXECUTOR_METHODS, "sqlExecutor");
 }
 
+function assertSqlRowReader(implementation) {
+  return assertMethods(
+    implementation,
+    SQL_ROW_READER_METHODS,
+    "sqlRowReader"
+  );
+}
+
 module.exports = {
   DATABASE_INITIALIZER_METHODS,
   SQL_EXECUTOR_METHODS,
+  SQL_ROW_READER_METHODS,
   assertDatabaseInitializer,
   assertSqlExecutor,
+  assertSqlRowReader,
 };

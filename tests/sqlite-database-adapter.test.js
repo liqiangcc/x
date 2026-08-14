@@ -52,6 +52,30 @@ test("sqlite database adapter initializes schema and executes read/write SQL", a
   }
 });
 
+test("sqlite row reader returns rows for CTE SELECT queries", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-db-row-reader-"));
+  const dbFile = path.join(root, "test.db");
+  const schemaFile = path.join(root, "schema.sql");
+  try {
+    await fs.writeFile(
+      schemaFile,
+      "CREATE TABLE items (value TEXT NOT NULL);\nINSERT INTO items(value) VALUES ('alpha');\n",
+      "utf8"
+    );
+    const database = createSqliteDatabase();
+    database.initialize({ dbFile, schemaFile });
+
+    const rows = database.queryRows({
+      dbFile,
+      sql: "WITH selected AS (SELECT value FROM items) SELECT value FROM selected",
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].value, "alpha");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("legacy sqlite facade delegates to the database adapter", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-db-legacy-"));
   const dbFile = path.join(root, "test.db");
@@ -79,6 +103,10 @@ test("sqlite database adapter keeps the legacy missing-sql error", () => {
   const database = createSqliteDatabase();
   assert.throws(
     () => database.execute({ dbFile: ":memory:" }),
+    /queryDatabase requires sql/
+  );
+  assert.throws(
+    () => database.queryRows({ dbFile: ":memory:" }),
     /queryDatabase requires sql/
   );
 });
