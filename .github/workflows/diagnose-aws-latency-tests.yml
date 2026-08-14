@@ -1,0 +1,38 @@
+name: Diagnose AWS latency unit tests
+
+on:
+  push:
+    branches:
+      - refactor/cli-aws-latency-boundary
+    paths:
+      - .github/workflows/diagnose-aws-latency-tests.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-aws-latency-boundary
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Capture npm test output
+        run: |
+          set +e
+          npm test > aws-latency-unit-test-diagnostic.log 2>&1
+          status=$?
+          echo "UNIT_TEST_EXIT_CODE=$status" >> aws-latency-unit-test-diagnostic.log
+          exit 0
+      - name: Commit diagnostic
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add aws-latency-unit-test-diagnostic.log
+          git commit -m "chore: capture aws latency test diagnostic"
+          git push origin HEAD:refactor/cli-aws-latency-boundary
