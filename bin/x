@@ -12,6 +12,7 @@ const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
 const { createGitDataCli } = require("../src/adapters/cli/commands/git");
 const { createBenchmarkCommand } = require("../src/adapters/cli/commands/benchmark");
+const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aws_probe_router");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -51,7 +52,6 @@ const {
   marketUniverseRootForRun,
   shouldReuseMarketUniverse,
 } = require("../src/jobs/universe");
-const { inferSecid } = require("../src/core/secid");
 const { getKlines, inspectFile, validateKlinePath } = require("../fetch/check_kline_empty");
 const { aggregateYearlyFromDaily } = require("../src/kline/aggregate_yearly");
 const { STRATEGY_ID, buildStrategyUniverse } = require("../src/strategies/year_decline_sync");
@@ -68,6 +68,7 @@ const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandGit = gitDataCli.command;
 const commitData = gitDataCli.commitData;
 const commandBenchmark = createBenchmarkCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
+const commandAwsProbeRouter = createAwsProbeRouterCommand();
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -516,27 +517,8 @@ async function commandAwsSyncGithubSecrets(rawOptions) {
   });
 }
 
-function periodToKlt(period = "daily") {
-  if (period === "daily") {
-    return 101;
-  }
-  if (period === "yearly") {
-    return 106;
-  }
-  throw new Error(`Invalid period: ${period}`);
-}
 
-function requiredEnv(name) {
-  const value = String(process.env[name] ?? "").trim();
-  if (!value) {
-    throw new Error(`${name} is required.`);
-  }
-  return value;
-}
 
-function appendUrlPath(baseUrl, pathname) {
-  return `${String(baseUrl).replace(/\/+$/, "")}${pathname}`;
-}
 
 function probeDuration(result) {
   return Number.isFinite(result?.router_reported_duration_ms)
@@ -635,43 +617,7 @@ async function resolveRouterRegionForDaily(options) {
   }
 }
 
-async function postRouterJson(pathname, body) {
-  const routerUrl = requiredEnv("AWS_ROUTER_URL");
-  const routerToken = requiredEnv("AWS_ROUTER_TOKEN");
-  const response = await fetch(appendUrlPath(routerUrl, pathname), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-router-token": routerToken,
-    },
-    body: JSON.stringify(body),
-  });
-  const rawText = await response.text();
-  let payload;
-  try {
-    payload = rawText ? JSON.parse(rawText) : {};
-  } catch (error) {
-    throw new Error(`Failed to parse Router response: ${error.message}`);
-  }
-  if (!response.ok || payload?.ok === false) {
-    throw new Error(`Router returned statusCode ${response.status}: ${payload?.error ?? rawText}`);
-  }
-  return payload;
-}
 
-async function commandAwsProbeRouter(rawOptions) {
-  if (!rawOptions.secid) {
-    throw new Error("aws probe-router requires --secid <secid_or_code>.");
-  }
-  const payload = await postRouterJson("/probe", {
-    region: rawOptions.targetRegion ?? "all",
-    secid: inferSecid(rawOptions.secid),
-    klt: periodToKlt(rawOptions.period ?? "daily"),
-    lmt: rawOptions.lmt ? Number(rawOptions.lmt) : 1,
-    end: rawOptions.end ?? "20991231",
-  });
-  printJson(payload);
-}
 
 async function commandAwsLatency(rawOptions) {
   const configFile = rawOptions.config ? rootPath(rawOptions.config) : path.join(ROOT, "config", "kline.json");
@@ -696,6 +642,10 @@ async function commandAwsLatency(rawOptions) {
 
 async function commandAws(argv) {
   const subcommand = argv[0];
+  if (subcommand === "probe-router") {
+    await commandAwsProbeRouter(argv.slice(1));
+    return;
+  }
   const options = parseOptions(argv.slice(1));
 
   if (subcommand === "status") {
@@ -708,10 +658,6 @@ async function commandAws(argv) {
     return;
   }
 
-  if (subcommand === "probe-router") {
-    await commandAwsProbeRouter(options);
-    return;
-  }
 
   if (subcommand === "latency") {
     await commandAwsLatency(options);
