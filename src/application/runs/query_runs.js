@@ -1,6 +1,9 @@
 "use strict";
 
-const { assertRunReader } = require("../../ports/runs/run_reader");
+const {
+  assertRunArtifactReader,
+  assertRunListReader,
+} = require("../../ports/runs/run_reader");
 
 const RUN_ARTIFACTS = Object.freeze(["run", "failures"]);
 
@@ -25,7 +28,7 @@ function normalizeRunArtifact(value) {
 
 class ListRunsUseCase {
   constructor({ runReader } = {}) {
-    this.runReader = assertRunReader(runReader);
+    this.runReader = assertRunListReader(runReader);
   }
 
   async execute() {
@@ -39,7 +42,7 @@ class ListRunsUseCase {
 
 class ReadRunArtifactUseCase {
   constructor({ runReader } = {}) {
-    this.runReader = assertRunReader(runReader);
+    this.runReader = assertRunArtifactReader(runReader);
   }
 
   async execute({ runId, artifact } = {}) {
