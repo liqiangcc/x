@@ -1,6 +1,6 @@
 "use strict";
 
-const BUY_EXECUTION_MODEL_PROVIDER_METHODS = Object.freeze(["resolveForDate"]);
+const BUY_EXECUTION_MODEL_PROVIDER_METHODS = Object.freeze(["resolveForBuy"]);
 
 function assertBuyExecutionModelProvider(implementation) {
   if (!implementation || typeof implementation !== "object") {

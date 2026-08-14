@@ -7,6 +7,9 @@ const {
 const {
   assertBuyExecutionModelProvider,
 } = require("../../ports/simulation/buy_execution_model_provider");
+const {
+  resolveNextExecutionBar,
+} = require("./execution_model_support");
 
 function normalizeIsoDate(value, field = "date") {
   const normalized = String(value ?? "");
@@ -43,6 +46,17 @@ function normalizeTimelineSegments(segments) {
   }));
 }
 
+function findTimelineSegment(segments, date) {
+  const normalizedDate = normalizeIsoDate(date, "date");
+  const segment = segments.find(
+    (candidate) => candidate.startDate <= normalizedDate && candidate.endDate >= normalizedDate
+  );
+  if (!segment) {
+    throw new Error(`execution profile timeline does not cover ${normalizedDate}.`);
+  }
+  return segment;
+}
+
 class TimelineBuyExecutionModelProvider {
   constructor({
     segments,
@@ -59,14 +73,10 @@ class TimelineBuyExecutionModelProvider {
     assertBuyExecutionModelProvider(this);
   }
 
-  resolveForDate({ date } = {}) {
-    const normalizedDate = normalizeIsoDate(date, "date");
-    const segment = this.segments.find(
-      (candidate) => candidate.startDate <= normalizedDate && candidate.endDate >= normalizedDate
-    );
-    if (!segment) {
-      throw new Error(`execution profile timeline does not cover ${normalizedDate}.`);
-    }
+  resolveForBuy({ bars, signalDate } = {}) {
+    const timing = resolveNextExecutionBar(bars, signalDate);
+    const effectiveDate = timing.bar?.date ?? timing.signalDate;
+    const segment = findTimelineSegment(this.segments, effectiveDate);
     if (!this.models.has(segment.profileId)) {
       this.models.set(segment.profileId, this.executionModelResolver.resolve({
         model: segment.profileId,
@@ -79,6 +89,7 @@ class TimelineBuyExecutionModelProvider {
 
 module.exports = {
   TimelineBuyExecutionModelProvider,
+  findTimelineSegment,
   normalizeIsoDate,
   normalizeTimelineSegments,
 };
