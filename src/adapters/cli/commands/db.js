@@ -6,14 +6,12 @@ const {
 } = require("../../../application/database/database_commands");
 const { createSqliteDatabase } = require("../../database/sqlite_database");
 const {
-  DEFAULT_BOOLEAN_OPTIONS,
+  BOOLEAN_OPTIONS,
   parseCliOptions,
 } = require("../options");
 
-const BOOLEAN_OPTIONS = DEFAULT_BOOLEAN_OPTIONS;
-
 function parseDbOptions(argv, defaults = {}) {
-  return parseCliOptions(argv, { defaults });
+  return parseCliOptions(argv, defaults);
 }
 
 function writeJson(stdout, payload) {
