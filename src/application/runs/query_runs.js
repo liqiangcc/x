@@ -8,12 +8,9 @@ const {
 const RUN_ARTIFACTS = Object.freeze(["run", "failures"]);
 
 function normalizeRunId(value) {
-  const runId = String(value ?? "").trim();
+  const runId = String(value ?? "");
   if (!runId) {
     throw new TypeError("runId is required.");
-  }
-  if (runId === "." || runId === ".." || runId.includes("/") || runId.includes("\\")) {
-    throw new TypeError("runId contains unsupported path characters.");
   }
   return runId;
 }
@@ -36,7 +33,7 @@ class ListRunsUseCase {
     if (!Array.isArray(runIds)) {
       throw new TypeError("runReader.listRunIds() must return an array.");
     }
-    return [...new Set(runIds.map((value) => String(value).trim()).filter(Boolean))].sort();
+    return [...new Set(runIds.map(String).filter(Boolean))].sort();
   }
 }
 
