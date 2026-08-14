@@ -78,7 +78,7 @@ Execution profile timeline
       v
 TimelineBuyExecutionModelProvider
       |
-      | execution date -> profile id
+      | buy context -> execution date -> profile id
       v
 BuyExecutionModelResolver Port
       |
@@ -95,10 +95,10 @@ The responsibilities are intentionally different:
 - **Timeline Reader** applies repository precedence and converts overlapping records into a deterministic winning fact timeline.
 - **Temporal Application** requires complete coverage and maps each winning fact segment to a public execution profile id.
 - **SecurityExecutionProfileResolver** remains the single authority for mapping security metadata to profile ids.
-- **TimelineBuyExecutionModelProvider** maps an execution date to the already-resolved profile timeline and asks the model resolver for the corresponding model.
+- **TimelineBuyExecutionModelProvider** accepts a buy execution context, derives the candidate execution date through shared deterministic timing Logic, maps that date to the already-resolved profile timeline, and asks the model resolver for the corresponding model.
 - **BuyExecutionModelResolver** remains the separate authority for constructing concrete execution models from public model/profile ids.
-- **Portfolio** owns account orchestration only. It does not read Security Master, inspect ETF categories, or decide profile ids.
-- **Execution-model support Logic** owns the deterministic next-execution-bar calculation shared by portfolio selection and concrete next-open models.
+- **Portfolio** owns account orchestration only. It delegates temporal model selection through `resolveForBuy({ bars, signalDate })`; it does not calculate next-bar timing, read Security Master, inspect ETF categories, or decide profile ids.
+- **Execution-model support Logic** owns the deterministic next-execution-bar calculation shared by the temporal provider and concrete next-open models.
 
 ## Timeline Reader contract
 
@@ -219,35 +219,47 @@ The simulation result may still expose the last effective `profileId` as a compa
 
 Current catalog-backed buy models execute at the next trading-day open. The candidate execution date therefore comes from the next available K-line bar after the signal bar.
 
-The deterministic helper is shared rather than duplicated:
+The deterministic helper is shared rather than duplicated, but the Portfolio does not invoke it directly:
 
 ```text
-bars + signalDate
-      |
-      v
+Portfolio
+  |
+  | resolveForBuy({ bars, signalDate })
+  v
+TimelineBuyExecutionModelProvider
+  |
+  v
 resolveNextExecutionBar
-      |
-      +--------------------------+
-      |                          |
-      v                          v
-Portfolio provider date       BuyExecutionModel execution bar
-      |                          |
-      v                          v
-Timeline provider             fill / skip result
+  |
+  | candidate execution date
+  v
+Execution profile timeline
+  |
+  v
+BuyExecutionModel
+  |
+  | reuses resolveNextExecutionBar for actual fill timing
+  v
+fill / skip result
 ```
 
-This preserves one authoritative definition of "next execution bar" and prevents a boundary bug where the provider selects one date while the model fills on another.
+This preserves one authoritative definition of "next execution bar" and prevents both kinds of boundary bug:
+
+- provider selection and model execution choosing different dates;
+- Portfolio learning next-open timing mechanics merely to select a provider result.
 
 For a signal on `D` whose next trading bar is `D+1`:
 
 ```text
-provider lookup date = D+1
-model execution date = D+1
+provider effective date = D+1
+model execution date    = D+1
 ```
 
 A profile transition between `D` and `D+1` therefore uses the `D+1` profile.
 
 If no next execution bar exists, there is no possible fill. The provider may use the signal date only to obtain a model capable of returning the normal `skipped_no_execution_bar` result. This fallback does not apply any market mechanics to a trade because no execution occurs.
+
+If a next execution bar exists but that execution date is not covered by the profile timeline, the provider fails closed rather than applying the signal-date profile forward.
 
 ## Explicit override semantics
 
@@ -262,24 +274,31 @@ executionModel supplied
 executionModel omitted
   -> security_metadata_timeline
   -> resolve temporal facts/profile segments
-  -> select model by candidate execution date
+  -> provider selects model by candidate execution date
 ```
 
 `frictionless` remains available only through the explicit override path. It is intentionally not a Security Master fact or an automatic execution profile.
 
 ## BuyExecutionModelProvider boundary
 
-The current provider contract is intentionally narrow:
+The provider contract is intentionally expressed in execution context rather than as a caller-selected date:
 
 ```text
-resolveForDate({ date }) -> BuyExecutionModel
+resolveForBuy({
+  bars,
+  signalDate
+}) -> BuyExecutionModel
 ```
+
+This prevents an orchestration caller from accidentally passing `signalDate` where `executionDate` is required.
 
 `TimelineBuyExecutionModelProvider` owns:
 
 - validating timeline segments;
-- finding the segment that covers the requested date;
-- failing closed when the date is uncovered;
+- deriving the candidate execution date through `resolveNextExecutionBar`;
+- finding the segment that covers that execution date;
+- falling back to the signal-date segment only when no execution bar exists;
+- failing closed when a real execution date is uncovered;
 - resolving a model through `BuyExecutionModelResolver`;
 - caching already-constructed models by profile id.
 
@@ -290,7 +309,7 @@ It does not:
 - calculate business signals;
 - execute portfolio/account logic.
 
-The portfolio does not know how profile ids are chosen. It only supplies the candidate execution date to the provider.
+The Portfolio does not know how execution dates or profile ids are chosen. It only passes the normalized buy context to the provider.
 
 ## Architecture fitness rules
 
@@ -298,11 +317,12 @@ The portfolio does not know how profile ids are chosen. It only supplies the can
 - Temporal Application code must not import Ledger adapters or filesystem APIs.
 - Ledger timeline code must not import execution profile catalogs or execution models.
 - The timeline Reader must not encode `legacy_a_share`, `domestic_stock_etf`, `t0_etf`, or `frictionless`.
-- `TimelineBuyExecutionModelProvider` may depend on `BuyExecutionModelResolver`, but not on Security Master storage.
-- `BuyOnlyPortfolioSimulator` must not read Security Master, inspect ETF type, or map metadata to profile ids.
+- `TimelineBuyExecutionModelProvider` may depend on `BuyExecutionModelResolver` and deterministic execution-timing Logic, but not on Security Master storage.
+- `BuyOnlyPortfolioSimulator` must not read Security Master, inspect ETF type, map metadata to profile ids, import execution-timing Logic, or calculate the provider lookup date.
+- `BuyExecutionModelProvider` must accept execution context rather than a preselected temporal lookup date.
 - MCP adapters must not read Security Master timelines directly.
 - Missing temporal coverage must never be filled by code-prefix inference or by applying a future record backward in time.
-- Candidate execution-date calculation must have one authoritative deterministic implementation shared by provider selection and concrete next-open models.
+- Candidate execution-date calculation must have one authoritative deterministic implementation shared by the temporal provider and concrete next-open models.
 
 ## Verification
 
@@ -313,8 +333,11 @@ The temporal execution test suite must cover at least:
 3. Metadata-to-profile transitions without constructing execution models inside temporal Application code.
 4. A signal whose next execution bar crosses a profile boundary and therefore resolves the profile effective on the execution date.
 5. The no-next-bar path, which must not fabricate an execution date.
-6. Explicit execution-model override bypassing automatic temporal classification.
-7. Architecture fitness boundaries between storage, temporal classification, model construction, portfolio orchestration, and MCP.
+6. A real execution date outside timeline coverage, which must fail closed.
+7. The Provider Port requiring `resolveForBuy` rather than `resolveForDate`.
+8. Portfolio source remaining free of execution-timing Logic and provider-date calculation.
+9. Explicit execution-model override bypassing automatic temporal classification.
+10. Architecture fitness boundaries between storage, temporal classification, model construction, portfolio orchestration, and MCP.
 
 ## Incremental delivery
 
@@ -327,7 +350,8 @@ Completed:
 5. Add `BuyExecutionModelProvider` and `TimelineBuyExecutionModelProvider`.
 6. Integrate the provider into `BuyOnlyPortfolioSimulator` while preserving explicit overrides.
 7. Select automatic models by candidate execution date and share the next-execution-bar Logic with concrete next-open models.
-8. Add a regression test for a signal crossing an execution-profile boundary.
+8. Move candidate execution-date ownership behind `BuyExecutionModelProvider.resolveForBuy` so Portfolio remains timing-agnostic.
+9. Add regression and architecture-fitness tests for profile-boundary crossing, uncovered execution dates, and timing ownership.
 
 ## Remaining scope
 
