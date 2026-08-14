@@ -9,6 +9,7 @@ const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
+const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -67,6 +68,12 @@ const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
+const commandSimulator = createSimulatorCommand({
+  root: ROOT,
+  klineDir: DEFAULT_KLINE_DIR,
+  poolDir: DEFAULT_POOL_DIR,
+  universeDir: DEFAULT_UNIVERSE_DIR,
+});
 const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
 const DEFAULT_ROUTER_PROBE_ATTEMPTS = "1";
 const DEFAULT_ROUTER_PROBE_LMT = "1";
@@ -2604,64 +2611,6 @@ async function commandGit(argv) {
   throw new Error(`Unknown git command: ${subcommand ?? ""}`);
 }
 
-async function commandSimulator(argv) {
-  const subcommand = argv[0] ?? "start";
-  if (["--help", "-h", "help"].includes(subcommand)) {
-    console.log(`Usage:
-  x simulator start [--host 127.0.0.1] [--port 3001]
-  x simulator check --start-date YYYYMMDD --end-date YYYYMMDD [--json]
-
-The simulator reuses data/universe, data/pool and data/kline without modifying them.`);
-    return;
-  }
-  const options = parseOptions(argv.slice(1));
-  if (subcommand === "start") {
-    await new Promise((resolve, reject) => {
-      const child = spawn("npm", ["run", "dev:simulator"], {
-        cwd: ROOT,
-        env: {
-          ...process.env,
-          SIMULATOR_HOST: options.host ?? "127.0.0.1",
-          SIMULATOR_PORT: options.port ?? "3001",
-        },
-        stdio: "inherit",
-      });
-      child.on("error", reject);
-      child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`simulator exited with code ${code}`)));
-    });
-    return;
-  }
-  if (subcommand === "check") {
-    if (!options.startDate || !options.endDate) throw new Error("simulator check requires --start-date and --end-date");
-    const { ExistingKlineRepository } = require("../src/simulator/adapters/ledger/existing_kline_repository");
-    const { ExistingUniverseRepository } = require("../src/simulator/adapters/ledger/existing_universe");
-    const { LegacyTradingCalendar } = require("../src/simulator/data/legacy_trading_calendar");
-    const klineRepository = new ExistingKlineRepository({ klineRoot: DEFAULT_KLINE_DIR });
-    const universe = await new ExistingUniverseRepository({
-      klineRoot: DEFAULT_KLINE_DIR,
-      poolRoot: DEFAULT_POOL_DIR,
-      universeRoot: DEFAULT_UNIVERSE_DIR,
-    }).listAvailableCodes({ asOfDate: options.startDate });
-    const calendar = await LegacyTradingCalendar.fromRepository({
-      endDate: options.endDate,
-      marketDataRepository: klineRepository,
-      securities: [{ code: "000001", market: 0 }],
-      startDate: options.startDate,
-    });
-    const result = {
-      dataMode: "legacy_approximate",
-      databasePath: "var/simulator/simulator.db",
-      qualityIssues: [...new Set([...universe.qualityIssues, ...calendar.qualityIssues])].sort(),
-      tradingDateCount: calendar.dates.length,
-      universeCount: universe.securities.length,
-      universeSource: universe.source,
-    };
-    if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    else console.log(`simulator data: ${result.universeCount} securities (${result.universeSource}), ${result.tradingDateCount} trading dates, ${result.dataMode}`);
-    return;
-  }
-  throw new Error(`Unknown simulator command: ${subcommand}`);
-}
 
 async function main() {
   const [command, subcommand, ...rest] = process.argv.slice(2);
