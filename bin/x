@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
+const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -55,6 +56,7 @@ const { DEFAULT_CN_FAST_THRESHOLD, selectStrategySyncEngine } = require("../src/
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
+const commandDoctor = createDoctorCommand({ cwd: ROOT });
 const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
@@ -293,33 +295,6 @@ function isoNow() {
 
 function runIdFor(date, period, now = new Date()) {
   return `${date}T${utcCompactTime(now)}Z_${period}`;
-}
-
-async function commandDoctor() {
-  const checks = [
-    ["node", ["--version"]],
-    ["git", ["--version"]],
-  ];
-
-  let failed = 0;
-  for (const [command, args] of checks) {
-    try {
-      const { stdout } = await execFileAsync(command, args, { cwd: ROOT });
-      console.log(`${command}: ${(stdout.split("\n")[0] || "ok").trim()}`);
-    } catch (error) {
-      failed += 1;
-      console.error(`${command}: missing or failed (${error.message})`);
-    }
-  }
-
-  const major = Number(process.versions.node.split(".")[0]);
-  if (major < 22) {
-    console.error(`node: v${process.versions.node} detected; Node 22+ is required for SQLite commands.`);
-  }
-
-  if (failed > 0) {
-    process.exitCode = 1;
-  }
 }
 
 async function runAwsKlinePreflight({ profile, preflightRegion, lambdaName }) {
