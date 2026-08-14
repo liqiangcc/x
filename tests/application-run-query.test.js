@@ -8,14 +8,11 @@ const {
   normalizeRunId,
 } = require("../src/application/runs/query_runs");
 
-test("ListRunsUseCase returns deterministic unique run ids", async () => {
+test("ListRunsUseCase returns deterministic unique run ids with only the list port", async () => {
   const useCase = new ListRunsUseCase({
     runReader: {
       async listRunIds() {
         return ["run-b", "run-a", "run-b", ""];
-      },
-      async readArtifact() {
-        throw new Error("not used");
       },
     },
   });
@@ -23,13 +20,10 @@ test("ListRunsUseCase returns deterministic unique run ids", async () => {
   assert.deepEqual(await useCase.execute(), ["run-a", "run-b"]);
 });
 
-test("ReadRunArtifactUseCase delegates only normalized domain inputs", async () => {
+test("ReadRunArtifactUseCase delegates normalized inputs with only the artifact port", async () => {
   const calls = [];
   const useCase = new ReadRunArtifactUseCase({
     runReader: {
-      async listRunIds() {
-        return [];
-      },
       async readArtifact(input) {
         calls.push(input);
         return "{\"status\":\"completed\"}\n";
@@ -46,9 +40,6 @@ test("ReadRunArtifactUseCase rejects unsupported artifacts and path traversal be
   let called = false;
   const useCase = new ReadRunArtifactUseCase({
     runReader: {
-      async listRunIds() {
-        return [];
-      },
       async readArtifact() {
         called = true;
         return "";
@@ -67,11 +58,22 @@ test("ReadRunArtifactUseCase rejects unsupported artifacts and path traversal be
   assert.equal(called, false);
 });
 
-test("run reader contract and run id normalization are explicit", () => {
-  assert.throws(() => new ListRunsUseCase(), /runReader implementation/);
+test("run reader contracts are narrow and run id normalization is explicit", () => {
+  assert.throws(() => new ListRunsUseCase(), /runListReader implementation/);
+  assert.throws(
+    () => new ListRunsUseCase({ runReader: { readArtifact() {} } }),
+    /listRunIds/
+  );
+  assert.throws(() => new ReadRunArtifactUseCase(), /runArtifactReader implementation/);
   assert.throws(
     () => new ReadRunArtifactUseCase({ runReader: { listRunIds() {} } }),
     /readArtifact/
+  );
+  assert.doesNotThrow(
+    () => new ListRunsUseCase({ runReader: { listRunIds() { return []; } } })
+  );
+  assert.doesNotThrow(
+    () => new ReadRunArtifactUseCase({ runReader: { readArtifact() { return ""; } } })
   );
   assert.equal(normalizeRunId("run-1"), "run-1");
   assert.throws(() => normalizeRunId(""), /required/);
