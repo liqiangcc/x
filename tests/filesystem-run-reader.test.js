@@ -54,3 +54,25 @@ test("filesystem run reader only maps supported artifacts inside runsDir", () =>
   assert.throws(() => artifactPath(runsDir, "run-a", "quality"), /Unsupported run artifact/);
   assert.throws(() => artifactPath(runsDir, "../outside", "run"), /outside runsDir/);
 });
+
+test("filesystem run reader rejects symlink escapes from the run ledger", {
+  skip: process.platform === "win32",
+}, async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "x-runs-symlink-"));
+  const runsDir = path.join(root, "runs");
+  const outsideDir = path.join(root, "outside");
+  try {
+    await fs.mkdir(runsDir, { recursive: true });
+    await fs.mkdir(outsideDir, { recursive: true });
+    await fs.writeFile(path.join(outsideDir, "run.json"), "secret\n", "utf8");
+    await fs.symlink(outsideDir, path.join(runsDir, "linked-run"), "dir");
+
+    const reader = createFilesystemRunReader({ runsDir });
+    await assert.rejects(
+      () => reader.readArtifact({ artifact: "run", runId: "linked-run" }),
+      /outside runsDir/
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
