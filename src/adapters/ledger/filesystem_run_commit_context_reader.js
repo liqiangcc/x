@@ -1,20 +1,22 @@
 "use strict";
 
-const { createFilesystemRunReader } = require("./filesystem_run_reader");
+const {
+  createFilesystemRunFileReader,
+} = require("./filesystem_run_reader");
 
 function createFilesystemRunCommitContextReader({ runsDir } = {}) {
-  const runReader = createFilesystemRunReader({ runsDir });
+  const fileReader = createFilesystemRunFileReader({ runsDir });
 
   return {
     async readCommitContext({ runId } = {}) {
       const run = JSON.parse(
-        await runReader.readArtifact({ artifact: "run", runId })
+        await fileReader.readFile({ fileName: "run.json", runId })
       );
 
       let quality = { status: "recorded" };
       try {
         quality = JSON.parse(
-          await runReader.readArtifact({ artifact: "quality", runId })
+          await fileReader.readFile({ fileName: "quality.json", runId })
         );
       } catch (error) {
         if (error?.code !== "ENOENT") throw error;
