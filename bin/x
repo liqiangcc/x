@@ -7,6 +7,7 @@ const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
+const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -62,6 +63,7 @@ const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
+const commandDb = createDbCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
 const DEFAULT_ROUTER_PROBE_ATTEMPTS = "1";
@@ -2180,31 +2182,6 @@ async function commandReport(argv) {
 function printJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
-
-async function commandDb(argv) {
-  const subcommand = argv[0];
-  const options = parseOptions(argv.slice(1), {
-    db: "db/stocks.db",
-    schema: "db/database_schema.sql",
-  });
-  const { initDatabase, queryDatabase } = require("./../src/db/sqlite");
-
-  if (subcommand === "init") {
-    printJson(initDatabase({ dbFile: options.db, schemaFile: options.schema }));
-    return;
-  }
-
-  if (subcommand === "query") {
-    if (!options.sql) {
-      throw new Error("db query requires --sql <sql>");
-    }
-    printJson(queryDatabase({ dbFile: options.db, sql: options.sql }));
-    return;
-  }
-
-  throw new Error(`Unknown db command: ${subcommand ?? ""}`);
-}
-
 async function commandStats(argv) {
   const subcommand = argv[0];
   const options = parseOptions(argv.slice(1), { db: "mydb.db" });
