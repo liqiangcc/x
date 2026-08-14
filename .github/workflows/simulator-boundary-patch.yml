@@ -1,0 +1,83 @@
+name: simulator-boundary-patch
+
+on:
+  push:
+    branches:
+      - refactor/cli-simulator-boundary
+    paths:
+      - .github/workflows/simulator-boundary-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: bin/x
+          sparse-checkout-cone-mode: false
+
+      - name: Patch simulator CLI boundary
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          text = path.read_text()
+
+          import_line = 'const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");\n'
+          import_anchor = 'const { createStatsCommand } = require("../src/adapters/cli/commands/stats");\n'
+          if import_line not in text:
+              assert text.count(import_anchor) == 1, "simulator import anchor drifted"
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          binding = '''const commandSimulator = createSimulatorCommand({
+            root: ROOT,
+            klineDir: DEFAULT_KLINE_DIR,
+            poolDir: DEFAULT_POOL_DIR,
+            universeDir: DEFAULT_UNIVERSE_DIR,
+          });
+          '''
+          binding_anchor = 'const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");\n'
+          if binding not in text:
+              assert text.count(binding_anchor) == 1, "simulator binding anchor drifted"
+              text = text.replace(binding_anchor, binding_anchor + binding, 1)
+
+          start_marker = '\nasync function commandSimulator(argv) {'
+          end_marker = '\nasync function main() {'
+          if start_marker in text:
+              start = text.index(start_marker)
+              end = text.index(end_marker, start)
+              text = text[:start] + '\n' + text[end:]
+
+          assert text.count(import_line) == 1, "simulator import must appear exactly once"
+          assert text.count('const commandSimulator = createSimulatorCommand({') == 1, "simulator binding must appear exactly once"
+          assert 'async function commandSimulator(argv)' not in text, "legacy commandSimulator still present"
+          assert text.count('async function main() {') == 1, "main anchor changed"
+
+          path.write_text(text)
+          PY
+
+          changed="$(git diff --name-only)"
+          if [ -n "$changed" ] && [ "$changed" != "bin/x" ]; then
+            echo "unexpected changed files: $changed" >&2
+            exit 1
+          fi
+          node --check bin/x
+
+      - name: Commit exact patch
+        shell: bash
+        run: |
+          if git diff --quiet -- bin/x; then
+            echo "bin/x already patched"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git commit -m "refactor(simulator): delegate CLI command through adapter"
+          git push origin HEAD:refactor/cli-simulator-boundary
