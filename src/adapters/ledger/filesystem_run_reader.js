@@ -5,7 +5,6 @@ const path = require("node:path");
 
 const ARTIFACT_FILES = Object.freeze({
   failures: "failures.json",
-  quality: "quality.json",
   run: "run.json",
 });
 
@@ -21,10 +20,10 @@ function isInside(rootDir, targetDir) {
   return targetDir.startsWith(`${rootDir}${path.sep}`);
 }
 
-function artifactPath(runsDir, runId, artifact) {
-  const fileName = ARTIFACT_FILES[artifact];
-  if (!fileName) {
-    throw new TypeError(`Unsupported run artifact: ${artifact}`);
+function runFilePath(runsDir, runId, fileName) {
+  const name = String(fileName ?? "");
+  if (!name || path.basename(name) !== name) {
+    throw new TypeError("run file name must be a basename.");
   }
 
   const resolvedRunsDir = path.resolve(runsDir);
@@ -32,7 +31,15 @@ function artifactPath(runsDir, runId, artifact) {
   if (!isInside(resolvedRunsDir, runDir)) {
     throw new TypeError("runId resolves outside runsDir.");
   }
-  return path.join(runDir, fileName);
+  return path.join(runDir, name);
+}
+
+function artifactPath(runsDir, runId, artifact) {
+  const fileName = ARTIFACT_FILES[artifact];
+  if (!fileName) {
+    throw new TypeError(`Unsupported run artifact: ${artifact}`);
+  }
+  return runFilePath(runsDir, runId, fileName);
 }
 
 async function assertRealRunDirInsideRunsDir(runsDir, runDir) {
@@ -46,8 +53,24 @@ async function assertRealRunDirInsideRunsDir(runsDir, runDir) {
   return realRunDir;
 }
 
+function createFilesystemRunFileReader({ runsDir } = {}) {
+  const resolvedRunsDir = assertRunsDir(runsDir);
+
+  return {
+    async readFile({ runId, fileName } = {}) {
+      const lexicalPath = runFilePath(resolvedRunsDir, runId, fileName);
+      const realRunDir = await assertRealRunDirInsideRunsDir(
+        resolvedRunsDir,
+        path.dirname(lexicalPath)
+      );
+      return fs.readFile(path.join(realRunDir, path.basename(lexicalPath)), "utf8");
+    },
+  };
+}
+
 function createFilesystemRunReader({ runsDir } = {}) {
   const resolvedRunsDir = assertRunsDir(runsDir);
+  const fileReader = createFilesystemRunFileReader({ runsDir: resolvedRunsDir });
 
   return {
     async listRunIds() {
@@ -60,12 +83,11 @@ function createFilesystemRunReader({ runsDir } = {}) {
     },
 
     async readArtifact({ runId, artifact } = {}) {
-      const lexicalPath = artifactPath(resolvedRunsDir, runId, artifact);
-      const realRunDir = await assertRealRunDirInsideRunsDir(
-        resolvedRunsDir,
-        path.dirname(lexicalPath)
-      );
-      return fs.readFile(path.join(realRunDir, path.basename(lexicalPath)), "utf8");
+      const fileName = ARTIFACT_FILES[artifact];
+      if (!fileName) {
+        throw new TypeError(`Unsupported run artifact: ${artifact}`);
+      }
+      return fileReader.readFile({ runId, fileName });
     },
   };
 }
@@ -73,6 +95,8 @@ function createFilesystemRunReader({ runsDir } = {}) {
 module.exports = {
   ARTIFACT_FILES,
   artifactPath,
+  createFilesystemRunFileReader,
   createFilesystemRunReader,
   isInside,
+  runFilePath,
 };
