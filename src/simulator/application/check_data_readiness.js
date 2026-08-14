@@ -24,12 +24,12 @@ class CheckSimulatorDataReadinessUseCase {
       dataMode: "legacy_approximate",
       qualityIssues: [
         ...new Set([
-          ...(universe.qualityIssues ?? []),
-          ...(calendar.qualityIssues ?? []),
+          ...universe.qualityIssues,
+          ...calendar.qualityIssues,
         ]),
       ].sort(),
-      tradingDateCount: (calendar.dates ?? []).length,
-      universeCount: (universe.securities ?? []).length,
+      tradingDateCount: calendar.dates.length,
+      universeCount: universe.securities.length,
       universeSource: universe.source,
     };
   }
