@@ -1,0 +1,93 @@
+name: DB Boundary Patch
+
+on:
+  push:
+    paths:
+      - .github/workflows/db-boundary-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-db-boundary
+
+      - name: Patch db delegation only
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          path = Path("bin/x")
+          text = path.read_text()
+
+          import_anchor = 'const { createRunCommand } = require("../src/adapters/cli/commands/run");\n'
+          import_line = 'const { createDbCommand } = require("../src/adapters/cli/commands/db");\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit("db import anchor not found")
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          binding_anchor = 'const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });\n'
+          binding_line = 'const commandDb = createDbCommand();\n'
+          if binding_line not in text:
+              if binding_anchor not in text:
+                  raise SystemExit("db binding anchor not found")
+              text = text.replace(binding_anchor, binding_anchor + binding_line, 1)
+
+          legacy = textwrap.dedent('''
+          async function commandDb(argv) {
+            const subcommand = argv[0];
+            const options = parseOptions(argv.slice(1), {
+              db: "db/stocks.db",
+              schema: "db/database_schema.sql",
+            });
+            const { initDatabase, queryDatabase } = require("./../src/db/sqlite");
+
+            if (subcommand === "init") {
+              printJson(initDatabase({ dbFile: options.db, schemaFile: options.schema }));
+              return;
+            }
+
+            if (subcommand === "query") {
+              if (!options.sql) {
+                throw new Error("db query requires --sql <sql>");
+              }
+              printJson(queryDatabase({ dbFile: options.db, sql: options.sql }));
+              return;
+            }
+
+            throw new Error(`Unknown db command: ${subcommand ?? ""}`);
+          }
+
+          ''')
+          if legacy in text:
+              text = text.replace(legacy, "", 1)
+          elif "async function commandDb(" in text:
+              raise SystemExit("legacy db function shape changed; refusing broad patch")
+
+          path.write_text(text)
+          PY
+
+      - name: Verify scoped diff
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "bin/x"
+          grep -q 'createDbCommand' bin/x
+          grep -q 'const commandDb = createDbCommand' bin/x
+          ! grep -q 'async function commandDb' bin/x
+          node --check bin/x
+
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bin/x
+          git commit -m 'refactor(db): delegate CLI command through adapter'
+          git push origin HEAD:refactor/cli-db-boundary
