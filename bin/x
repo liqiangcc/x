@@ -2183,7 +2183,9 @@ async function commandReport(argv) {
 
 function printJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-}async function commandProxy(argv) {
+}
+
+async function commandProxy(argv) {
   const subcommand = argv[0];
   if (subcommand === "pool") {
     await commandProxyPool(argv.slice(1));
