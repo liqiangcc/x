@@ -80,14 +80,27 @@ test("run command preserves the legacy missing-run-id error contract", async () 
   );
 });
 
-test("createRunCommand accepts explicit use cases without constructing filesystem dependencies", async () => {
+test("createRunCommand composes separate narrow run readers without filesystem dependencies", async () => {
   const output = captureWriter();
+  const reads = [];
   const command = createRunCommand({
-    listRunsUseCase: { async execute() { return ["run-a"]; } },
-    readRunArtifactUseCase: { async execute() { return ""; } },
+    runListReader: {
+      async listRunIds() {
+        return ["run-b", "run-a"];
+      },
+    },
+    runArtifactReader: {
+      async readArtifact(input) {
+        reads.push(input);
+        return "artifact\n";
+      },
+    },
     stdout: output.stream,
   });
 
   await command(["list"]);
-  assert.equal(output.value(), "run-a\n");
+  await command(["show", "run-a"]);
+
+  assert.equal(output.value(), "run-a\nrun-b\nartifact\n");
+  assert.deepEqual(reads, [{ artifact: "run", runId: "run-a" }]);
 });
