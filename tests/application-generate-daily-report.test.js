@@ -27,38 +27,26 @@ test("GenerateDailyReportUseCase orchestrates signal calculation and report writ
     },
   });
 
-  const result = await useCase.execute({
-    date: "20260701",
-    klineDir: "/tmp/kline",
-    outputDir: "/tmp/reports",
-    poolDir: "/tmp/pool",
-  });
+  const result = await useCase.execute({ date: "20260701" });
 
   assert.equal(result, expected);
   assert.deepEqual(calls, [
     {
       kind: "signals",
-      input: {
-        date: "20260701",
-        klineDir: "/tmp/kline",
-        poolDir: "/tmp/pool",
-      },
+      input: { date: "20260701" },
     },
     {
       kind: "write",
-      input: {
-        ...signalReport,
-        outputDir: "/tmp/reports",
-      },
+      input: signalReport,
     },
   ]);
 });
 
-test("GenerateDailyReportUseCase keeps storage defaults outside the application request", async () => {
-  const calls = [];
+test("GenerateDailyReportUseCase exposes only the business request and no storage paths", async () => {
+  const seen = [];
   const useCase = new GenerateDailyReportUseCase({
     async runSignals(input) {
-      calls.push(input);
+      seen.push(input);
       return {
         candidates: [],
         date: input.date,
@@ -67,15 +55,18 @@ test("GenerateDailyReportUseCase keeps storage defaults outside the application 
       };
     },
     async writeReport(input) {
-      calls.push(input);
+      seen.push(input);
       return input;
     },
   });
 
   await useCase.execute({ date: "20260701" });
 
-  assert.deepEqual(calls[0], { date: "20260701" });
-  assert.equal(Object.hasOwn(calls[1], "outputDir"), false);
+  assert.deepEqual(seen[0], { date: "20260701" });
+  assert.deepEqual(Object.keys(seen[0]), ["date"]);
+  assert.equal(Object.hasOwn(seen[1], "klineDir"), false);
+  assert.equal(Object.hasOwn(seen[1], "poolDir"), false);
+  assert.equal(Object.hasOwn(seen[1], "outputDir"), false);
 });
 
 test("GenerateDailyReportUseCase validates its application contract before invoking dependencies", async () => {
