@@ -1,6 +1,6 @@
 "use strict";
 
-const { assertSqlExecutor } = require("../../ports/database/sql_database");
+const { assertSqlRowReader } = require("../../ports/database/sql_database");
 const {
   buildNewHighsQuery,
   buildYearlyPositiveQuery,
@@ -14,29 +14,29 @@ function assertRows(value, operation) {
 }
 
 class QueryYearlyPositiveUseCase {
-  constructor({ sqlExecutor } = {}) {
-    this.sqlExecutor = assertSqlExecutor(sqlExecutor);
+  constructor({ sqlRowReader } = {}) {
+    this.sqlRowReader = assertSqlRowReader(sqlRowReader);
   }
 
   execute({ dbFile, metricColumn, stockCode = null } = {}) {
     const query = buildYearlyPositiveQuery({ metricColumn, stockCode });
     return assertRows(
-      this.sqlExecutor.execute({ dbFile, ...query }),
-      "sqlExecutor.execute()"
+      this.sqlRowReader.queryRows({ dbFile, ...query }),
+      "sqlRowReader.queryRows()"
     );
   }
 }
 
 class QueryNewHighsUseCase {
-  constructor({ sqlExecutor } = {}) {
-    this.sqlExecutor = assertSqlExecutor(sqlExecutor);
+  constructor({ sqlRowReader } = {}) {
+    this.sqlRowReader = assertSqlRowReader(sqlRowReader);
   }
 
   execute({ dbFile, year = null, date = null } = {}) {
     const query = buildNewHighsQuery({ year, date });
     return assertRows(
-      this.sqlExecutor.execute({ dbFile, ...query }),
-      "sqlExecutor.execute()"
+      this.sqlRowReader.queryRows({ dbFile, ...query }),
+      "sqlRowReader.queryRows()"
     );
   }
 }
