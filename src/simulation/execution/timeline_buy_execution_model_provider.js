@@ -23,6 +23,14 @@ function normalizeIsoDate(value, field = "date") {
   return normalized;
 }
 
+function normalizeRevisionId(value, field) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) {
+    throw new TypeError(`${field} must be a non-empty string.`);
+  }
+  return normalized;
+}
+
 function normalizeTimelineSegments(segments) {
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new TypeError("segments must be a non-empty array.");
@@ -38,11 +46,32 @@ function normalizeTimelineSegments(segments) {
       throw new TypeError("segments must be strictly ordered and non-overlapping.");
     }
     previousEnd = endDate;
-    return Object.freeze({
+
+    const hasRevisionId = segment?.revisionId !== undefined && segment?.revisionId !== null;
+    const hasExecutionProfile =
+      segment?.executionProfile !== undefined && segment?.executionProfile !== null;
+    if (hasRevisionId !== hasExecutionProfile) {
+      throw new TypeError(
+        `segments[${index}] must provide revisionId and executionProfile together.`
+      );
+    }
+
+    const normalized = {
       startDate,
       endDate,
       profileId: normalizeBuyExecutionModelId(segment?.profileId),
-    });
+    };
+    if (hasRevisionId) {
+      if (typeof segment.executionProfile !== "object" || Array.isArray(segment.executionProfile)) {
+        throw new TypeError(`segments[${index}].executionProfile must be an object.`);
+      }
+      normalized.revisionId = normalizeRevisionId(
+        segment.revisionId,
+        `segments[${index}].revisionId`
+      );
+      normalized.executionProfile = segment.executionProfile;
+    }
+    return Object.freeze(normalized);
   }));
 }
 
@@ -55,6 +84,11 @@ function findTimelineSegment(segments, date) {
     throw new Error(`execution profile timeline does not cover ${normalizedDate}.`);
   }
   return segment;
+}
+
+function executionModelCacheKey(segment) {
+  if (!segment.revisionId) return segment.profileId;
+  return JSON.stringify([segment.profileId, segment.revisionId]);
 }
 
 class TimelineBuyExecutionModelProvider {
@@ -77,13 +111,19 @@ class TimelineBuyExecutionModelProvider {
     const timing = resolveNextExecutionBar(bars, signalDate);
     const effectiveDate = timing.bar?.date ?? timing.signalDate;
     const segment = findTimelineSegment(this.segments, effectiveDate);
-    if (!this.models.has(segment.profileId)) {
-      this.models.set(segment.profileId, this.executionModelResolver.resolve({
+    const cacheKey = executionModelCacheKey(segment);
+    if (!this.models.has(cacheKey)) {
+      const request = {
         model: segment.profileId,
         executionConfig: this.executionConfig,
-      }));
+      };
+      if (segment.executionProfile) {
+        request.executionProfile = segment.executionProfile;
+        request.assumptionRevisionId = segment.revisionId;
+      }
+      this.models.set(cacheKey, this.executionModelResolver.resolve(request));
     }
-    return this.models.get(segment.profileId);
+    return this.models.get(cacheKey);
   }
 }
 
