@@ -8,6 +8,7 @@ const { promisify } = require("node:util");
 const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
+const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const {
   AWS_ACCESS_KEY_SECRET,
   AWS_REGION_VARIABLE,
@@ -64,6 +65,7 @@ const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const commandDb = createDbCommand();
+const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const DEFAULT_JOBS_DIR = path.join(ROOT, "data", "jobs");
 const DEFAULT_ROUTER_PROBE_ATTEMPTS = "1";
@@ -2181,37 +2183,7 @@ async function commandReport(argv) {
 
 function printJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-}
-async function commandStats(argv) {
-  const subcommand = argv[0];
-  const options = parseOptions(argv.slice(1), { db: "mydb.db" });
-  const { analyzeNewHighs, yearlyPositivePct } = require("./../src/stats/statistics");
-
-  if (subcommand === "yearly-positive") {
-    if (!options.metricColumn) {
-      throw new Error("stats yearly-positive requires --metric-column <column>");
-    }
-    printJson(yearlyPositivePct({
-      dbFile: options.db,
-      metricColumn: options.metricColumn,
-      stockCode: options.stockCode ?? null,
-    }));
-    return;
-  }
-
-  if (subcommand === "new-highs") {
-    printJson(analyzeNewHighs({
-      dbFile: options.db,
-      year: options.year ?? null,
-      date: options.date ?? null,
-    }));
-    return;
-  }
-
-  throw new Error(`Unknown stats command: ${subcommand ?? ""}`);
-}
-
-async function commandProxy(argv) {
+}async function commandProxy(argv) {
   const subcommand = argv[0];
   if (subcommand === "pool") {
     await commandProxyPool(argv.slice(1));
