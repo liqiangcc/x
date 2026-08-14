@@ -15,7 +15,7 @@ const SIMULATOR_USAGE = `Usage:
 The simulator reuses data/universe, data/pool and data/kline without modifying them.`;
 
 function parseSimulatorOptions(argv, defaults = {}) {
-  return parseCliOptions(argv, { defaults });
+  return parseCliOptions(argv, defaults);
 }
 
 async function runSimulatorCommand({
