@@ -20,7 +20,7 @@ test("ListRunsUseCase returns deterministic unique run ids with only the list po
   assert.deepEqual(await useCase.execute(), ["run-a", "run-b"]);
 });
 
-test("ReadRunArtifactUseCase delegates normalized inputs with only the artifact port", async () => {
+test("ReadRunArtifactUseCase delegates opaque run ids with only the artifact port", async () => {
   const calls = [];
   const useCase = new ReadRunArtifactUseCase({
     runReader: {
@@ -31,12 +31,12 @@ test("ReadRunArtifactUseCase delegates normalized inputs with only the artifact 
     },
   });
 
-  const content = await useCase.execute({ artifact: "run", runId: " 20260814T120000Z_daily " });
+  const content = await useCase.execute({ artifact: "run", runId: "nested/run-id" });
   assert.equal(content, "{\"status\":\"completed\"}\n");
-  assert.deepEqual(calls, [{ artifact: "run", runId: "20260814T120000Z_daily" }]);
+  assert.deepEqual(calls, [{ artifact: "run", runId: "nested/run-id" }]);
 });
 
-test("ReadRunArtifactUseCase rejects unsupported artifacts and path traversal before IO", async () => {
+test("ReadRunArtifactUseCase rejects unsupported application artifacts before IO", async () => {
   let called = false;
   const useCase = new ReadRunArtifactUseCase({
     runReader: {
@@ -51,14 +51,10 @@ test("ReadRunArtifactUseCase rejects unsupported artifacts and path traversal be
     () => useCase.execute({ artifact: "quality", runId: "run-a" }),
     /artifact must be one of/
   );
-  await assert.rejects(
-    () => useCase.execute({ artifact: "run", runId: "../outside" }),
-    /unsupported path characters/
-  );
   assert.equal(called, false);
 });
 
-test("run reader contracts are narrow and run id normalization is explicit", () => {
+test("run reader contracts are narrow and run ids remain opaque to Application", () => {
   assert.throws(() => new ListRunsUseCase(), /runListReader implementation/);
   assert.throws(
     () => new ListRunsUseCase({ runReader: { readArtifact() {} } }),
@@ -75,6 +71,6 @@ test("run reader contracts are narrow and run id normalization is explicit", () 
   assert.doesNotThrow(
     () => new ReadRunArtifactUseCase({ runReader: { readArtifact() { return ""; } } })
   );
-  assert.equal(normalizeRunId("run-1"), "run-1");
+  assert.equal(normalizeRunId("nested/run-id"), "nested/run-id");
   assert.throws(() => normalizeRunId(""), /required/);
 });
