@@ -24,6 +24,24 @@ function normalizeExecutionBars(bars) {
   });
 }
 
+function resolveNextExecutionBar(bars, signalDate) {
+  if (!Array.isArray(bars)) throw new TypeError("bars must be an array.");
+  const normalizedSignalDate = String(signalDate ?? "");
+  const signalIndex = bars.findIndex(
+    (bar) => String(bar?.date ?? "") === normalizedSignalDate
+  );
+  if (signalIndex < 0) {
+    throw new TypeError(`No Kline bar is available for signal date ${normalizedSignalDate}.`);
+  }
+  const executionIndex = signalIndex + 1;
+  return Object.freeze({
+    signalDate: normalizedSignalDate,
+    signalIndex,
+    executionIndex,
+    bar: bars[executionIndex] ?? null,
+  });
+}
+
 function skippedBuyExecutionResult({
   status,
   reason,
@@ -55,5 +73,6 @@ module.exports = {
   nonNegativeMoney,
   normalizeExecutionBars,
   positiveMoney,
+  resolveNextExecutionBar,
   skippedBuyExecutionResult,
 };

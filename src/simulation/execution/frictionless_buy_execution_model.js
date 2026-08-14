@@ -5,6 +5,7 @@ const {
   nonNegativeMoney,
   normalizeExecutionBars,
   positiveMoney,
+  resolveNextExecutionBar,
   skippedBuyExecutionResult,
 } = require("./execution_model_support");
 
@@ -53,11 +54,9 @@ function createFrictionlessBuyExecutionModel({ executionConfig = {} } = {}) {
       const budget = positiveMoney(Number(requestedBudget), "requestedBudget");
       const availableCash = nonNegativeMoney(Number(cashAvailable), "cashAvailable");
       const effectiveBudget = Math.min(budget, availableCash);
-      const normalizedSignalDate = String(signalDate ?? "");
-      const signalIndex = rows.findIndex((bar) => bar.date === normalizedSignalDate);
-      if (signalIndex < 0) throw new TypeError(`No Kline bar is available for signal date ${normalizedSignalDate}.`);
-
-      const bar = rows[signalIndex + 1] ?? null;
+      const timing = resolveNextExecutionBar(rows, signalDate);
+      const normalizedSignalDate = timing.signalDate;
+      const bar = timing.bar;
       if (!bar) {
         return skippedBuyExecutionResult({
           status: "skipped_no_execution_bar",

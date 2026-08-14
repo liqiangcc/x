@@ -7,6 +7,9 @@ const { assertBuyExecutionModel } = require("../../ports/simulation/buy_executio
 const {
   assertBuyExecutionModelProvider,
 } = require("../../ports/simulation/buy_execution_model_provider");
+const {
+  resolveNextExecutionBar,
+} = require("../execution/execution_model_support");
 
 const PRICE_FIELDS = Object.freeze(["open", "close", "high", "low"]);
 
@@ -75,6 +78,11 @@ function describeUsedModel(target, model) {
   if (!target.has(key)) target.set(key, Object.freeze({ ...description }));
 }
 
+function resolveProviderDate(rows, signalDate) {
+  const timing = resolveNextExecutionBar(rows, signalDate);
+  return timing.bar?.date ?? timing.signalDate;
+}
+
 function simulateBuyOrders({
   bars,
   orders,
@@ -100,7 +108,9 @@ function simulateBuyOrders({
   for (const [index, order] of normalizedOrders.entries()) {
     const selectedExecutionModel = executionSelection.executionModel
       ?? assertBuyExecutionModel(
-        executionSelection.executionModelProvider.resolveForDate({ date: order.date })
+        executionSelection.executionModelProvider.resolveForDate({
+          date: resolveProviderDate(rows, order.date),
+        })
       );
     describeUsedModel(usedExecutionModels, selectedExecutionModel);
     const execution = selectedExecutionModel.executeBuy({
@@ -184,5 +194,6 @@ module.exports = {
   normalizeExecutionSelection,
   normalizeOrders,
   normalizePriceField,
+  resolveProviderDate,
   simulateBuyOrders,
 };
