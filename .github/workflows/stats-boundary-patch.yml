@@ -12,10 +12,13 @@ jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
+      - name: Checkout bin only
         uses: actions/checkout@v4
         with:
           ref: refactor/cli-stats-boundary
+          filter: blob:none
+          sparse-checkout: bin/x
+          sparse-checkout-cone-mode: false
 
       - name: Patch stats delegation only
         run: |
@@ -79,20 +82,25 @@ jobs:
           path.write_text(text)
           PY
 
-      - name: Verify scoped diff
+      - name: Verify scoped result
         run: |
           git diff --check
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = "bin/x"
+          changed="$(git diff --name-only)"
+          if [ -n "$changed" ]; then
+            test "$changed" = "bin/x"
+          fi
           grep -q 'createStatsCommand' bin/x
           grep -q 'const commandStats = createStatsCommand' bin/x
           ! grep -q 'async function commandStats' bin/x
           node --check bin/x
 
-      - name: Commit patch
+      - name: Commit patch if needed
         run: |
+          git add bin/x
+          if git diff --cached --quiet; then
+            exit 0
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add bin/x
           git commit -m 'refactor(stats): delegate CLI command through adapter'
           git push origin HEAD:refactor/cli-stats-boundary
