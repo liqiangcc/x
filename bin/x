@@ -387,11 +387,11 @@ async function commandAws(argv) {
     return;
   }
   if (subcommand === "latency") {
-  await commandAwsLatency(argv.slice(1));
-  return;
-}
+    await commandAwsLatency(argv.slice(1));
+    return;
+  }
   parseOptions(argv.slice(1));
-throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
+  throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
 }
 
 async function commandKlineFetch(argv) {
