@@ -7,6 +7,9 @@ const {
   normalizeBuyExecutionModelId,
 } = require("../../ports/simulation/buy_execution_model_resolver");
 const {
+  assertExecutionProfile,
+} = require("../../ports/simulation/execution_profile");
+const {
   DEFAULT_EXECUTION_PROFILE_CATALOG,
 } = require("./execution_profile_catalog");
 const { createFrictionlessBuyExecutionModel } = require("./frictionless_buy_execution_model");
@@ -35,6 +38,18 @@ function normalizeFactories(factories) {
   return factories;
 }
 
+function normalizeResolvedExecutionProfile({ model, executionProfile } = {}) {
+  if (executionProfile === undefined) return null;
+  if (model === "frictionless") {
+    throw new TypeError("executionProfile cannot be provided for frictionless execution.");
+  }
+  const profile = assertExecutionProfile(executionProfile);
+  if (profile.id !== model) {
+    throw new TypeError(`executionProfile.id must match executionModel: ${model}.`);
+  }
+  return profile;
+}
+
 function assertModelCoverage({ profileCatalog, factories }) {
   for (const id of BUY_EXECUTION_MODEL_IDS) {
     if (profileCatalog.get(id)) continue;
@@ -55,9 +70,23 @@ function createBuyExecutionModelResolver({
   return Object.freeze({
     resolve({
       model = DEFAULT_BUY_EXECUTION_MODEL_ID,
+      executionProfile,
       executionConfig = {},
     } = {}) {
       const normalizedModel = normalizeBuyExecutionModelId(model);
+      const resolvedExecutionProfile = normalizeResolvedExecutionProfile({
+        model: normalizedModel,
+        executionProfile,
+      });
+      if (resolvedExecutionProfile) {
+        return assertBuyExecutionModel(
+          createProfiledBuyExecutionModel({
+            profile: resolvedExecutionProfile,
+            executionConfig,
+          })
+        );
+      }
+
       const profile = resolvedProfileCatalog.get(normalizedModel);
       if (profile) {
         return assertBuyExecutionModel(
@@ -77,4 +106,5 @@ module.exports = {
   createBuyExecutionModelResolver,
   normalizeFactories,
   normalizeProfileCatalog,
+  normalizeResolvedExecutionProfile,
 };
