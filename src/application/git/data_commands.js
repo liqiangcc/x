@@ -17,7 +17,7 @@ const DEFAULT_DATA_STATUS_CANDIDATES = Object.freeze([
 ]);
 
 function normalizeRunId(value) {
-  const runId = String(value ?? "").trim();
+  const runId = String(value ?? "");
   if (!runId) throw new TypeError("runId is required.");
   return runId;
 }
