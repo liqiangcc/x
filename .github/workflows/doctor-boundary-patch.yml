@@ -1,0 +1,96 @@
+name: Doctor Boundary Patch
+
+on:
+  push:
+    paths:
+      - .github/workflows/doctor-boundary-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-doctor-boundary
+
+      - name: Patch doctor delegation only
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          text = path.read_text()
+
+          import_anchor = 'const { promisify } = require("node:util");\n'
+          import_line = 'const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit("doctor import anchor not found")
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          root_anchor = 'const ROOT = path.resolve(__dirname, "..");\n'
+          binding_line = 'const commandDoctor = createDoctorCommand({ cwd: ROOT });\n'
+          if binding_line not in text:
+              if root_anchor not in text:
+                  raise SystemExit("ROOT anchor not found")
+              text = text.replace(root_anchor, root_anchor + binding_line, 1)
+
+          legacy = '''async function commandDoctor() {
+            const checks = [
+              ["node", ["--version"]],
+              ["git", ["--version"]],
+            ];
+
+            let failed = 0;
+            for (const [command, args] of checks) {
+              try {
+                const { stdout } = await execFileAsync(command, args, { cwd: ROOT });
+                console.log(`${command}: ${(stdout.split("\\n")[0] || "ok").trim()}`);
+              } catch (error) {
+                failed += 1;
+                console.error(`${command}: missing or failed (${error.message})`);
+              }
+            }
+
+            const major = Number(process.versions.node.split(".")[0]);
+            if (major < 22) {
+              console.error(`node: v${process.versions.node} detected; Node 22+ is required for SQLite commands.`);
+            }
+
+            if (failed > 0) {
+              process.exitCode = 1;
+            }
+          }
+
+          '''
+          # Dedent the exact source block because the triple-quoted literal above is indented in this script.
+          import textwrap
+          legacy = textwrap.dedent(legacy)
+          if legacy in text:
+              text = text.replace(legacy, "", 1)
+          elif "async function commandDoctor()" in text:
+              raise SystemExit("legacy doctor function shape changed; refusing broad patch")
+
+          path.write_text(text)
+          PY
+
+      - name: Verify scoped diff
+        run: |
+          git diff --check
+          git diff -- bin/x
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "bin/x"
+          grep -q 'createDoctorCommand' bin/x
+          ! grep -q 'async function commandDoctor' bin/x
+
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bin/x
+          git commit -m 'refactor(doctor): delegate CLI command through adapter'
+          git push origin HEAD:refactor/cli-doctor-boundary
