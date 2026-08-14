@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "revisions": [
+    {
+      "revisionId": "legacy_a_share.2008-09-19.2011-02-27",
+      "profileId": "legacy_a_share",
+      "effectiveFrom": "2008-09-19",
+      "effectiveTo": "2011-02-27",
+      "profile": {
+        "id": "legacy_a_share",
+        "assetClass": "a_share",
+        "kind": "legacy_a_share_next_open",
+        "ruleApproximation": "historical_exchange_tax_evidence_with_simulation_cost_defaults",
+        "settlement": {
+          "sharesAvailable": "next_trading_day"
+        },
+        "lotRules": {
+          "buyLotSize": 100
+        },
+        "priceRules": {
+          "tickSize": 0.01
+        },
+        "feeRules": {
+          "stampDutyRate": 0.001
+        },
+        "restrictionRules": {
+          "kind": "a_share_market"
+        },
+        "qualityIssues": [
+          "broker_commission_uses_simulation_default",
+          "minimum_commission_uses_simulation_default",
+          "slippage_uses_simulation_default"
+        ]
+      },
+      "source": {
+        "provider": "repository_evidence_bundle",
+        "document": "docs/LEGACY_A_SHARE_REVISION_BOUNDARY_AUDIT.md",
+        "version": "4b5cb376df08c93325f6edec1b199a7ed2f23271",
+        "collectedAt": "2026-08-14T10:31:55Z"
+      },
+      "qualityIssues": []
+    }
+  ]
+}
