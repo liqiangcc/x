@@ -147,27 +147,40 @@ function createSimulatorCommand({
 
   function getCheckDataReadinessUseCase() {
     if (!resolvedCheckUseCase) {
-      const {
-        ExistingKlineRepository,
-      } = require("../../../simulator/adapters/ledger/existing_kline_repository");
-      const {
-        ExistingUniverseRepository,
-      } = require("../../../simulator/adapters/ledger/existing_universe");
-      const {
-        createLegacyTradingCalendarReader,
-      } = require("../../../simulator/adapters/ledger/legacy_trading_calendar_reader");
-      const resolvedMarketDataRepository = marketDataRepository ?? new ExistingKlineRepository({
-        klineRoot: klineDir,
-      });
-      resolvedCheckUseCase = new CheckSimulatorDataReadinessUseCase({
-        universeReader: universeReader ?? new ExistingUniverseRepository({
+      let resolvedUniverseReader = universeReader;
+      if (!resolvedUniverseReader) {
+        const {
+          ExistingUniverseRepository,
+        } = require("../../../simulator/adapters/ledger/existing_universe");
+        resolvedUniverseReader = new ExistingUniverseRepository({
           klineRoot: klineDir,
           poolRoot: poolDir,
           universeRoot: universeDir,
-        }),
-        tradingCalendarReader: tradingCalendarReader ?? createLegacyTradingCalendarReader({
+        });
+      }
+
+      let resolvedTradingCalendarReader = tradingCalendarReader;
+      if (!resolvedTradingCalendarReader) {
+        let resolvedMarketDataRepository = marketDataRepository;
+        if (!resolvedMarketDataRepository) {
+          const {
+            ExistingKlineRepository,
+          } = require("../../../simulator/adapters/ledger/existing_kline_repository");
+          resolvedMarketDataRepository = new ExistingKlineRepository({
+            klineRoot: klineDir,
+          });
+        }
+        const {
+          createLegacyTradingCalendarReader,
+        } = require("../../../simulator/adapters/ledger/legacy_trading_calendar_reader");
+        resolvedTradingCalendarReader = createLegacyTradingCalendarReader({
           marketDataRepository: resolvedMarketDataRepository,
-        }),
+        });
+      }
+
+      resolvedCheckUseCase = new CheckSimulatorDataReadinessUseCase({
+        universeReader: resolvedUniverseReader,
+        tradingCalendarReader: resolvedTradingCalendarReader,
       });
     }
     return resolvedCheckUseCase;
