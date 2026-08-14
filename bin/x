@@ -14,8 +14,8 @@ const { createGitDataCli } = require("../src/adapters/cli/commands/git");
 const { createBenchmarkCommand } = require("../src/adapters/cli/commands/benchmark");
 const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aws_probe_router");
 const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aws_maintenance");
+const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
 const {
-  formatLatencyReport,
   normalizeLatencyOptions,
   runLatencyBenchmark,
 } = require("../src/aws/latency");
@@ -56,6 +56,7 @@ const commitData = gitDataCli.commitData;
 const commandBenchmark = createBenchmarkCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandAwsProbeRouter = createAwsProbeRouterCommand();
 const commandAwsMaintenance = createAwsMaintenanceCommand({ root: ROOT });
+const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -374,26 +375,6 @@ async function resolveRouterRegionForDaily(options) {
 
 
 
-async function commandAwsLatency(rawOptions) {
-  const configFile = rawOptions.config ? rootPath(rawOptions.config) : path.join(ROOT, "config", "kline.json");
-  const config = await readJson(configFile, {});
-  const options = normalizeLatencyOptions(rawOptions, config);
-  const report = await runLatencyBenchmark(options);
-  const output = `${JSON.stringify(report, null, 2)}\n`;
-
-  if (rawOptions.output) {
-    const outputPath = rootPath(rawOptions.output);
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, output, "utf8");
-  }
-
-  if (rawOptions.json) {
-    process.stdout.write(output);
-    return;
-  }
-
-  process.stdout.write(formatLatencyReport(report));
-}
 
 async function commandAws(argv) {
   const subcommand = argv[0];
@@ -405,16 +386,11 @@ async function commandAws(argv) {
     await commandAwsMaintenance(argv);
     return;
   }
-  const options = parseOptions(argv.slice(1));
-
-
-
-
   if (subcommand === "latency") {
-    await commandAwsLatency(options);
+    await commandAwsLatency(argv.slice(1));
     return;
   }
-
+  parseOptions(argv.slice(1));
   throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
 }
 
