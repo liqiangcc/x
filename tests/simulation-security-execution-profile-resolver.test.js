@@ -115,7 +115,7 @@ test("security execution profile resolver fails closed for incomplete or contrad
   );
 });
 
-test("simulation application resolves security metadata at the normalized backtest end date before execution mechanics", async () => {
+test("simulation application resolves the full backtest execution-profile timeline before execution mechanics", async () => {
   const calls = [];
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
@@ -134,18 +134,35 @@ test("simulation application resolves security metadata at the normalized backte
         };
       },
     },
-    securityMetadataReader: {
-      async readMetadata(security, options) {
-        calls.push({ layer: "metadata", security, options });
-        return { instrumentType: "etf", intradayRoundTripEligible: true };
+    executionProfileTimelineResolver: {
+      async execute(input) {
+        calls.push({ layer: "timeline", input });
+        return {
+          security: input.security,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          segments: [{
+            startDate: input.startDate,
+            endDate: input.endDate,
+            profileId: "t0_etf",
+          }],
+          source: { kind: "test_timeline" },
+        };
       },
     },
-    securityExecutionProfileResolver: createSecurityExecutionProfileResolver(),
     executionModelResolver: {
       resolve(input) {
         calls.push({ layer: "execution", input });
         return { kind: input.model };
       },
+    },
+    buildExecutionModelProvider(input) {
+      calls.push({ layer: "provider", input });
+      return {
+        resolveForDate() {
+          return { kind: "t0_etf" };
+        },
+      };
     },
     buildPlan() {
       calls.push({ layer: "policy" });
@@ -162,18 +179,19 @@ test("simulation application resolves security metadata at the normalized backte
       };
     },
     simulatePortfolio(input) {
-      calls.push({ layer: "portfolio", executionModel: input.executionModel });
+      calls.push({
+        layer: "portfolio",
+        executionModel: input.executionModel,
+        executionModelProvider: input.executionModelProvider,
+      });
       return {
         trades: [],
         summary: { filledTradeCount: 0 },
         config: {
-          kind: input.executionModel.kind,
-          timing: "next_trading_day_open",
-          executionPriceField: "open",
-          lotSize: 100,
-          feesIncluded: true,
-          slippageIncluded: true,
-          marketRestrictionsIncluded: true,
+          priceField: "close",
+          signalPriceField: "close",
+          executionMode: "date_aware",
+          executionModels: [],
         },
       };
     },
@@ -188,29 +206,44 @@ test("simulation application resolves security metadata at the normalized backte
 
   assert.deepEqual(calls.map((call) => call.layer), [
     "market",
-    "metadata",
+    "timeline",
+    "provider",
     "policy",
-    "execution",
     "portfolio",
   ]);
-  assert.deepEqual(calls[1].security, { code: "513500", market: 1 });
-  assert.deepEqual(calls[1].options, { asOf: "2026-01-05" });
-  assert.deepEqual(calls[3].input, {
-    model: "t0_etf",
+  assert.deepEqual(calls[1].input, {
+    security: { code: "513500", market: 1 },
+    startDate: "2026-01-02",
+    endDate: "2026-01-05",
+  });
+  assert.deepEqual(calls[2].input, {
+    segments: [{
+      startDate: "2026-01-02",
+      endDate: "2026-01-05",
+      profileId: "t0_etf",
+    }],
     executionConfig: { lotSize: 100 },
   });
+  assert.equal(calls.some((call) => call.layer === "execution"), false);
+  assert.equal(calls[4].executionModel, undefined);
+  assert.equal(typeof calls[4].executionModelProvider.resolveForDate, "function");
   assert.equal(result.config.executionModel, "t0_etf");
-  assert.equal(result.config.executionModelSelection, "security_metadata");
+  assert.equal(result.config.executionModelSelection, "security_metadata_timeline");
   assert.deepEqual(result.meta.executionSelection, {
-    mode: "security_metadata",
+    mode: "security_metadata_timeline",
     profileId: "t0_etf",
-    securityMetadataSource: "reader",
+    securityMetadataSource: "timeline",
+    timeline: [{
+      startDate: "2026-01-02",
+      endDate: "2026-01-05",
+      profileId: "t0_etf",
+    }],
   });
 });
 
-test("simulation automatic profile selection fails closed when no metadata is effective at the backtest end date", async () => {
-  const metadataCalls = [];
-  let profileResolutions = 0;
+test("simulation automatic profile selection fails closed when temporal coverage is unavailable", async () => {
+  const timelineCalls = [];
+  let providerBuilds = 0;
   let executionResolutions = 0;
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
@@ -226,17 +259,17 @@ test("simulation automatic profile selection fails closed when no metadata is ef
         };
       },
     },
-    securityMetadataReader: {
-      async readMetadata(security, options) {
-        metadataCalls.push({ security, options });
-        return null;
+    executionProfileTimelineResolver: {
+      async execute(input) {
+        timelineCalls.push(input);
+        throw new Error(
+          "security master timeline does not fully cover the requested interval: 2025-06-01..2025-06-30"
+        );
       },
     },
-    securityExecutionProfileResolver: {
-      resolve() {
-        profileResolutions += 1;
-        return "t0_etf";
-      },
+    buildExecutionModelProvider() {
+      providerBuilds += 1;
+      return { resolveForDate() { return null; } };
     },
     executionModelResolver: {
       resolve() {
@@ -253,19 +286,21 @@ test("simulation automatic profile selection fails closed when no metadata is ef
       startDate: "2025-01-02",
       endDate: "2025-12-31",
     }),
-    /security metadata is required to resolve an execution profile automatically/
+    /security master timeline does not fully cover the requested interval/
   );
-  assert.deepEqual(metadataCalls, [{
+  assert.deepEqual(timelineCalls, [{
     security: { code: "513500", market: 1 },
-    options: { asOf: "2025-12-31" },
+    startDate: "2025-01-02",
+    endDate: "2025-12-31",
   }]);
-  assert.equal(profileResolutions, 0);
+  assert.equal(providerBuilds, 0);
   assert.equal(executionResolutions, 0);
 });
 
-test("explicit execution override bypasses security classification while preserving application orchestration", async () => {
-  let metadataReads = 0;
+test("explicit execution override bypasses temporal security classification while preserving application orchestration", async () => {
+  let timelineResolutions = 0;
   let profileResolutions = 0;
+  let providerBuilds = 0;
   const useCase = new SimulateDrawdownBuyingUseCase({
     klineReader: {
       async readRange() {
@@ -280,10 +315,10 @@ test("explicit execution override bypasses security classification while preserv
         };
       },
     },
-    securityMetadataReader: {
-      async readMetadata() {
-        metadataReads += 1;
-        return { instrumentType: "a_share" };
+    executionProfileTimelineResolver: {
+      async execute() {
+        timelineResolutions += 1;
+        return { segments: [] };
       },
     },
     securityExecutionProfileResolver: {
@@ -291,6 +326,10 @@ test("explicit execution override bypasses security classification while preserv
         profileResolutions += 1;
         return "legacy_a_share";
       },
+    },
+    buildExecutionModelProvider() {
+      providerBuilds += 1;
+      return { resolveForDate() { return null; } };
     },
     executionModelResolver: {
       resolve({ model }) {
@@ -312,8 +351,9 @@ test("explicit execution override bypasses security classification while preserv
     executionModel: "frictionless",
   });
 
-  assert.equal(metadataReads, 0);
+  assert.equal(timelineResolutions, 0);
   assert.equal(profileResolutions, 0);
+  assert.equal(providerBuilds, 0);
   assert.equal(result.config.executionModel, "frictionless");
   assert.equal(result.config.executionModelSelection, "explicit_override");
   assert.deepEqual(result.meta.executionSelection, {
