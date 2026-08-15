@@ -18,6 +18,7 @@ const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_la
 const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
 const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/proxy_pool_status");
+const { createProxyPoolRefreshGithubCommand } = require("../src/adapters/cli/commands/proxy_pool_refresh_github");
 const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
@@ -63,6 +64,7 @@ const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
+const commandProxyPoolRefreshGithub = createProxyPoolRefreshGithubCommand();
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -1968,6 +1970,10 @@ async function commandProxyPool(argv) {
     await commandProxyPoolStatus(argv.slice(1));
     return;
   }
+  if (action === "refresh-github") {
+    await commandProxyPoolRefreshGithub(argv.slice(1));
+    return;
+  }
   const options = parseOptions(argv.slice(1));
   if (action === "up") {
     await proxyCompose(["up", "-d", "--build"]);
@@ -1977,19 +1983,6 @@ async function commandProxyPool(argv) {
     await proxyCompose(["down"]);
     return;
   }
-  if (action === "refresh-github") {
-    const { GithubProxyRepositoryProvider } = require("./../src/proxy/providers/github_repository");
-    const provider = new GithubProxyRepositoryProvider({
-      filePath: options.path,
-      ref: options.ref,
-      repository: options.repository,
-      timeoutMs: parsePositiveOption(options.timeoutMs, "--timeout-ms", 5000),
-    });
-    const proxies = await provider.listCandidates();
-    printJson({ ok: true, ...provider.lastReport, candidate_count: proxies.length });
-    return;
-  }
-
   if (action === "diagnose") {
     const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
     const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
