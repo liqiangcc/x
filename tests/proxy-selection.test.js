@@ -1,11 +1,12 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs/promises");
-const os = require("node:os");
-const path = require("node:path");
 const test = require("node:test");
-const { selectHealthyProxies, writeSelectedProxies } = require("../src/proxy/selection");
+const {
+  buildProxySelectionReport,
+  retainPreviousProxySelection,
+  selectHealthyProxies,
+} = require("../src/proxy/selection");
 
 function entry(endpoint, samples, successRate, p95, ewma = p95) {
   return { proxy: { endpoint }, targets: { "eastmoney-kline": {
@@ -24,13 +25,39 @@ test("selectHealthyProxies filters thresholds and ranks reliability before laten
     .map((row) => row.endpoint), ["2.2.2.2:80", "1.1.1.1:80"]);
 });
 
-test("writeSelectedProxies retains previous non-empty list when no proxy qualifies", async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "proxy-select-"));
-  const stateFile = path.join(dir, "health.json");
-  const outputFile = path.join(dir, "selected.json");
-  await fs.writeFile(stateFile, JSON.stringify({ version: 2, proxies: {} }));
-  await fs.writeFile(outputFile, JSON.stringify({ proxies: [{ endpoint: "1.1.1.1:80" }] }));
-  const report = await writeSelectedProxies({ stateFile, outputFile });
-  assert.equal(report.retained_previous, true);
-  assert.equal(report.selected_count, 1);
+test("proxy selection report construction remains deterministic", () => {
+  const proxies = [{ endpoint: "1.1.1.1:80" }];
+  assert.deepEqual(buildProxySelectionReport({
+    generatedAt: "2026-08-15T00:00:00Z",
+    options: { minSamples: 6, minSuccessRate: 0.9, maxP95Ms: 2500, limit: 3 },
+    proxies,
+  }), {
+    generated_at: "2026-08-15T00:00:00Z",
+    target: "eastmoney-kline",
+    policy: {
+      min_samples: 6,
+      min_success_rate: 0.9,
+      max_p95_ms: 2500,
+      limit: 3,
+    },
+    selected_count: 1,
+    retained_previous: false,
+    proxies,
+  });
+});
+
+test("retaining a previous selection changes only retention metadata", () => {
+  const previous = {
+    generated_at: "2026-08-14T00:00:00Z",
+    target: "eastmoney-kline",
+    policy: { min_samples: 5 },
+    selected_count: 1,
+    retained_previous: false,
+    proxies: [{ endpoint: "1.1.1.1:80" }],
+  };
+  assert.deepEqual(retainPreviousProxySelection(previous), {
+    ...previous,
+    retained_previous: true,
+    selected_count: 1,
+  });
 });
