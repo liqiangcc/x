@@ -25,6 +25,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("bin/x")
           text = path.read_text()
@@ -41,37 +42,17 @@ jobs:
           assert "const commandProxyPoolStatus" not in text, "proxy status binding already present"
           text = text.replace(old, new, 1)
 
-          legacy = '''  if (action === "status") {
-            await proxyCompose(["ps"]);
-            const { fetchAllProxyCandidates } = require("./../src/proxy/pool");
-            try {
-              const candidates = await fetchAllProxyCandidates();
-              printJson({ ok: true, cn_candidates: candidates.length });
-            } catch (error) {
-              printJson({ ok: false, error: error.message, cn_candidates: 0 });
-              process.exitCode = 1;
-            }
-            return;
-          }
+          pattern = re.compile(
+              r'\n  if \(action === "status"\) \{\n'
+              r'    await proxyCompose\(\["ps"\]\);\n'
+              r'.*?\n  \}\n\n  if \(action === "refresh-github"\)',
+              re.S,
+          )
+          text, count = pattern.subn('\n  if (action === "refresh-github")', text, count=1)
+          assert count == 1, "legacy proxy status block changed"
 
-          '''.replace("          ", "")
-          assert text.count(legacy) == 1, "legacy proxy status block changed"
-          text = text.replace(legacy, "", 1)
-
-          old = '''  if (action === "select") {
-            await commandProxyPoolSelect(argv.slice(1));
-            return;
-          }
-          const options = parseOptions(argv.slice(1));'''.replace("          ", "")
-          new = '''  if (action === "select") {
-            await commandProxyPoolSelect(argv.slice(1));
-            return;
-          }
-          if (action === "status") {
-            await commandProxyPoolStatus(argv.slice(1));
-            return;
-          }
-          const options = parseOptions(argv.slice(1));'''.replace("          ", "")
+          old = '  if (action === "select") {\n    await commandProxyPoolSelect(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));'
+          new = '  if (action === "select") {\n    await commandProxyPoolSelect(argv.slice(1));\n    return;\n  }\n  if (action === "status") {\n    await commandProxyPoolStatus(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));'
           assert text.count(old) == 1, "commandProxyPool routing anchor changed"
           text = text.replace(old, new, 1)
 
