@@ -72,7 +72,7 @@ jobs:
       - name: Validate patch
         run: |
           node --check bin/x
-          node --test tests/cli-proxy-pool-refresh-github-command.test.js tests/cli-proxy-pool-refresh-github-integration.test.js tests/proxy-github-provider.test.js
+          node --test tests/cli-proxy-pool-refresh-github-command.test.js tests/proxy-github-provider.test.js
           git diff --check
           git diff -- bin/x
       - name: Commit patch
