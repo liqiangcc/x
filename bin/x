@@ -17,6 +17,7 @@ const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aw
 const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
 const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
+const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/proxy_pool_status");
 const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
@@ -61,6 +62,7 @@ const commandAwsMaintenance = createAwsMaintenanceCommand({ root: ROOT });
 const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
+const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -1962,6 +1964,10 @@ async function commandProxyPool(argv) {
     await commandProxyPoolSelect(argv.slice(1));
     return;
   }
+  if (action === "status") {
+    await commandProxyPoolStatus(argv.slice(1));
+    return;
+  }
   const options = parseOptions(argv.slice(1));
   if (action === "up") {
     await proxyCompose(["up", "-d", "--build"]);
@@ -1971,19 +1977,6 @@ async function commandProxyPool(argv) {
     await proxyCompose(["down"]);
     return;
   }
-  if (action === "status") {
-    await proxyCompose(["ps"]);
-    const { fetchAllProxyCandidates } = require("./../src/proxy/pool");
-    try {
-      const candidates = await fetchAllProxyCandidates();
-      printJson({ ok: true, cn_candidates: candidates.length });
-    } catch (error) {
-      printJson({ ok: false, error: error.message, cn_candidates: 0 });
-      process.exitCode = 1;
-    }
-    return;
-  }
-
   if (action === "refresh-github") {
     const { GithubProxyRepositoryProvider } = require("./../src/proxy/providers/github_repository");
     const provider = new GithubProxyRepositoryProvider({
