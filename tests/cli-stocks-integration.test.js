@@ -32,7 +32,7 @@ test("real CLI preserves stocks protocol errors without launching fetch script",
   }
 });
 
-test("bin/x delegates stocks while leaving codes build and daily orchestration scoped for later", async () => {
+test("bin/x delegates stocks and codes while leaving daily orchestration scoped independently", async () => {
   const source = await fs.readFile(BIN, "utf8");
 
   assert.match(source, /createStocksCommand/);
@@ -40,6 +40,7 @@ test("bin/x delegates stocks while leaving codes build and daily orchestration s
   assert.doesNotMatch(source, /async function commandStocks\(/);
   assert.doesNotMatch(source, /runNode\("fetch\/fetch_market_stocks\.js", args\)/);
 
-  assert.match(source, /async function commandCodesBuild\(/);
+  assert.match(source, /createCodesBuildCommand/);
+  assert.doesNotMatch(source, /async function commandCodesBuild\(/);
   assert.match(source, /runNodeAllowFailure\("fetch\/fetch_market_stocks\.js", \[/);
 });
