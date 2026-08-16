@@ -12,6 +12,7 @@ const { createPoolPullCommand } = require("../src/adapters/cli/commands/pool_pul
 const { createStocksCommand } = require("../src/adapters/cli/commands/stocks");
 const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_build");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
+const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -107,6 +108,7 @@ const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const commandStocks = createStocksCommand({ root: ROOT, outputDir: rel(DEFAULT_UNIVERSE_DIR) });
 const commandCodesBuild = createCodesBuildCommand({ root: ROOT });
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
+const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
   root: ROOT,
   klineDir: DEFAULT_KLINE_DIR,
@@ -510,88 +512,6 @@ async function commandKlineAggregateYearly(argv) {
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (result.failed > 0) process.exitCode = 1;
-}
-
-function extractRetryCodes(payload) {
-  if (Array.isArray(payload?.codes)) {
-    return [...new Set(payload.codes.map(String).filter(Boolean))].sort();
-  }
-
-  if (payload?.files && typeof payload.files === "object") {
-    return Object.entries(payload.files)
-      .filter(([, item]) => item?.status === "failed")
-      .map(([code, item]) => item?.code ?? code)
-      .filter(Boolean)
-      .sort();
-  }
-
-  if (Array.isArray(payload?.items)) {
-    return [...new Set(payload.items
-      .map((item) => item?.code ?? item?.target)
-      .filter(Boolean)
-      .map((value) => String(value).includes(".") ? String(value).split(".")[1] : String(value))
-    )].sort();
-  }
-
-  return [];
-}
-
-function inferKlineOutputDirFromSummary(summaryPath, period) {
-  const resolved = path.resolve(summaryPath);
-  if (path.basename(resolved) === `summary.${period}.json`) {
-    return path.dirname(path.dirname(resolved));
-  }
-  return "data/kline";
-}
-
-async function commandKlineRetry(argv) {
-  const options = parseOptions(argv, { engine: "aws" });
-  const inputPath = options._[0];
-  if (!inputPath) {
-    throw new Error("kline retry requires <summary.json|failures.json>");
-  }
-
-  const payload = await readJson(path.resolve(inputPath));
-  const codes = extractRetryCodes(payload);
-  if (codes.length === 0) {
-    throw new Error("No failed kline codes found to retry.");
-  }
-
-  const itemPeriod = Array.isArray(payload?.items)
-    ? payload.items.find((item) => item?.period)?.period
-    : null;
-  const period = options.period ?? payload.period ?? itemPeriod ?? "daily";
-  const outputDir = options.outputDir ?? inferKlineOutputDirFromSummary(inputPath, period);
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "x-kline-retry-"));
-  const codesPath = path.join(tempDir, "codes.json");
-  await writeJson(codesPath, { codes });
-
-  const args = [
-    codesPath,
-    "--period",
-    period,
-    "--engine",
-    options.engine,
-    "--output-dir",
-    outputDir,
-  ];
-  appendKlineSyncOptions(args, {
-    ...options,
-    concurrency: options.concurrency ?? 1,
-    limit: null,
-    outputDir: null,
-    period,
-    retryAttempts: options.retryAttempts ?? 3,
-    retryConcurrency: options.retryConcurrency ?? 1,
-  }, { includeOutputDir: false });
-
-  const result = await runNodeAllowFailure("fetch/query_pool_klines.js", args);
-  process.stdout.write(result.stdout);
-  process.stderr.write(result.stderr);
-  await fs.rm(tempDir, { recursive: true, force: true });
-  if (result.exitCode !== 0) {
-    process.exitCode = result.exitCode;
-  }
 }
 
 async function commandKlineRetryQueue(argv) {
