@@ -40,8 +40,8 @@ test("bin/x keeps proxy pool status orchestration out of the entry file", async 
   assert.match(source, /await commandProxyPoolStatus\(argv\.slice\(1\)\);/);
   assert.doesNotMatch(source, /await proxyCompose\(\["ps"\]\);/);
   assert.doesNotMatch(source, /fetchAllProxyCandidates/);
-  assert.match(source, /if \(action === "up"\)/);
-  assert.match(source, /if \(action === "down"\)/);
+  assert.match(source, /createProxyPoolLifecycleCommand/);
+  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
   assert.match(source, /if \(action === "refresh-github"\)/);
   assert.match(source, /await commandProxyPoolSelect\(argv\.slice\(1\)\);/);
 });

@@ -45,7 +45,9 @@ test("bin/x delegates refresh-github without owning provider orchestration", asy
   assert.match(source, /await commandProxyPoolRefreshGithub\(argv\.slice\(1\)\);/);
   assert.doesNotMatch(source, /GithubProxyRepositoryProvider/);
   assert.doesNotMatch(source, /provider\.listCandidates\(\)/);
-  assert.match(source, /if \(action === "up"\)/);
-  assert.match(source, /if \(action === "down"\)/);
+  assert.match(source, /createProxyPoolLifecycleCommand/);
+  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
+  assert.doesNotMatch(source, /if \(action === "up"\)/);
+  assert.doesNotMatch(source, /if \(action === "down"\)/);
   assert.match(source, /if \(action === "diagnose"\)/);
 });

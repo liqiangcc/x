@@ -19,6 +19,7 @@ const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/p
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
 const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/proxy_pool_status");
 const { createProxyPoolRefreshGithubCommand } = require("../src/adapters/cli/commands/proxy_pool_refresh_github");
+const { createProxyPoolLifecycleCommand } = require("../src/adapters/cli/commands/proxy_pool_lifecycle");
 const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
@@ -65,6 +66,7 @@ const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDi
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
 const commandProxyPoolRefreshGithub = createProxyPoolRefreshGithubCommand();
+const commandProxyPoolLifecycle = createProxyPoolLifecycleCommand({ root: ROOT });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -1927,26 +1929,6 @@ function parsePositiveOption(value, name, fallback) {
   return number;
 }
 
-async function proxyCompose(args) {
-  const composeDir = path.join(ROOT, "ops/proxy-pool");
-  const envFile = path.join(composeDir, ".env");
-  try {
-    await fs.access(envFile);
-  } catch {
-    throw new Error("Missing ops/proxy-pool/.env; copy .env.example and set PROXY_POOL_API_KEY first.");
-  }
-  const result = await execFileAsync("docker", [
-    "compose",
-    "--env-file",
-    envFile,
-    "-f",
-    path.join(composeDir, "compose.yml"),
-    ...args,
-  ], { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 });
-  process.stdout.write(result.stdout ?? "");
-  process.stderr.write(result.stderr ?? "");
-}
-
 async function writeProxyBenchmarkReport(report, kind) {
   const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const outputDir = path.join(DEFAULT_RUNS_DIR, "proxy-benchmark", `${runId}_${kind}`);
@@ -1974,15 +1956,11 @@ async function commandProxyPool(argv) {
     await commandProxyPoolRefreshGithub(argv.slice(1));
     return;
   }
+  if (["up", "down"].includes(action)) {
+    await commandProxyPoolLifecycle(argv);
+    return;
+  }
   const options = parseOptions(argv.slice(1));
-  if (action === "up") {
-    await proxyCompose(["up", "-d", "--build"]);
-    return;
-  }
-  if (action === "down") {
-    await proxyCompose(["down"]);
-    return;
-  }
   if (action === "diagnose") {
     const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
     const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
