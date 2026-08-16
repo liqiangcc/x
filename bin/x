@@ -1974,6 +1974,9 @@ async function commandProxyPool(argv) {
     return;
   }
   const options = parseOptions(argv.slice(1));
+  const { runProxyBenchmark } = require("./../src/proxy/pool");
+  const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
+  const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
   if (action === "benchmark") {
     const report = await runProxyBenchmark({ samples, concurrency });
     report.report = await proxyBenchmarkReportWriter.write(report, "benchmark");
