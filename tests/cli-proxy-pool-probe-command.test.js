@@ -25,22 +25,16 @@ test("proxy probe CLI preserves defaults and JSON presentation", async () => {
   let request = null;
   const command = createProxyPoolProbeCommand({
     stdout: stdout.stream,
-    sessionFactory: { open() {} },
-    reportWriter: { write() {} },
-  });
-
-  const report = await runProxyPoolProbeCommand({
-    argv: [],
     useCase: {
       async execute(value) {
         request = value;
         return { rounds: [], target: "eastmoney-kline", report: "runs/report.json" };
       },
     },
-    stdout: stdout.stream,
   });
 
-  assert.equal(typeof command, "function");
+  const report = await command([]);
+
   assert.deepEqual(request, {
     durationMs: 600_000,
     intervalMs: 30_000,
