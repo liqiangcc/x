@@ -46,51 +46,25 @@ jobs:
           assert source.count(binding_anchor) == 1
           source = source.replace(binding_anchor, binding_replacement, 1)
 
-          old = '''async function commandProxy(argv) {
-            const subcommand = argv[0];
-            if (subcommand === "pool") {
-              await commandProxyPool(argv.slice(1));
-              return;
-            }
-            const options = parseOptions(argv.slice(1));
-            const { checkEastmoneyAccess, listProxies, rotateProxy } = require("./../src/proxy/clash");
-            const common = {
-              configFile: options.config,
-              groupName: options.group,
-            };
+          start = source.index('async function commandProxy(argv) {\n')
+          end = source.index('async function commandProxyPool(argv) {', start)
+          legacy = source[start:end]
+          assert 'require("./../src/proxy/clash")' in legacy
+          assert 'listProxies(common)' in legacy
+          assert 'rotateProxy({ ...common' in legacy
+          assert 'checkEastmoneyAccess()' in legacy
 
-            if (subcommand === "list") {
-              printJson(await listProxies(common));
-              return;
-            }
-
-            if (subcommand === "rotate") {
-              printJson(await rotateProxy({ ...common, proxyName: options.proxy ?? null }));
-              return;
-            }
-
-            if (subcommand === "check") {
-              printJson(await checkEastmoneyAccess());
-              return;
-            }
-
-            throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
-          }
-'''
-          new = '''async function commandProxy(argv) {
-            const subcommand = argv[0];
-            if (subcommand === "pool") {
-              await commandProxyPool(argv.slice(1));
-              return;
-            }
-            await commandProxyClash(argv);
-          }
-'''
-          import textwrap
-          old = textwrap.dedent(old)
-          new = textwrap.dedent(new)
-          assert source.count(old) == 1, source.count(old)
-          source = source.replace(old, new, 1)
+          replacement = (
+              'async function commandProxy(argv) {\n'
+              '  const subcommand = argv[0];\n'
+              '  if (subcommand === "pool") {\n'
+              '    await commandProxyPool(argv.slice(1));\n'
+              '    return;\n'
+              '  }\n'
+              '  await commandProxyClash(argv);\n'
+              '}\n\n'
+          )
+          source = source[:start] + replacement + source[end:]
 
           assert source.count('createProxyClashCommand') == 2
           assert 'await commandProxyClash(argv);' in source
