@@ -45,3 +45,15 @@ test("bin/x proxy pool probe validates protocol before runtime access", async ()
   assert.equal(missingDeadline.stdout, "");
   assert.equal(missingDeadline.stderr, "Missing value for --hard-deadline-ms\n");
 });
+
+test("probe delegation preserves benchmark and warmup option validation", async () => {
+  const invalidBenchmarkSamples = await runCli(["proxy", "pool", "benchmark", "--samples", "0"]);
+  assert.equal(invalidBenchmarkSamples.exitCode, 1);
+  assert.equal(invalidBenchmarkSamples.stdout, "");
+  assert.equal(invalidBenchmarkSamples.stderr, "--samples must be a positive integer.\n");
+
+  const invalidWarmupConcurrency = await runCli(["proxy", "pool", "warmup", "--concurrency", "0"]);
+  assert.equal(invalidWarmupConcurrency.exitCode, 1);
+  assert.equal(invalidWarmupConcurrency.stdout, "");
+  assert.equal(invalidWarmupConcurrency.stderr, "--concurrency must be a positive integer.\n");
+});
