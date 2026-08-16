@@ -31,15 +31,17 @@ test("real CLI preserves pool pull protocol errors without launching the fetch s
   }
 });
 
-test("bin/x delegates pool pull while leaving sibling child-process wrappers scoped for later", async () => {
+test("bin/x delegates pool pull while leaving sibling child-process wrappers and daily orchestration scoped for later", async () => {
   const source = await fs.readFile(BIN, "utf8");
 
   assert.match(source, /createPoolPullCommand/);
   assert.match(source, /const commandPoolPull = createPoolPullCommand\(\{ root: ROOT \}\);/);
   assert.match(source, /await commandPoolPull\(rest\);/);
   assert.doesNotMatch(source, /async function commandPoolPull\(/);
-  assert.doesNotMatch(source, /fetch\/pull_pool_task\.js/);
+  assert.doesNotMatch(source, /runNode\("fetch\/pull_pool_task\.js", args\)/);
 
+  // Daily legitimately owns a separate pool-snapshot orchestration and keeps its own failure-aware call.
+  assert.match(source, /runNodeAllowFailure\("fetch\/pull_pool_task\.js", poolArgs/);
   assert.match(source, /async function commandStocks\(/);
   assert.match(source, /async function commandCodesBuild\(/);
 });
