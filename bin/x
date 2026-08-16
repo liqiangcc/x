@@ -21,6 +21,7 @@ const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/p
 const { createProxyPoolRefreshGithubCommand } = require("../src/adapters/cli/commands/proxy_pool_refresh_github");
 const { createProxyPoolLifecycleCommand } = require("../src/adapters/cli/commands/proxy_pool_lifecycle");
 const { createProxyPoolDiagnoseCommand } = require("../src/adapters/cli/commands/proxy_pool_diagnose");
+const { createProxyPoolProbeCommand } = require("../src/adapters/cli/commands/proxy_pool_probe");
 const { createFilesystemProxyBenchmarkReportWriter } = require("../src/adapters/proxy/filesystem_proxy_benchmark_reports");
 const {
   normalizeLatencyOptions,
@@ -71,6 +72,11 @@ const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
 const commandProxyPoolRefreshGithub = createProxyPoolRefreshGithubCommand();
 const commandProxyPoolLifecycle = createProxyPoolLifecycleCommand({ root: ROOT });
 const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({
+  root: ROOT,
+  runsDir: DEFAULT_RUNS_DIR,
+  reportWriter: proxyBenchmarkReportWriter,
+});
+const commandProxyPoolProbe = createProxyPoolProbeCommand({
   root: ROOT,
   runsDir: DEFAULT_RUNS_DIR,
   reportWriter: proxyBenchmarkReportWriter,
@@ -1963,38 +1969,11 @@ async function commandProxyPool(argv) {
     await commandProxyPoolDiagnose(argv.slice(1));
     return;
   }
-  const options = parseOptions(argv.slice(1));
   if (action === "probe") {
-    const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
-    const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
-    const durationMs = parseDurationMs(options.duration ?? "10m");
-    const intervalMs = parseDurationMs(options.interval ?? "30s");
-    const samples = parsePositiveOption(options.samples, "--samples", 20);
-    const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 2);
-    const timeoutMs = parsePositiveOption(options.hardDeadlineMs, "--hard-deadline-ms", 5000);
-    const deadline = Date.now() + durationMs;
-    const rounds = [];
-    const runtime = new ProxyBatchRuntime({ classifyError: classifyProxyError, cooldownForError: cooldownMs, stateFile: DEFAULT_STATE_FILE });
-    try {
-      let startIndex = 0;
-      do {
-        const report = await runtime.prepare({ concurrency, limit: samples, minAvailable: 0, minSuccessRate: 0, startIndex, timeoutMs });
-        rounds.push({ ...report, passed: report.available_count > 0, started_at: new Date().toISOString() });
-        startIndex += samples;
-        if (Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, deadline - Date.now())));
-      } while (Date.now() < deadline);
-    } finally {
-      await runtime.close();
-    }
-    const report = { duration_ms: durationMs, interval_ms: intervalMs, rounds, target: "eastmoney-kline" };
-    report.report = await proxyBenchmarkReportWriter.write(report, "probe");
-    printJson(report);
+    await commandProxyPoolProbe(argv.slice(1));
     return;
   }
-
-  const { runProxyBenchmark } = require("./../src/proxy/pool");
-  const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
-  const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
+  const options = parseOptions(argv.slice(1));
   if (action === "benchmark") {
     const report = await runProxyBenchmark({ samples, concurrency });
     report.report = await proxyBenchmarkReportWriter.write(report, "benchmark");
