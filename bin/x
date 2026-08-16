@@ -9,6 +9,7 @@ const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createReportCommand } = require("../src/adapters/cli/commands/report");
 const { createPoolPullCommand } = require("../src/adapters/cli/commands/pool_pull");
+const { createStocksCommand } = require("../src/adapters/cli/commands/stocks");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -101,6 +102,7 @@ const commandProxyPoolWarmup = createProxyPoolWarmupCommand({
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
+const commandStocks = createStocksCommand({ root: ROOT, outputDir: rel(DEFAULT_UNIVERSE_DIR) });
 const commandSimulator = createSimulatorCommand({
   root: ROOT,
   klineDir: DEFAULT_KLINE_DIR,
@@ -557,34 +559,6 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.freshnessCodes) {
     args.push("--freshness-codes", String(options.freshnessCodes));
   }
-}
-
-async function commandStocks(argv) {
-  const subcommand = argv[0];
-  if (subcommand !== "fetch") {
-    throw new Error(`Unknown stocks command: ${subcommand ?? ""}`);
-  }
-
-  const options = parseOptions(argv.slice(1), {
-    market: "hs-a",
-    outputDir: rel(DEFAULT_UNIVERSE_DIR),
-  });
-  const args = ["--market", options.market, "--output-dir", options.outputDir];
-
-  if (options.date && options.latest) {
-    throw new Error("--date and --latest cannot be used together.");
-  } else if (options.date) {
-    args.push("--date", normalizeDate(options.date));
-  } else {
-    args.push("--latest");
-  }
-  if (options.pageSize) {
-    args.push("--page-size", String(options.pageSize));
-  }
-
-  const { stdout, stderr } = await runNode("fetch/fetch_market_stocks.js", args);
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
 }
 
 async function commandCodesBuild(argv) {
