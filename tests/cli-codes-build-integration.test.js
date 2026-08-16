@@ -16,12 +16,10 @@ function runCli(args) {
   });
 }
 
-test("real CLI preserves stocks protocol errors without launching fetch script", () => {
+test("real CLI preserves codes build protocol errors without launching parser script", () => {
   const cases = [
-    { args: ["stocks", "list"], error: "Unknown stocks command: list\n" },
-    { args: ["stocks", "fetch", "--date", "20260817", "--latest"], error: "--date and --latest cannot be used together.\n" },
-    { args: ["stocks", "fetch", "--date", "bad"], error: "Invalid date: bad\n" },
-    { args: ["stocks", "fetch", "--page-size"], error: "Missing value for --page-size\n" },
+    { args: ["codes", "build"], error: "codes build requires <pool_dir>\n" },
+    { args: ["codes", "build", "data/pool", "--output"], error: "Missing value for --output\n" },
   ];
 
   for (const { args, error } of cases) {
@@ -32,15 +30,14 @@ test("real CLI preserves stocks protocol errors without launching fetch script",
   }
 });
 
-test("bin/x delegates stocks and codes while leaving daily orchestration scoped independently", async () => {
+test("bin/x delegates codes build while leaving kline sync and daily orchestration scoped for later", async () => {
   const source = await fs.readFile(BIN, "utf8");
 
-  assert.match(source, /createStocksCommand/);
-  assert.match(source, /const commandStocks = createStocksCommand\(\{ root: ROOT, outputDir: rel\(DEFAULT_UNIVERSE_DIR\) \}\);/);
-  assert.doesNotMatch(source, /async function commandStocks\(/);
-  assert.doesNotMatch(source, /runNode\("fetch\/fetch_market_stocks\.js", args\)/);
-
   assert.match(source, /createCodesBuildCommand/);
+  assert.match(source, /const commandCodesBuild = createCodesBuildCommand\(\{ root: ROOT \}\);/);
   assert.doesNotMatch(source, /async function commandCodesBuild\(/);
+  assert.doesNotMatch(source, /runNode\("utils\/parse_pool_json\.js", args\)/);
+
+  assert.match(source, /async function commandKlineSync\(/);
   assert.match(source, /runNodeAllowFailure\("fetch\/fetch_market_stocks\.js", \[/);
 });

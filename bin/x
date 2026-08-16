@@ -10,6 +10,7 @@ const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createReportCommand } = require("../src/adapters/cli/commands/report");
 const { createPoolPullCommand } = require("../src/adapters/cli/commands/pool_pull");
 const { createStocksCommand } = require("../src/adapters/cli/commands/stocks");
+const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_build");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -103,6 +104,7 @@ const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const commandStocks = createStocksCommand({ root: ROOT, outputDir: rel(DEFAULT_UNIVERSE_DIR) });
+const commandCodesBuild = createCodesBuildCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
   root: ROOT,
   klineDir: DEFAULT_KLINE_DIR,
@@ -559,22 +561,6 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.freshnessCodes) {
     args.push("--freshness-codes", String(options.freshnessCodes));
   }
-}
-
-async function commandCodesBuild(argv) {
-  const options = parseOptions(argv);
-  const inputPath = options._[0];
-  if (!inputPath) {
-    throw new Error("codes build requires <pool_dir>");
-  }
-
-  const args = [inputPath, "--codes-only"];
-  if (options.output) {
-    args.push("--output", options.output);
-  }
-  const { stdout, stderr } = await runNode("utils/parse_pool_json.js", args);
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
 }
 
 async function commandKlineSync(argv) {
