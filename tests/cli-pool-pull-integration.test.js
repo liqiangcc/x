@@ -42,5 +42,6 @@ test("bin/x delegates pool pull while daily keeps its separate pool orchestratio
 
   // Daily legitimately owns a separate pool-snapshot orchestration and keeps its own failure-aware call.
   assert.match(source, /runNodeAllowFailure\("fetch\/pull_pool_task\.js", poolArgs/);
-  assert.match(source, /async function commandCodesBuild\(/);
+  assert.match(source, /createCodesBuildCommand/);
+  assert.doesNotMatch(source, /async function commandCodesBuild\(/);
 });
