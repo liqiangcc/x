@@ -3,12 +3,6 @@
 const {
   ProbeProxyPoolUseCase,
 } = require("../../../application/proxy/probe_proxy_pool");
-const {
-  createFilesystemProxyBenchmarkReportWriter,
-} = require("../../proxy/filesystem_proxy_benchmark_reports");
-const {
-  createProxyPoolProbeSessionFactory,
-} = require("../../proxy/proxy_pool_probe_session");
 const { parseCliOptions } = require("../option_parser");
 
 function parseDurationMs(value) {
@@ -21,9 +15,11 @@ function parseDurationMs(value) {
 }
 
 function parsePositiveOption(value, label, fallback) {
-  if (value === undefined) return fallback;
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  if (!Number.isInteger(parsed) || parsed < 1) {
     throw new Error(`${label} must be a positive integer.`);
   }
   return parsed;
@@ -40,11 +36,11 @@ function parseProxyPoolProbeRequest(argv) {
   };
 }
 
-function assertExecutableUseCase(value) {
-  if (!value || typeof value.execute !== "function") {
+function requireUseCase(useCase) {
+  if (!useCase || typeof useCase.execute !== "function") {
     throw new TypeError("proxy pool probe useCase must expose execute().");
   }
-  return value;
+  return useCase;
 }
 
 async function runProxyPoolProbeCommand({
@@ -54,7 +50,7 @@ async function runProxyPoolProbeCommand({
   stdout = process.stdout,
 } = {}) {
   const request = parseProxyPoolProbeRequest(argv);
-  const resolvedUseCase = assertExecutableUseCase(useCase ?? getUseCase?.());
+  const resolvedUseCase = requireUseCase(useCase ?? getUseCase?.());
   const report = await resolvedUseCase.execute(request);
   stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   return report;
@@ -63,31 +59,52 @@ async function runProxyPoolProbeCommand({
 function createProxyPoolProbeCommand({
   root,
   runsDir,
-  reportWriter,
-  sessionFactory,
   stdout = process.stdout,
+  useCase,
+  sessionFactory,
+  reportWriter,
 } = {}) {
-  let useCase;
-  return async function commandProxyPoolProbe(argv = []) {
-    return runProxyPoolProbeCommand({
-      argv,
-      getUseCase() {
-        if (!useCase) {
-          useCase = new ProbeProxyPoolUseCase({
-            sessionFactory: sessionFactory ?? createProxyPoolProbeSessionFactory(),
-            reportWriter: reportWriter ?? createFilesystemProxyBenchmarkReportWriter({ root, runsDir }),
-          });
-        }
-        return useCase;
-      },
-      stdout,
+  let resolvedUseCase = useCase;
+
+  function getUseCase() {
+    if (resolvedUseCase) {
+      return resolvedUseCase;
+    }
+
+    let resolvedSessionFactory = sessionFactory;
+    if (!resolvedSessionFactory) {
+      const {
+        createProxyPoolProbeSessionFactory,
+      } = require("../../proxy/proxy_pool_probe_session");
+      resolvedSessionFactory = createProxyPoolProbeSessionFactory();
+    }
+
+    let resolvedReportWriter = reportWriter;
+    if (!resolvedReportWriter) {
+      const {
+        createFilesystemProxyBenchmarkReportWriter,
+      } = require("../../proxy/filesystem_proxy_benchmark_reports");
+      resolvedReportWriter = createFilesystemProxyBenchmarkReportWriter({ root, runsDir });
+    }
+
+    resolvedUseCase = new ProbeProxyPoolUseCase({
+      sessionFactory: resolvedSessionFactory,
+      reportWriter: resolvedReportWriter,
     });
-  };
+    return resolvedUseCase;
+  }
+
+  return (argv = []) => runProxyPoolProbeCommand({
+    argv,
+    getUseCase,
+    stdout,
+  });
 }
 
 module.exports = {
   createProxyPoolProbeCommand,
   parseDurationMs,
+  parsePositiveOption,
   parseProxyPoolProbeRequest,
   runProxyPoolProbeCommand,
 };
