@@ -7,6 +7,7 @@ const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
+const { createReportCommand } = require("../src/adapters/cli/commands/report");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -32,7 +33,6 @@ const {
 } = require("../src/aws/latency");
 const { formatMarketDate } = require("../src/core/date");
 const { isStageLogEnabled, stageLog, withStage } = require("../src/core/stage_log");
-const { generateDailyReport } = require("../src/reports/daily");
 const {
   applyProgressResults,
   calculateMaxChainDepth,
@@ -62,6 +62,7 @@ const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const proxyBenchmarkReportWriter = createFilesystemProxyBenchmarkReportWriter({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
+const commandReport = createReportCommand({ root: ROOT, klineDir: DEFAULT_KLINE_DIR, poolDir: DEFAULT_POOL_DIR });
 const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandGit = gitDataCli.command;
 const commitData = gitDataCli.commitData;
@@ -1879,27 +1880,6 @@ async function readExistingJson(filePath) {
   } catch {
     return null;
   }
-}
-
-async function commandReport(argv) {
-  const subcommand = argv[0];
-  if (subcommand !== "daily") {
-    throw new Error(`Unknown report command: ${subcommand ?? ""}`);
-  }
-
-  const options = parseOptions(argv.slice(1));
-  if (!options.date) {
-    throw new Error("report daily requires --date <YYYYMMDD>");
-  }
-
-  const date = normalizeDate(options.date);
-  const report = await generateDailyReport({
-    date,
-    klineDir: DEFAULT_KLINE_DIR,
-    outputDir: path.join(ROOT, "reports"),
-    poolDir: DEFAULT_POOL_DIR,
-  });
-  console.log(rel(report.reportDir));
 }
 
 function printJson(payload) {
