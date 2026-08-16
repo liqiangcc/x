@@ -41,44 +41,13 @@ jobs:
           assert source.count(import_anchor) == 1
           source = source.replace(import_anchor, import_replacement, 1)
 
-          binding_anchor = '''const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({
-            root: ROOT,
-            runsDir: DEFAULT_RUNS_DIR,
-            reportWriter: proxyBenchmarkReportWriter,
-          });
-          const commandDb = createDbCommand();
-          '''
-          binding_replacement = '''const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({
-            root: ROOT,
-            runsDir: DEFAULT_RUNS_DIR,
-            reportWriter: proxyBenchmarkReportWriter,
-          });
-          const commandProxyPoolProbe = createProxyPoolProbeCommand({
-            root: ROOT,
-            runsDir: DEFAULT_RUNS_DIR,
-            reportWriter: proxyBenchmarkReportWriter,
-          });
-          const commandDb = createDbCommand();
-          '''
+          binding_anchor = 'const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandDb = createDbCommand();\n'
+          binding_replacement = 'const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandProxyPoolProbe = createProxyPoolProbeCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandDb = createDbCommand();\n'
           assert source.count(binding_anchor) == 1
           source = source.replace(binding_anchor, binding_replacement, 1)
 
-          route_anchor = '''  if (action === "diagnose") {
-            await commandProxyPoolDiagnose(argv.slice(1));
-            return;
-          }
-          const options = parseOptions(argv.slice(1));
-          '''
-          route_replacement = '''  if (action === "diagnose") {
-            await commandProxyPoolDiagnose(argv.slice(1));
-            return;
-          }
-          if (action === "probe") {
-            await commandProxyPoolProbe(argv.slice(1));
-            return;
-          }
-          const options = parseOptions(argv.slice(1));
-          '''
+          route_anchor = '  if (action === "diagnose") {\n    await commandProxyPoolDiagnose(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n'
+          route_replacement = '  if (action === "diagnose") {\n    await commandProxyPoolDiagnose(argv.slice(1));\n    return;\n  }\n  if (action === "probe") {\n    await commandProxyPoolProbe(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n'
           assert source.count(route_anchor) == 1
           source = source.replace(route_anchor, route_replacement, 1)
 
