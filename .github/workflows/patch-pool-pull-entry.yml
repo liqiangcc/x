@@ -53,7 +53,8 @@ jobs:
           assert source.count('createPoolPullCommand') == 2
           assert 'const commandPoolPull = createPoolPullCommand({ root: ROOT });' in source
           assert 'async function commandPoolPull(' not in source
-          assert 'fetch/pull_pool_task.js' not in source
+          assert 'runNode("fetch/pull_pool_task.js", args)' not in source
+          assert 'runNodeAllowFailure("fetch/pull_pool_task.js", poolArgs' in source
           assert 'await commandPoolPull(rest);' in source
           assert 'async function commandStocks(' in source
           assert 'async function commandCodesBuild(' in source
