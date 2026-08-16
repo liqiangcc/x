@@ -45,7 +45,9 @@ test("bin/x delegates proxy pool lifecycle and no longer owns docker compose inf
   assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
   assert.doesNotMatch(source, /async function proxyCompose/);
   assert.doesNotMatch(source, /await proxyCompose\(/);
-  assert.match(source, /if \(action === "diagnose"\)/);
+  assert.match(source, /createProxyPoolDiagnoseCommand/);
+  assert.match(source, /await commandProxyPoolDiagnose\(argv\.slice\(1\)\);/);
+  assert.doesNotMatch(source, /if \(action === "diagnose"\)/);
   assert.match(source, /if \(action === "probe"\)/);
   assert.match(source, /if \(action === "benchmark"\)/);
   assert.match(source, /if \(action === "warmup"\)/);
