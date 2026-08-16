@@ -11,6 +11,7 @@ const { createReportCommand } = require("../src/adapters/cli/commands/report");
 const { createPoolPullCommand } = require("../src/adapters/cli/commands/pool_pull");
 const { createStocksCommand } = require("../src/adapters/cli/commands/stocks");
 const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_build");
+const { createKlineFetchCommand } = require("../src/adapters/cli/commands/kline_fetch");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
 const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
@@ -107,6 +108,7 @@ const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
 const commandStocks = createStocksCommand({ root: ROOT, outputDir: rel(DEFAULT_UNIVERSE_DIR) });
 const commandCodesBuild = createCodesBuildCommand({ root: ROOT });
+const commandKlineFetch = createKlineFetchCommand({ root: ROOT });
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
 const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
@@ -441,53 +443,6 @@ async function commandAws(argv) {
   }
   parseOptions(argv.slice(1));
   throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
-}
-
-async function commandKlineFetch(argv) {
-  const options = parseOptions(argv, { period: "daily" });
-  const input = options._[0];
-  if (!input) {
-    throw new Error("kline fetch requires <code_or_secid>");
-  }
-
-  if (options.policy && options.engine) throw new Error("--policy and --engine cannot be used together.");
-  const args = [input, "--period", options.period];
-  if (options.policy) args.push("--policy", options.policy);
-  else if (options.engine) args.push("--engine", options.engine);
-  if (options.awsRegion) {
-    args.push("--aws-region", options.awsRegion);
-  }
-  if (options.routerRegion) {
-    args.push("--router-region", options.routerRegion);
-  }
-  if (options.proxyPoolUrl) {
-    args.push("--proxy-pool-url", options.proxyPoolUrl);
-  }
-  if (options.proxyMaxAttempts) {
-    args.push("--proxy-max-attempts", String(options.proxyMaxAttempts));
-  }
-  if (options.huaweicloudRegion) {
-    args.push("--huaweicloud-region", options.huaweicloudRegion);
-  }
-  if (options.huaweicloudRegionStartIndex) {
-    args.push("--huaweicloud-region-start-index", String(options.huaweicloudRegionStartIndex));
-  }
-  if (options.huaweicloudTargets) {
-    args.push("--huaweicloud-targets", options.huaweicloudTargets);
-  }
-  if (options.lambdaName) {
-    args.push("--lambda-name", options.lambdaName);
-  }
-  if (options.config) {
-    args.push("--config", options.config);
-  }
-  if (options.output) {
-    args.push("--output", options.output);
-  }
-
-  const { stdout, stderr } = await runNode("fetch/fetch_kline.js", args);
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
 }
 
 async function loadCodesInput(inputPath) {
