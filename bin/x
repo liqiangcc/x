@@ -20,6 +20,8 @@ const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/p
 const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/proxy_pool_status");
 const { createProxyPoolRefreshGithubCommand } = require("../src/adapters/cli/commands/proxy_pool_refresh_github");
 const { createProxyPoolLifecycleCommand } = require("../src/adapters/cli/commands/proxy_pool_lifecycle");
+const { createProxyPoolDiagnoseCommand } = require("../src/adapters/cli/commands/proxy_pool_diagnose");
+const { createFilesystemProxyBenchmarkReportWriter } = require("../src/adapters/proxy/filesystem_proxy_benchmark_reports");
 const {
   normalizeLatencyOptions,
   runLatencyBenchmark,
@@ -54,6 +56,7 @@ const commandDoctor = createDoctorCommand({ cwd: ROOT });
 const DEFAULT_POOL_DIR = path.join(ROOT, "data", "pool");
 const DEFAULT_KLINE_DIR = path.join(ROOT, "data", "kline");
 const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
+const proxyBenchmarkReportWriter = createFilesystemProxyBenchmarkReportWriter({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandGit = gitDataCli.command;
@@ -67,6 +70,11 @@ const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
 const commandProxyPoolRefreshGithub = createProxyPoolRefreshGithubCommand();
 const commandProxyPoolLifecycle = createProxyPoolLifecycleCommand({ root: ROOT });
+const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({
+  root: ROOT,
+  runsDir: DEFAULT_RUNS_DIR,
+  reportWriter: proxyBenchmarkReportWriter,
+});
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
 const DEFAULT_UNIVERSE_DIR = path.join(ROOT, "data", "universe");
@@ -1929,15 +1937,6 @@ function parsePositiveOption(value, name, fallback) {
   return number;
 }
 
-async function writeProxyBenchmarkReport(report, kind) {
-  const runId = new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  const outputDir = path.join(DEFAULT_RUNS_DIR, "proxy-benchmark", `${runId}_${kind}`);
-  const outputFile = path.join(outputDir, "report.json");
-  await fs.mkdir(outputDir, { recursive: true });
-  await fs.writeFile(outputFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-  return rel(outputFile);
-}
-
 async function commandProxyPool(argv) {
   const action = argv[0];
   if (action === "verify") {
@@ -1960,29 +1959,11 @@ async function commandProxyPool(argv) {
     await commandProxyPoolLifecycle(argv);
     return;
   }
-  const options = parseOptions(argv.slice(1));
   if (action === "diagnose") {
-    const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
-    const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
-    const runtime = new ProxyBatchRuntime({ classifyError: classifyProxyError, cooldownForError: cooldownMs, stateFile: DEFAULT_STATE_FILE });
-    try {
-      const report = await runtime.prepare({
-        concurrency: parsePositiveOption(options.concurrency, "--concurrency", 16),
-        limit: parsePositiveOption(options.samples, "--samples", 100),
-        minAvailable: 0,
-        minSuccessRate: 0,
-        timeoutMs: parsePositiveOption(options.timeoutMs, "--timeout-ms", 3000),
-      });
-      report.target = "eastmoney-kline";
-      report.passed = report.available_count > 0;
-      report.report = await writeProxyBenchmarkReport(report, "diagnose");
-      printJson(report);
-    } finally {
-      await runtime.close();
-    }
+    await commandProxyPoolDiagnose(argv.slice(1));
     return;
   }
-
+  const options = parseOptions(argv.slice(1));
   if (action === "probe") {
     const { classifyProxyError, cooldownMs, DEFAULT_STATE_FILE } = require("./../src/proxy/pool");
     const { ProxyBatchRuntime } = require("./../src/proxy/runtime");
@@ -2006,7 +1987,7 @@ async function commandProxyPool(argv) {
       await runtime.close();
     }
     const report = { duration_ms: durationMs, interval_ms: intervalMs, rounds, target: "eastmoney-kline" };
-    report.report = await writeProxyBenchmarkReport(report, "probe");
+    report.report = await proxyBenchmarkReportWriter.write(report, "probe");
     printJson(report);
     return;
   }
@@ -2016,7 +1997,7 @@ async function commandProxyPool(argv) {
   const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
   if (action === "benchmark") {
     const report = await runProxyBenchmark({ samples, concurrency });
-    report.report = await writeProxyBenchmarkReport(report, "benchmark");
+    report.report = await proxyBenchmarkReportWriter.write(report, "benchmark");
     printJson(report);
     if (!report.passed) {
       process.exitCode = 2;
@@ -2051,7 +2032,7 @@ async function commandProxyPool(argv) {
       })),
       passed: rounds.some((round) => round.passed),
     };
-    report.report = await writeProxyBenchmarkReport(report, "warmup");
+    report.report = await proxyBenchmarkReportWriter.write(report, "warmup");
     printJson(report);
     if (!report.passed) {
       process.exitCode = 2;

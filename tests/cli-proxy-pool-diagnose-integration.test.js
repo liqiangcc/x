@@ -27,26 +27,27 @@ async function runCli(args) {
   }
 }
 
-test("bin/x proxy pool lifecycle validates protocol before docker compose access", async () => {
-  const up = await runCli(["proxy", "pool", "up", "--unexpected"]);
-  assert.equal(up.exitCode, 1);
-  assert.equal(up.stdout, "");
-  assert.equal(up.stderr, "Missing value for --unexpected\n");
+test("bin/x proxy pool diagnose validates protocol before runtime access", async () => {
+  const invalidSamples = await runCli(["proxy", "pool", "diagnose", "--samples", "0"]);
+  assert.equal(invalidSamples.exitCode, 1);
+  assert.equal(invalidSamples.stdout, "");
+  assert.equal(invalidSamples.stderr, "--samples must be a positive integer.\n");
 
-  const down = await runCli(["proxy", "pool", "down", "--unexpected"]);
-  assert.equal(down.exitCode, 1);
-  assert.equal(down.stdout, "");
-  assert.equal(down.stderr, "Missing value for --unexpected\n");
+  const missingTimeout = await runCli(["proxy", "pool", "diagnose", "--timeout-ms"]);
+  assert.equal(missingTimeout.exitCode, 1);
+  assert.equal(missingTimeout.stdout, "");
+  assert.equal(missingTimeout.stderr, "Missing value for --timeout-ms\n");
 });
 
-test("bin/x delegates proxy pool lifecycle and no longer owns docker compose infrastructure", async () => {
+test("bin/x delegates diagnose while remaining proxy loops stay legacy", async () => {
   const source = await fs.readFile(BIN, "utf8");
-  assert.match(source, /createProxyPoolLifecycleCommand/);
-  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
-  assert.doesNotMatch(source, /async function proxyCompose/);
-  assert.doesNotMatch(source, /await proxyCompose\(/);
   assert.match(source, /createProxyPoolDiagnoseCommand/);
   assert.match(source, /if \(action === "diagnose"\)[\s\S]*?await commandProxyPoolDiagnose\(argv\.slice\(1\)\);/);
+  assert.doesNotMatch(source, /report\.target = "eastmoney-kline"/);
+  assert.doesNotMatch(source, /async function writeProxyBenchmarkReport/);
+  assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "probe"\)/);
+  assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "benchmark"\)/);
+  assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "warmup"\)/);
   assert.match(source, /if \(action === "probe"\)/);
   assert.match(source, /if \(action === "benchmark"\)/);
   assert.match(source, /if \(action === "warmup"\)/);
