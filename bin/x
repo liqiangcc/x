@@ -8,6 +8,7 @@ const { promisify } = require("node:util");
 const { createDoctorCommand } = require("../src/adapters/cli/commands/doctor");
 const { createRunCommand } = require("../src/adapters/cli/commands/run");
 const { createReportCommand } = require("../src/adapters/cli/commands/report");
+const { createPoolPullCommand } = require("../src/adapters/cli/commands/pool_pull");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -63,6 +64,7 @@ const DEFAULT_RUNS_DIR = path.join(ROOT, "runs");
 const proxyBenchmarkReportWriter = createFilesystemProxyBenchmarkReportWriter({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });
 const commandReport = createReportCommand({ root: ROOT, klineDir: DEFAULT_KLINE_DIR, poolDir: DEFAULT_POOL_DIR });
+const commandPoolPull = createPoolPullCommand({ root: ROOT });
 const gitDataCli = createGitDataCli({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandGit = gitDataCli.command;
 const commitData = gitDataCli.commitData;
@@ -555,31 +557,6 @@ function appendKlineSyncOptions(args, options, { includeOutputDir = true } = {})
   if (options.freshnessCodes) {
     args.push("--freshness-codes", String(options.freshnessCodes));
   }
-}
-
-async function commandPoolPull(argv) {
-  const options = parseOptions(argv, { engine: "curl", outputDir: "data/pool" });
-  const args = [];
-
-  if (options.date) {
-    args.push(normalizeDate(options.date));
-  } else if (options._[0]) {
-    args.push(normalizeDate(options._[0]));
-  } else if (options.latest) {
-    args.push("--days", "0");
-  }
-
-  if (options.rangeDays) {
-    args.push("--range-days", String(options.rangeDays));
-  }
-  if (options.engine) {
-    args.push("--engine", options.engine);
-  }
-  args.push("--output-dir", options.outputDir);
-
-  const { stdout, stderr } = await runNode("fetch/pull_pool_task.js", args);
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
 }
 
 async function commandStocks(argv) {
