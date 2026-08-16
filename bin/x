@@ -15,6 +15,7 @@ const { createBenchmarkCommand } = require("../src/adapters/cli/commands/benchma
 const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aws_probe_router");
 const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aws_maintenance");
 const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
+const { createProxyClashCommand } = require("../src/adapters/cli/commands/proxy_clash");
 const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
 const { createProxyPoolStatusCommand } = require("../src/adapters/cli/commands/proxy_pool_status");
@@ -68,6 +69,7 @@ const commandBenchmark = createBenchmarkCommand({ root: ROOT, runsDir: DEFAULT_R
 const commandAwsProbeRouter = createAwsProbeRouterCommand();
 const commandAwsMaintenance = createAwsMaintenanceCommand({ root: ROOT });
 const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });
+const commandProxyClash = createProxyClashCommand();
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
@@ -1910,29 +1912,7 @@ async function commandProxy(argv) {
     await commandProxyPool(argv.slice(1));
     return;
   }
-  const options = parseOptions(argv.slice(1));
-  const { checkEastmoneyAccess, listProxies, rotateProxy } = require("./../src/proxy/clash");
-  const common = {
-    configFile: options.config,
-    groupName: options.group,
-  };
-
-  if (subcommand === "list") {
-    printJson(await listProxies(common));
-    return;
-  }
-
-  if (subcommand === "rotate") {
-    printJson(await rotateProxy({ ...common, proxyName: options.proxy ?? null }));
-    return;
-  }
-
-  if (subcommand === "check") {
-    printJson(await checkEastmoneyAccess());
-    return;
-  }
-
-  throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
+  await commandProxyClash(argv);
 }
 
 async function commandProxyPool(argv) {
