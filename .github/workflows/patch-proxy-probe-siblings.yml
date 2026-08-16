@@ -1,0 +1,64 @@
+name: Patch proxy probe sibling boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-probe-boundary
+    paths:
+      - .github/workflows/patch-proxy-probe-siblings.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-probe-boundary
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore benchmark sibling setup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+          anchor = '  if (action === "probe") {\n    await commandProxyPoolProbe(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n  if (action === "benchmark") {\n'
+          replacement = '  if (action === "probe") {\n    await commandProxyPoolProbe(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n  const { runProxyBenchmark } = require("./../src/proxy/pool");\n  const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);\n  const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);\n  if (action === "benchmark") {\n'
+          assert source.count(anchor) == 1
+          assert 'const { runProxyBenchmark } = require("./../src/proxy/pool");' not in source
+          source = source.replace(anchor, replacement, 1)
+          path.write_text(source)
+          PY
+
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --test \
+            tests/cli-proxy-pool-probe-integration.test.js \
+            tests/cli-proxy-pool-probe-command.test.js \
+            tests/cli-proxy-pool-diagnose-integration.test.js \
+            tests/application-proxy-probe.test.js \
+            tests/proxy-probe-adapters.test.js
+          git diff --check
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: preserve proxy benchmark sibling setup"
+          git push origin HEAD:refactor/cli-proxy-probe-boundary
