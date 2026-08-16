@@ -1,0 +1,95 @@
+name: Patch proxy warmup entry boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-warmup-boundary
+    paths:
+      - .github/workflows/patch-proxy-warmup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-warmup-boundary
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch bin/x
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+
+          import_anchor = 'const { createProxyPoolBenchmarkCommand } = require("../src/adapters/cli/commands/proxy_pool_benchmark");\n'
+          import_replacement = import_anchor + 'const { createProxyPoolWarmupCommand } = require("../src/adapters/cli/commands/proxy_pool_warmup");\n'
+          assert source.count(import_anchor) == 1
+          source = source.replace(import_anchor, import_replacement, 1)
+
+          binding_anchor = 'const commandProxyPoolBenchmark = createProxyPoolBenchmarkCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandDb = createDbCommand();\n'
+          binding_replacement = 'const commandProxyPoolBenchmark = createProxyPoolBenchmarkCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandProxyPoolWarmup = createProxyPoolWarmupCommand({\n  root: ROOT,\n  runsDir: DEFAULT_RUNS_DIR,\n  reportWriter: proxyBenchmarkReportWriter,\n});\nconst commandDb = createDbCommand();\n'
+          assert source.count(binding_anchor) == 1
+          source = source.replace(binding_anchor, binding_replacement, 1)
+
+          route_anchor = '  if (action === "benchmark") {\n    await commandProxyPoolBenchmark(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n'
+          route_replacement = '  if (action === "benchmark") {\n    await commandProxyPoolBenchmark(argv.slice(1));\n    return;\n  }\n  if (action === "warmup") {\n    await commandProxyPoolWarmup(argv.slice(1));\n    return;\n  }\n  const options = parseOptions(argv.slice(1));\n'
+          assert source.count(route_anchor) == 1
+          source = source.replace(route_anchor, route_replacement, 1)
+
+          legacy_start = source.index('  const options = parseOptions(argv.slice(1));\n', source.index('async function commandProxyPool(argv) {'))
+          legacy_end = source.index('  throw new Error(`Unknown proxy pool command:', legacy_start)
+          legacy = source[legacy_start:legacy_end]
+          assert 'if (action === "warmup")' in legacy
+          assert 'runProxyBenchmark' in legacy
+          assert 'proxyBenchmarkReportWriter.write(report, "warmup")' in legacy
+          source = source[:legacy_start] + source[legacy_end:]
+
+          assert source.count('createProxyPoolWarmupCommand') == 2
+          assert 'await commandProxyPoolWarmup(argv.slice(1));' in source
+          assert 'rounds.push(await runProxyBenchmark' not in source
+          assert 'proxyBenchmarkReportWriter.write(report, "warmup")' not in source
+          assert 'const { runProxyBenchmark } = require("./../src/proxy/pool");' not in source
+          assert 'await commandProxyPoolBenchmark(argv.slice(1));' in source
+
+          path.write_text(source)
+          PY
+
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --check src/application/proxy/warmup_proxy_pool.js
+          node --check src/adapters/cli/commands/proxy_pool_warmup.js
+          node --test \
+            tests/application-proxy-warmup.test.js \
+            tests/cli-proxy-pool-warmup-command.test.js \
+            tests/cli-proxy-pool-warmup-integration.test.js \
+            tests/cli-proxy-pool-diagnose-integration.test.js \
+            tests/application-proxy-benchmark.test.js \
+            tests/proxy-benchmark-adapters.test.js \
+            tests/cli-proxy-pool-benchmark-command.test.js \
+            tests/cli-proxy-pool-benchmark-integration.test.js
+          git diff --check
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor: delegate proxy pool warmup from CLI"
+          git push origin HEAD:refactor/cli-proxy-warmup-boundary
