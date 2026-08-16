@@ -1,0 +1,75 @@
+name: Patch Kline Fetch Boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-kline-fetch-boundary
+    paths:
+      - .github/workflows/patch-kline-fetch-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-kline-fetch-boundary
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Apply scoped fetch entry patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+
+          import_anchor = 'const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_build");\n'
+          import_line = 'const { createKlineFetchCommand } = require("../src/adapters/cli/commands/kline_fetch");\n'
+          assert source.count(import_anchor) == 1
+          assert import_line not in source
+          source = source.replace(import_anchor, import_anchor + import_line, 1)
+
+          composition_anchor = 'const commandCodesBuild = createCodesBuildCommand({ root: ROOT });\n'
+          composition_line = 'const commandKlineFetch = createKlineFetchCommand({ root: ROOT });\n'
+          assert source.count(composition_anchor) == 1
+          assert composition_line not in source
+          source = source.replace(composition_anchor, composition_anchor + composition_line, 1)
+
+          start = source.index('async function commandKlineFetch(argv) {')
+          end = source.index('async function loadCodesInput(', start)
+          assert start >= 0 and end > start
+          source = source[:start] + source[end:]
+
+          assert 'async function commandKlineFetch(' not in source
+          assert 'runNode("fetch/fetch_kline.js", args)' not in source
+          assert 'async function commandKlineAggregateYearly(' in source
+          assert 'async function commandKlineRetryQueue(' in source
+          assert 'async function commandDaily(' in source
+          path.write_text(source)
+          PY
+
+          node --check bin/x
+          node --check src/adapters/cli/commands/kline_fetch.js
+          node --test \
+            tests/cli-kline-fetch-command.test.js \
+            tests/cli-kline-fetch-integration.test.js \
+            tests/cli-kline-sync-integration.test.js \
+            tests/cli-kline-retry-integration.test.js \
+            tests/cli-codes-build-integration.test.js
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor: separate kline fetch from CLI entry"
+          git push origin HEAD:refactor/cli-kline-fetch-boundary
