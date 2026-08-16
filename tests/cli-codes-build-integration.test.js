@@ -30,7 +30,7 @@ test("real CLI preserves codes build protocol errors without launching parser sc
   }
 });
 
-test("bin/x delegates codes build while leaving kline sync and daily orchestration scoped for later", async () => {
+test("bin/x delegates codes build and kline sync while daily orchestration remains independent", async () => {
   const source = await fs.readFile(BIN, "utf8");
 
   assert.match(source, /createCodesBuildCommand/);
@@ -38,6 +38,7 @@ test("bin/x delegates codes build while leaving kline sync and daily orchestrati
   assert.doesNotMatch(source, /async function commandCodesBuild\(/);
   assert.doesNotMatch(source, /runNode\("utils\/parse_pool_json\.js", args\)/);
 
-  assert.match(source, /async function commandKlineSync\(/);
+  assert.match(source, /createKlineSyncCommand/);
+  assert.doesNotMatch(source, /async function commandKlineSync\(/);
   assert.match(source, /runNodeAllowFailure\("fetch\/fetch_market_stocks\.js", \[/);
 });
