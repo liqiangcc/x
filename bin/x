@@ -23,6 +23,7 @@ const { createProxyPoolLifecycleCommand } = require("../src/adapters/cli/command
 const { createProxyPoolDiagnoseCommand } = require("../src/adapters/cli/commands/proxy_pool_diagnose");
 const { createProxyPoolProbeCommand } = require("../src/adapters/cli/commands/proxy_pool_probe");
 const { createProxyPoolBenchmarkCommand } = require("../src/adapters/cli/commands/proxy_pool_benchmark");
+const { createProxyPoolWarmupCommand } = require("../src/adapters/cli/commands/proxy_pool_warmup");
 const { createFilesystemProxyBenchmarkReportWriter } = require("../src/adapters/proxy/filesystem_proxy_benchmark_reports");
 const {
   normalizeLatencyOptions,
@@ -83,6 +84,11 @@ const commandProxyPoolProbe = createProxyPoolProbeCommand({
   reportWriter: proxyBenchmarkReportWriter,
 });
 const commandProxyPoolBenchmark = createProxyPoolBenchmarkCommand({
+  root: ROOT,
+  runsDir: DEFAULT_RUNS_DIR,
+  reportWriter: proxyBenchmarkReportWriter,
+});
+const commandProxyPoolWarmup = createProxyPoolWarmupCommand({
   root: ROOT,
   runsDir: DEFAULT_RUNS_DIR,
   reportWriter: proxyBenchmarkReportWriter,
@@ -1983,46 +1989,10 @@ async function commandProxyPool(argv) {
     await commandProxyPoolBenchmark(argv.slice(1));
     return;
   }
-  const options = parseOptions(argv.slice(1));
-  const { runProxyBenchmark } = require("./../src/proxy/pool");
-  const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
-  const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
   if (action === "warmup") {
-    const durationMs = parseDurationMs(options.duration ?? "30m");
-    const deadline = Date.now() + durationMs;
-    const rounds = [];
-    do {
-      rounds.push(await runProxyBenchmark({ samples, concurrency }));
-      if (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, Math.min(60_000, deadline - Date.now())));
-      }
-    } while (Date.now() < deadline);
-    const report = {
-      started_at: rounds[0]?.started_at ?? new Date().toISOString(),
-      finished_at: new Date().toISOString(),
-      duration_ms: durationMs,
-      rounds: rounds.map((round) => ({
-        samples: round.samples,
-        success: round.success,
-        failed: round.failed,
-        success_rate: round.success_rate,
-        eligible_proxy_count: round.eligible_proxy_count,
-        stable_proxy_count: round.stable_proxy_count,
-        p95_duration_ms: round.p95_duration_ms,
-        passed: round.passed,
-        selector: round.selector,
-        target: round.target,
-      })),
-      passed: rounds.some((round) => round.passed),
-    };
-    report.report = await proxyBenchmarkReportWriter.write(report, "warmup");
-    printJson(report);
-    if (!report.passed) {
-      process.exitCode = 2;
-    }
+    await commandProxyPoolWarmup(argv.slice(1));
     return;
   }
-
   throw new Error(`Unknown proxy pool command: ${action ?? ""}`);
 }
 
