@@ -22,6 +22,7 @@ const { createProxyPoolRefreshGithubCommand } = require("../src/adapters/cli/com
 const { createProxyPoolLifecycleCommand } = require("../src/adapters/cli/commands/proxy_pool_lifecycle");
 const { createProxyPoolDiagnoseCommand } = require("../src/adapters/cli/commands/proxy_pool_diagnose");
 const { createProxyPoolProbeCommand } = require("../src/adapters/cli/commands/proxy_pool_probe");
+const { createProxyPoolBenchmarkCommand } = require("../src/adapters/cli/commands/proxy_pool_benchmark");
 const { createFilesystemProxyBenchmarkReportWriter } = require("../src/adapters/proxy/filesystem_proxy_benchmark_reports");
 const {
   normalizeLatencyOptions,
@@ -77,6 +78,11 @@ const commandProxyPoolDiagnose = createProxyPoolDiagnoseCommand({
   reportWriter: proxyBenchmarkReportWriter,
 });
 const commandProxyPoolProbe = createProxyPoolProbeCommand({
+  root: ROOT,
+  runsDir: DEFAULT_RUNS_DIR,
+  reportWriter: proxyBenchmarkReportWriter,
+});
+const commandProxyPoolBenchmark = createProxyPoolBenchmarkCommand({
   root: ROOT,
   runsDir: DEFAULT_RUNS_DIR,
   reportWriter: proxyBenchmarkReportWriter,
@@ -1973,19 +1979,14 @@ async function commandProxyPool(argv) {
     await commandProxyPoolProbe(argv.slice(1));
     return;
   }
+  if (action === "benchmark") {
+    await commandProxyPoolBenchmark(argv.slice(1));
+    return;
+  }
   const options = parseOptions(argv.slice(1));
   const { runProxyBenchmark } = require("./../src/proxy/pool");
   const samples = parsePositiveOption(options.samples, "--samples", action === "warmup" ? 20 : 100);
   const concurrency = parsePositiveOption(options.concurrency, "--concurrency", 4);
-  if (action === "benchmark") {
-    const report = await runProxyBenchmark({ samples, concurrency });
-    report.report = await proxyBenchmarkReportWriter.write(report, "benchmark");
-    printJson(report);
-    if (!report.passed) {
-      process.exitCode = 2;
-    }
-    return;
-  }
   if (action === "warmup") {
     const durationMs = parseDurationMs(options.duration ?? "30m");
     const deadline = Date.now() + durationMs;
