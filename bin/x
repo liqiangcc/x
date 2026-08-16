@@ -1935,26 +1935,6 @@ async function commandProxy(argv) {
   throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
 }
 
-function parseDurationMs(value) {
-  const match = String(value ?? "").trim().match(/^(\d+)(s|m|h)$/i);
-  if (!match || Number(match[1]) < 1) {
-    throw new Error(`Invalid duration: ${value}. Use values such as 30s, 30m, or 1h.`);
-  }
-  const multiplier = { s: 1000, m: 60_000, h: 3_600_000 }[match[2].toLowerCase()];
-  return Number(match[1]) * multiplier;
-}
-
-function parsePositiveOption(value, name, fallback) {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
-  const number = Number(value);
-  if (!Number.isInteger(number) || number < 1) {
-    throw new Error(`${name} must be a positive integer.`);
-  }
-  return number;
-}
-
 async function commandProxyPool(argv) {
   const action = argv[0];
   if (action === "verify") {
