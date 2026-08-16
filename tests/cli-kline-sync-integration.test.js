@@ -15,14 +15,13 @@ test("real CLI preserves kline sync protocol errors", () => {
   ]) { const r = runCli(args); assert.equal(r.status, 1, args.join(" ")); assert.equal(r.stdout, ""); assert.equal(r.stderr, error); }
 });
 
-test("bin/x delegates kline sync and retains shared mapping consumers", async () => {
+test("bin/x delegates kline sync and keeps daily as shared script-option consumer", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineSyncCommand/);
   assert.match(source, /const commandKlineSync = createKlineSyncCommand\(\{ root: ROOT \}\);/);
   assert.match(source, /await commandKlineSync\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineSync\(/);
   assert.doesNotMatch(source, /function appendKlineSyncOptions\(/);
-  assert.match(source, /appendKlineSyncOptions\(args, \{/);
-  assert.match(source, /async function commandKlineRetry\(/);
+  assert.match(source, /appendKlineSyncOptions\(klineArgs, klineOptions/);
   assert.match(source, /async function commandDaily\(/);
 });
