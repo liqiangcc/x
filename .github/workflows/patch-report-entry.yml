@@ -1,0 +1,84 @@
+name: Patch report entry boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-report-boundary
+    paths:
+      - .github/workflows/patch-report-entry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-report-boundary
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch bin/x
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+
+          import_anchor = 'const { createRunCommand } = require("../src/adapters/cli/commands/run");\n'
+          import_replacement = import_anchor + 'const { createReportCommand } = require("../src/adapters/cli/commands/report");\n'
+          assert source.count(import_anchor) == 1
+          source = source.replace(import_anchor, import_replacement, 1)
+
+          direct_report_import = 'const { generateDailyReport } = require("../src/reports/daily");\n'
+          assert source.count(direct_report_import) == 1
+          source = source.replace(direct_report_import, "", 1)
+
+          binding_anchor = 'const commandRun = createRunCommand({ runsDir: DEFAULT_RUNS_DIR });\n'
+          binding_replacement = binding_anchor + 'const commandReport = createReportCommand({ root: ROOT, klineDir: DEFAULT_KLINE_DIR, poolDir: DEFAULT_POOL_DIR });\n'
+          assert source.count(binding_anchor) == 1
+          source = source.replace(binding_anchor, binding_replacement, 1)
+
+          start = source.index('async function commandReport(argv) {')
+          end = source.index('function printJson(payload) {', start)
+          source = source[:start] + source[end:]
+
+          assert source.count('createReportCommand') == 2
+          assert 'const commandReport = createReportCommand(' in source
+          assert 'async function commandReport(' not in source
+          assert 'generateDailyReport' not in source
+          assert 'await commandReport([subcommand, ...rest]);' in source
+
+          path.write_text(source)
+          PY
+
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --check src/adapters/cli/commands/report.js
+          node --test \
+            tests/cli-report-command.test.js \
+            tests/cli-report-integration.test.js \
+            tests/cli-bin-x-boundary-audit.test.js \
+            tests/cli-proxy-clash-integration.test.js
+          git diff --check
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor: delegate report command from CLI entry"
+          git push origin HEAD:refactor/cli-report-boundary
