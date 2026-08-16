@@ -39,16 +39,17 @@ test("bin/x proxy pool diagnose validates protocol before runtime access", async
   assert.equal(missingTimeout.stderr, "Missing value for --timeout-ms\n");
 });
 
-test("bin/x delegates diagnose while remaining proxy loops stay legacy", async () => {
+test("bin/x delegates diagnose and probe while benchmark and warmup stay legacy", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolDiagnoseCommand/);
+  assert.match(source, /createProxyPoolProbeCommand/);
   assert.match(source, /if \(action === "diagnose"\)[\s\S]*?await commandProxyPoolDiagnose\(argv\.slice\(1\)\);/);
+  assert.match(source, /if \(action === "probe"\)[\s\S]*?await commandProxyPoolProbe\(argv\.slice\(1\)\);/);
   assert.doesNotMatch(source, /report\.target = "eastmoney-kline"/);
   assert.doesNotMatch(source, /async function writeProxyBenchmarkReport/);
-  assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "probe"\)/);
+  assert.doesNotMatch(source, /proxyBenchmarkReportWriter\.write\(report, "probe"\)/);
   assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "benchmark"\)/);
   assert.match(source, /proxyBenchmarkReportWriter\.write\(report, "warmup"\)/);
-  assert.match(source, /if \(action === "probe"\)/);
   assert.match(source, /if \(action === "benchmark"\)/);
   assert.match(source, /if \(action === "warmup"\)/);
 });
