@@ -1,14 +1,9 @@
 "use strict";
 
+const { normalizeNodeScriptFailure } = require("../system/node_script_runner");
 const { appendKlineSyncOptions } = require("./kline_sync_script_args");
 
-function normalizeFailure(error) {
-  return {
-    exitCode: typeof error?.code === "number" ? error.code : 1,
-    stderr: error?.stderr ?? error?.message ?? String(error),
-    stdout: error?.stdout ?? "",
-  };
-}
+const normalizeFailure = normalizeNodeScriptFailure;
 
 function createKlineSyncRetryRunner({ nodeScriptRunner } = {}) {
   if (typeof nodeScriptRunner !== "function") {
