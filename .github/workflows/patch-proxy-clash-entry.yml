@@ -1,0 +1,127 @@
+name: Patch proxy clash entry boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-clash-boundary
+    paths:
+      - .github/workflows/patch-proxy-clash-entry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-clash-boundary
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch bin/x
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+
+          import_anchor = 'const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");\n'
+          import_replacement = import_anchor + 'const { createProxyClashCommand } = require("../src/adapters/cli/commands/proxy_clash");\n'
+          assert source.count(import_anchor) == 1
+          source = source.replace(import_anchor, import_replacement, 1)
+
+          binding_anchor = 'const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });\n'
+          binding_replacement = binding_anchor + 'const commandProxyClash = createProxyClashCommand();\n'
+          assert source.count(binding_anchor) == 1
+          source = source.replace(binding_anchor, binding_replacement, 1)
+
+          old = '''async function commandProxy(argv) {
+            const subcommand = argv[0];
+            if (subcommand === "pool") {
+              await commandProxyPool(argv.slice(1));
+              return;
+            }
+            const options = parseOptions(argv.slice(1));
+            const { checkEastmoneyAccess, listProxies, rotateProxy } = require("./../src/proxy/clash");
+            const common = {
+              configFile: options.config,
+              groupName: options.group,
+            };
+
+            if (subcommand === "list") {
+              printJson(await listProxies(common));
+              return;
+            }
+
+            if (subcommand === "rotate") {
+              printJson(await rotateProxy({ ...common, proxyName: options.proxy ?? null }));
+              return;
+            }
+
+            if (subcommand === "check") {
+              printJson(await checkEastmoneyAccess());
+              return;
+            }
+
+            throw new Error(`Unknown proxy command: ${subcommand ?? ""}`);
+          }
+'''
+          new = '''async function commandProxy(argv) {
+            const subcommand = argv[0];
+            if (subcommand === "pool") {
+              await commandProxyPool(argv.slice(1));
+              return;
+            }
+            await commandProxyClash(argv);
+          }
+'''
+          import textwrap
+          old = textwrap.dedent(old)
+          new = textwrap.dedent(new)
+          assert source.count(old) == 1, source.count(old)
+          source = source.replace(old, new, 1)
+
+          assert source.count('createProxyClashCommand') == 2
+          assert 'await commandProxyClash(argv);' in source
+          assert 'require("./../src/proxy/clash")' not in source
+          assert 'listProxies(common)' not in source
+          assert 'rotateProxy({ ...common' not in source
+          assert 'checkEastmoneyAccess()' not in source
+          assert 'await commandProxyPool(argv.slice(1));' in source
+
+          path.write_text(source)
+          PY
+
+      - name: Validate patch
+        run: |
+          node --check bin/x
+          node --check src/adapters/cli/commands/proxy_clash.js
+          node --test \
+            tests/cli-proxy-clash-command.test.js \
+            tests/cli-proxy-clash-integration.test.js \
+            tests/cli-bin-x-boundary-audit.test.js \
+            tests/cli-proxy-pool-diagnose-integration.test.js \
+            tests/cli-proxy-pool-benchmark-integration.test.js \
+            tests/cli-proxy-pool-warmup-integration.test.js \
+            tests/cli-proxy-pool-probe-integration.test.js
+          git diff --check
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor: delegate proxy clash commands from CLI"
+          git push origin HEAD:refactor/cli-proxy-clash-boundary
