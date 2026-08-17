@@ -1,0 +1,33 @@
+name: Export refactor source
+
+on:
+  push:
+    branches:
+      - refactor/complete-architecture-boundaries
+    paths:
+      - .github/workflows/export-refactor-source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fixed branch snapshot
+        uses: actions/checkout@v4
+
+      - name: Package repository source
+        run: |
+          zip -q -r /tmp/x-refactor-source.zip . \
+            -x '.git/*' \
+            -x 'node_modules/*' \
+            -x 'data/kline/*' \
+            -x 'runs/*'
+
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: x-refactor-source
+          path: /tmp/x-refactor-source.zip
+          retention-days: 1
