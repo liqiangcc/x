@@ -1,0 +1,82 @@
+name: Review and remediate complete architecture
+
+on:
+  push:
+    branches:
+      - refactor/complete-architecture-boundaries
+    paths:
+      - .github/workflows/review-remediate-complete-architecture.yml
+
+permissions:
+  contents: write
+
+jobs:
+  review-remediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout fixed refactor branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/complete-architecture-boundaries
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Recover implementation transform when needed
+        run: |
+          if [ ! -f src/application/daily/run_daily_pipeline.js ]; then
+            python3 tools/apply_complete_architecture_refactor.py
+          fi
+
+      - name: Apply independent review remediations
+        run: python3 tools/review_and_remediate_complete_architecture.py
+
+      - name: Verify JavaScript syntax
+        run: |
+          node --check bin/x
+          node --check src/application/daily/run_daily_pipeline.js
+          node --check src/adapters/daily/daily_runtime.js
+          node --check src/adapters/cli/commands/daily.js
+          node --check src/adapters/cli/root_router.js
+          node --check src/adapters/cli/usage.js
+          node --check src/composition/cli_application.js
+
+      - name: Run architecture boundary tests
+        run: |
+          node --test \
+            tests/cli-complete-architecture-boundary.test.js \
+            tests/cli-daily-command-boundary.test.js \
+            tests/daily-runtime-adapter.test.js \
+            tests/cli-bin-x-boundary-audit.test.js \
+            tests/github-daily-workflow.test.js \
+            tests/github-daily-report-workflow.test.js
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Remove all one-shot tooling
+        run: |
+          rm -f .github/workflows/export-refactor-source.yml
+          rm -f .github/workflows/apply-complete-architecture-refactor.yml
+          rm -f .github/workflows/review-remediate-complete-architecture.yml
+          rm -f tools/apply_complete_architecture_refactor.py
+          rm -f tools/review_and_remediate_complete_architecture.py
+          rm -f REFACTOR_TRANSFORM_REPORT.txt
+          rm -f docs/reviews/.keep
+
+      - name: Commit reviewed and remediated architecture
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor: remediate complete architecture review"
+          git push origin HEAD:refactor/complete-architecture-boundaries

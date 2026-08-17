@@ -1,0 +1,145 @@
+name: Final complete architecture audit
+
+on:
+  push:
+    branches:
+      - refactor/complete-architecture-boundaries
+    paths:
+      - .github/workflows/final-complete-architecture-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  final-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout fixed reviewed branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/complete-architecture-boundaries
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit architecture and repository hygiene
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          entry = (root / 'bin' / 'x').read_text(encoding='utf-8')
+          lines = entry.rstrip().splitlines()
+          assert len(lines) <= 12, f'bin/x has {len(lines)} lines'
+          assert '../src/composition/cli_application' in entry
+          assert 'node:fs' not in entry and 'node:child_process' not in entry
+
+          application = (root / 'src/application/daily/run_daily_pipeline.js').read_text(encoding='utf-8')
+          assert 'require("node:' not in application and "require('node:" not in application
+          assert 'adapters/cli' not in application
+          assert 'parseOptions(' not in application
+          assert 'const { runtime } = dependencies' in application
+
+          runtime = (root / 'src/adapters/daily/daily_runtime.js').read_text(encoding='utf-8')
+          assert 'REQUIRED_DAILY_RUNTIME_DEPENDENCIES' in runtime
+          assert 'Missing Daily runtime dependencies' in runtime
+
+          composition = (root / 'src/composition/cli_application.js').read_text(encoding='utf-8')
+          for token in ('createDailyRuntime', 'createRunDailyPipeline', 'createDailyCommand', 'createRootRouter', 'createCliApplication'):
+              assert token in composition, token
+          assert 'function commandDaily' not in composition
+
+          forbidden = [
+              '.github/workflows/export-refactor-source.yml',
+              '.github/workflows/apply-complete-architecture-refactor.yml',
+              '.github/workflows/review-remediate-complete-architecture.yml',
+              'tools/apply_complete_architecture_refactor.py',
+              'tools/review_and_remediate_complete_architecture.py',
+              'REFACTOR_TRANSFORM_REPORT.txt',
+              'docs/reviews/.keep',
+          ]
+          present = [path for path in forbidden if (root / path).exists()]
+          assert not present, f'temporary files remain: {present}'
+
+          review = (root / 'docs/reviews/COMPLETE_ARCHITECTURE_REVIEW.md').read_text(encoding='utf-8')
+          remediation = (root / 'docs/reviews/COMPLETE_ARCHITECTURE_REMEDIATION.md').read_text(encoding='utf-8')
+          assert 'R1 — Medium' in review and 'R2 — Medium' in review and 'R3 — Low' in review
+          assert 'src/adapters/daily/daily_runtime.js' in remediation
+          PY
+
+      - name: Verify JavaScript syntax
+        run: |
+          node --check bin/x
+          node --check src/application/daily/run_daily_pipeline.js
+          node --check src/adapters/daily/daily_runtime.js
+          node --check src/adapters/cli/commands/daily.js
+          node --check src/adapters/cli/root_router.js
+          node --check src/adapters/cli/usage.js
+          node --check src/composition/cli_application.js
+
+      - name: Run focused architecture and Daily tests
+        run: |
+          node --test \
+            tests/cli-complete-architecture-boundary.test.js \
+            tests/cli-daily-command-boundary.test.js \
+            tests/daily-runtime-adapter.test.js \
+            tests/cli-bin-x-boundary-audit.test.js \
+            tests/github-daily-workflow.test.js \
+            tests/github-daily-report-workflow.test.js
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Finalize review evidence
+        env:
+          REVIEWED_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          reviewed_sha = os.environ['REVIEWED_SHA']
+          review_path = Path('docs/reviews/COMPLETE_ARCHITECTURE_REVIEW.md')
+          review = review_path.read_text(encoding='utf-8')
+          review = review.replace(
+              'Status: **REVIEWED — REMEDIATION REQUIRED**',
+              'Status: **APPROVED — ALL FINDINGS REMEDIATED**',
+          )
+          review += f'\n## Final verification\n\nAll review findings were remediated and the complete local CI-equivalent test gate passed on fixed input SHA `{reviewed_sha}`.\n'
+          review_path.write_text(review, encoding='utf-8')
+
+          remediation_path = Path('docs/reviews/COMPLETE_ARCHITECTURE_REMEDIATION.md')
+          remediation = remediation_path.read_text(encoding='utf-8')
+          remediation = remediation.replace(
+              'Status: **IMPLEMENTED — AWAITING FINAL CI**',
+              'Status: **VERIFIED — COMPLETE**',
+          )
+          remediation += f'\n## Verified input SHA\n\n`{reviewed_sha}` passed syntax checks, focused architecture/Daily tests, and the complete test suite before this evidence commit.\n'
+          remediation_path.write_text(remediation, encoding='utf-8')
+
+          final_path = Path('docs/reviews/FINAL_ARCHITECTURE_VERIFICATION.md')
+          final = final_path.read_text(encoding='utf-8')
+          final += f'\n## Local CI-equivalent result\n\nPASS on fixed input SHA `{reviewed_sha}`. PR CI must pass on the resulting evidence head before merge.\n'
+          final_path.write_text(final, encoding='utf-8')
+          PY
+
+      - name: Remove final one-shot workflow
+        run: rm -f .github/workflows/final-complete-architecture-audit.yml
+
+      - name: Commit verified audit evidence
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m "docs: finalize complete architecture review evidence"
+          git push origin HEAD:refactor/complete-architecture-boundaries
