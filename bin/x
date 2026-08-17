@@ -28,6 +28,7 @@ const { createAwsCommand } = require("../src/adapters/cli/commands/aws");
 const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aws_probe_router");
 const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aws_maintenance");
 const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
+const { createProxyCommand } = require("../src/adapters/cli/commands/proxy");
 const { createProxyClashCommand } = require("../src/adapters/cli/commands/proxy_clash");
 const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
@@ -89,6 +90,10 @@ const commandAws = createAwsCommand({
   latencyCommand: commandAwsLatency,
 });
 const commandProxyClash = createProxyClashCommand();
+const commandProxy = createProxyCommand({
+  clashCommand: commandProxyClash,
+  poolCommand: commandProxyPool,
+});
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
@@ -1480,14 +1485,6 @@ function printJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
-async function commandProxy(argv) {
-  const subcommand = argv[0];
-  if (subcommand === "pool") {
-    await commandProxyPool(argv.slice(1));
-    return;
-  }
-  await commandProxyClash(argv);
-}
 
 async function commandProxyPool(argv) {
   const action = argv[0];
