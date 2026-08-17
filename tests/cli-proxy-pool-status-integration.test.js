@@ -37,11 +37,12 @@ test("bin/x proxy pool status validates protocol before docker or candidate acce
 test("bin/x keeps proxy pool status orchestration out of the entry file", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolStatusCommand/);
-  assert.match(source, /await commandProxyPoolStatus\(argv\.slice\(1\)\);/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /statusCommand: commandProxyPoolStatus/);
+  assert.match(source, /lifecycleCommand: commandProxyPoolLifecycle/);
+  assert.match(source, /refreshGithubCommand: commandProxyPoolRefreshGithub/);
+  assert.match(source, /selectCommand: commandProxyPoolSelect/);
+  assert.doesNotMatch(source, /await commandProxyPoolStatus\(/);
   assert.doesNotMatch(source, /await proxyCompose\(\["ps"\]\);/);
   assert.doesNotMatch(source, /fetchAllProxyCandidates/);
-  assert.match(source, /createProxyPoolLifecycleCommand/);
-  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
-  assert.match(source, /if \(action === "refresh-github"\)/);
-  assert.match(source, /await commandProxyPoolSelect\(argv\.slice\(1\)\);/);
 });
