@@ -18,6 +18,7 @@ const { createKlineAggregateYearlyCommand } = require("../src/adapters/cli/comma
 const { createKlineFreshnessCommand } = require("../src/adapters/cli/commands/kline_freshness");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
 const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
+const { createKlineRetryQueueCommand } = require("../src/adapters/cli/commands/kline_retry_queue");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
 const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
@@ -119,6 +120,7 @@ const commandKlineAggregateYearly = createKlineAggregateYearlyCommand({ root: RO
 const commandKlineFreshness = createKlineFreshnessCommand({ root: ROOT });
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
 const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
+const commandKlineRetryQueue = createKlineRetryQueueCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
   root: ROOT,
   klineDir: DEFAULT_KLINE_DIR,
@@ -451,25 +453,6 @@ async function commandAws(argv) {
   }
   parseOptions(argv.slice(1));
   throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
-}
-
-async function commandKlineRetryQueue(argv) {
-  const options = parseOptions(argv, { concurrency: "2", policy: "proxy-only" });
-  const queueFile = options._[0];
-  if (!queueFile) throw new Error("kline retry-queue requires <queue.json>.");
-  const absoluteQueue = rootPath(queueFile);
-  const dueFile = path.join(path.dirname(absoluteQueue), `${path.basename(absoluteQueue, ".json")}.due.json`);
-  const { writeDueCodes } = require("./../src/kline/failure_queue");
-  const due = await writeDueCodes(absoluteQueue, dueFile);
-  if (due.codes.length === 0) {
-    printJson({ status: "no_due_items", queue: absoluteQueue, due: 0 });
-    return;
-  }
-  const args = [dueFile, "--period", due.period, "--policy", options.policy, "--concurrency", String(options.concurrency), "--retry-attempts", "0", "--failure-queue", absoluteQueue];
-  if (due.expectedLatestDate) {
-    args.push("--expected-latest-date", due.expectedLatestDate.replaceAll("-", ""), "--freshness-codes", dueFile);
-  }
-  await commandKlineSync(args);
 }
 
 function extractKlineFailures(summary, period) {
