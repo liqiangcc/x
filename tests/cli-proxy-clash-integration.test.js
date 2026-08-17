@@ -44,22 +44,17 @@ test("bin/x proxy clash validates protocol without touching clash infrastructure
   assert.equal(unknown.stderr, "Unknown proxy command: unknown\n");
 });
 
-test("bin/x delegates clash commands while preserving proxy-pool routing", async () => {
+test("bin/x delegates clash commands through the parent proxy adapter while preserving proxy-pool routing", async () => {
   const source = await fs.readFile(BIN, "utf8");
-  const start = source.indexOf("async function commandProxy(argv) {");
-  const end = source.indexOf("async function commandProxyPool(argv) {", start);
 
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-
-  const router = source.slice(start, end);
+  assert.match(source, /createProxyCommand/);
   assert.match(source, /createProxyClashCommand/);
-  assert.match(router, /if \(subcommand === "pool"\)[\s\S]*?await commandProxyPool\(argv\.slice\(1\)\);/);
-  assert.match(router, /await commandProxyClash\(argv\);/);
-  assert.doesNotMatch(router, /parseOptions\(/);
-  assert.doesNotMatch(router, /checkEastmoneyAccess/);
-  assert.doesNotMatch(router, /listProxies/);
-  assert.doesNotMatch(router, /rotateProxy/);
+  assert.match(source, /clashCommand: commandProxyClash/);
+  assert.match(source, /poolCommand: commandProxyPool/);
+  assert.doesNotMatch(source, /async function commandProxy\(argv\)/);
+  assert.match(source, /async function commandProxyPool\(argv\)/);
+  assert.doesNotMatch(source, /await commandProxyClash\(argv\)/);
+  assert.doesNotMatch(source, /await commandProxyPool\(argv\.slice\(1\)\)/);
   assert.doesNotMatch(source, /require\("\.\.\/src\/proxy\/clash"\)/);
   assert.doesNotMatch(source, /require\("\.\.\/\.\.\/src\/proxy\/clash"\)/);
 });
