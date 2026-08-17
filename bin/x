@@ -14,6 +14,7 @@ const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_
 const { createKlineFetchCommand } = require("../src/adapters/cli/commands/kline_fetch");
 const { createKlineValidateCommand } = require("../src/adapters/cli/commands/kline_validate");
 const { createKlineSyncControlCommand } = require("../src/adapters/cli/commands/kline_sync_control");
+const { createKlineAggregateYearlyCommand } = require("../src/adapters/cli/commands/kline_aggregate_yearly");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
 const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
@@ -113,6 +114,7 @@ const commandCodesBuild = createCodesBuildCommand({ root: ROOT });
 const commandKlineFetch = createKlineFetchCommand({ root: ROOT });
 const commandKlineValidate = createKlineValidateCommand({ root: ROOT });
 const commandKlineSyncControl = createKlineSyncControlCommand();
+const commandKlineAggregateYearly = createKlineAggregateYearlyCommand({ root: ROOT, klineRoot: DEFAULT_KLINE_DIR });
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
 const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
@@ -447,30 +449,6 @@ async function commandAws(argv) {
   }
   parseOptions(argv.slice(1));
   throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
-}
-
-async function loadCodesInput(inputPath) {
-  const target = rootPath(inputPath);
-  const stat = await fs.stat(target);
-  if (stat.isDirectory()) return loadCodesJson(target);
-  const payload = await readJson(target);
-  if (!Array.isArray(payload?.codes)) throw new Error(`Missing codes array: ${rel(target)}`);
-  return uniqueCodes(payload.codes);
-}
-
-async function commandKlineAggregateYearly(argv) {
-  const options = parseOptions(argv, { concurrency: "16" });
-  const inputPath = options._[0];
-  if (!inputPath) throw new Error("kline aggregate-yearly requires <input_dir|codes.json>.");
-  if (!options.date) throw new Error("kline aggregate-yearly requires --date YYYYMMDD.");
-  const result = await aggregateYearlyFromDaily({
-    codes: await loadCodesInput(inputPath),
-    concurrency: parsePositiveIntegerOption(options.concurrency, 16),
-    klineRoot: DEFAULT_KLINE_DIR,
-    targetDate: options.date,
-  });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (result.failed > 0) process.exitCode = 1;
 }
 
 async function commandKlineRetryQueue(argv) {
