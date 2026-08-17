@@ -26,14 +26,16 @@ test("real CLI preserves sync control protocol errors before lock access", () =>
   }
 });
 
-test("bin/x delegates sync-status and unlock while neighboring kline flows remain separate", async () => {
+test("bin/x delegates sync-status, unlock, and freshness while retry-queue and daily remain separate", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineSyncControlCommand/);
   assert.match(source, /const commandKlineSyncControl = createKlineSyncControlCommand\(\);/);
   assert.match(source, /await commandKlineSyncControl\(subcommand, rest\);/);
   assert.doesNotMatch(source, /async function commandKlineSyncControl\(/);
   assert.doesNotMatch(source, /src\/kline\/sync_lock/);
+  assert.match(source, /createKlineFreshnessCommand/);
+  assert.match(source, /await commandKlineFreshness\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineFreshness\(/);
   assert.match(source, /async function commandKlineRetryQueue\(/);
-  assert.match(source, /async function commandKlineFreshness\(/);
   assert.match(source, /async function commandDaily\(/);
 });

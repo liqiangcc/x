@@ -15,6 +15,7 @@ const { createKlineFetchCommand } = require("../src/adapters/cli/commands/kline_
 const { createKlineValidateCommand } = require("../src/adapters/cli/commands/kline_validate");
 const { createKlineSyncControlCommand } = require("../src/adapters/cli/commands/kline_sync_control");
 const { createKlineAggregateYearlyCommand } = require("../src/adapters/cli/commands/kline_aggregate_yearly");
+const { createKlineFreshnessCommand } = require("../src/adapters/cli/commands/kline_freshness");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
 const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
@@ -115,6 +116,7 @@ const commandKlineFetch = createKlineFetchCommand({ root: ROOT });
 const commandKlineValidate = createKlineValidateCommand({ root: ROOT });
 const commandKlineSyncControl = createKlineSyncControlCommand();
 const commandKlineAggregateYearly = createKlineAggregateYearlyCommand({ root: ROOT, klineRoot: DEFAULT_KLINE_DIR });
+const commandKlineFreshness = createKlineFreshnessCommand({ root: ROOT });
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
 const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
@@ -468,57 +470,6 @@ async function commandKlineRetryQueue(argv) {
     args.push("--expected-latest-date", due.expectedLatestDate.replaceAll("-", ""), "--freshness-codes", dueFile);
   }
   await commandKlineSync(args);
-}
-
-async function commandKlineFreshness(argv) {
-  const options = parseOptions(argv);
-  if (!options.period || !["daily", "yearly"].includes(options.period)) {
-    throw new Error("kline freshness requires --period daily|yearly.");
-  }
-  if (!options.codes) throw new Error("kline freshness requires --codes <codes.json>.");
-  const targetRoot = rootPath(options._[0] ?? "data/kline");
-  const codesFile = rootPath(options.codes);
-  const { inspectFreshness, writeRepairCodes } = require("./../src/kline/freshness");
-  const report = await inspectFreshness({
-    codesFile,
-    expectedLatestDate: options.expectedLatestDate,
-    period: options.period,
-    targetRoot,
-  });
-  if (options.repairOutput) {
-    const repairOutput = rootPath(options.repairOutput);
-    await writeRepairCodes(repairOutput, report);
-    report.repair_output = repairOutput;
-    const expected = report.expected_latest_date.replaceAll("-", "");
-    report.suggested_sync_command = [
-      "bin/x kline sync",
-      repairOutput,
-      "--period", report.period,
-      "--policy proxy-only",
-      "--expected-latest-date", expected,
-      "--freshness-codes", repairOutput,
-    ].join(" ");
-  } else {
-    report.repair_output = null;
-    report.suggested_sync_command = null;
-  }
-  if (options.json) {
-    printJson(report);
-    return;
-  }
-  console.log(`Kline freshness: ${report.period}`);
-  console.log(`Expected latest date: ${report.expected_latest_date} (${report.expected_date_source})`);
-  console.log(`Universe: ${report.universe_count}`);
-  console.log(`Fresh: ${report.fresh_count}`);
-  console.log(`Stale: ${report.stale_count}`);
-  console.log(`Missing: ${report.missing_count}`);
-  console.log(`Invalid: ${report.invalid_count}`);
-  console.log(`Repair: ${report.repair_count}`);
-  console.log(`Fresh rate: ${(report.fresh_rate * 100).toFixed(2)}%`);
-  console.log("Latest date distribution:");
-  for (const [date, count] of Object.entries(report.latest_date_distribution)) console.log(`${date}\t${count}`);
-  if (report.repair_output) console.log(`Repair codes: ${report.repair_output}`);
-  if (report.suggested_sync_command) console.log(`Sync: ${report.suggested_sync_command}`);
 }
 
 function extractKlineFailures(summary, period) {
