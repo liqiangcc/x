@@ -20,7 +20,7 @@ test("real CLI preserves kline validate option protocol errors before script exe
   assert.equal(result.stderr, "Missing value for --period\n");
 });
 
-test("bin/x delegates kline validate and freshness while retry-queue and daily remain separate", async () => {
+test("bin/x delegates kline validate, freshness, and retry-queue while daily remains separate", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineValidateCommand/);
   assert.match(source, /const commandKlineValidate = createKlineValidateCommand\(\{ root: ROOT \}\);/);
@@ -30,6 +30,8 @@ test("bin/x delegates kline validate and freshness while retry-queue and daily r
   assert.match(source, /createKlineFreshnessCommand/);
   assert.match(source, /await commandKlineFreshness\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineFreshness\(/);
-  assert.match(source, /async function commandKlineRetryQueue\(/);
+  assert.match(source, /createKlineRetryQueueCommand/);
+  assert.match(source, /await commandKlineRetryQueue\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandDaily\(/);
 });
