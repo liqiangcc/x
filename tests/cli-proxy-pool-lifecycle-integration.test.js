@@ -42,12 +42,13 @@ test("bin/x proxy pool lifecycle validates protocol before docker compose access
 test("bin/x delegates proxy pool lifecycle and no longer owns docker compose infrastructure", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolLifecycleCommand/);
-  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /lifecycleCommand: commandProxyPoolLifecycle/);
+  assert.match(source, /diagnoseCommand: commandProxyPoolDiagnose/);
+  assert.match(source, /probeCommand: commandProxyPoolProbe/);
+  assert.match(source, /benchmarkCommand: commandProxyPoolBenchmark/);
+  assert.match(source, /warmupCommand: commandProxyPoolWarmup/);
+  assert.doesNotMatch(source, /await commandProxyPoolLifecycle\(/);
   assert.doesNotMatch(source, /async function proxyCompose/);
   assert.doesNotMatch(source, /await proxyCompose\(/);
-  assert.match(source, /createProxyPoolDiagnoseCommand/);
-  assert.match(source, /if \(action === "diagnose"\)[\s\S]*?await commandProxyPoolDiagnose\(argv\.slice\(1\)\);/);
-  assert.match(source, /if \(action === "probe"\)/);
-  assert.match(source, /if \(action === "benchmark"\)/);
-  assert.match(source, /if \(action === "warmup"\)/);
 });
