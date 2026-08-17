@@ -50,7 +50,7 @@ test("bin/x delegates aggregate-yearly while daily keeps its own aggregate and c
   assert.doesNotMatch(source, /async function commandKlineAggregateYearly\(/);
   assert.doesNotMatch(source, /async function loadCodesInput\(/);
   assert.match(source, /const \{ aggregateYearlyFromDaily \} = require\("\.\.\/src\/kline\/aggregate_yearly"\);/);
-  assert.match(source, /await aggregateYearlyFromDaily\(\{/);
+  assert.match(source, /async \(\) => aggregateYearlyFromDaily\(\{/);
   assert.match(source, /async function loadCodesJson\(/);
   assert.match(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandKlineFreshness\(/);
