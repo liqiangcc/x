@@ -39,8 +39,9 @@ jobs:
           source = source.replace(import_anchor, import_anchor + import_line, 1)
 
           daily_capability = 'const { aggregateYearlyFromDaily } = require("../src/kline/aggregate_yearly");\n'
+          daily_call = 'async () => aggregateYearlyFromDaily({'
           assert source.count(daily_capability) == 1
-          assert 'await aggregateYearlyFromDaily({' in source
+          assert daily_call in source
 
           composition_anchor = 'const commandKlineSyncControl = createKlineSyncControlCommand();\n'
           composition_line = 'const commandKlineAggregateYearly = createKlineAggregateYearlyCommand({ root: ROOT, klineRoot: DEFAULT_KLINE_DIR });\n'
@@ -57,7 +58,7 @@ jobs:
           assert 'async function loadCodesInput(' not in source
           assert 'async function commandKlineAggregateYearly(' not in source
           assert daily_capability in source
-          assert 'await aggregateYearlyFromDaily({' in source
+          assert daily_call in source
           assert 'await commandKlineAggregateYearly(rest);' in source
           assert 'async function loadCodesJson(' in source
           assert 'async function commandKlineRetryQueue(' in source
