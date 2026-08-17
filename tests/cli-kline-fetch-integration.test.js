@@ -29,7 +29,7 @@ test("real CLI preserves kline fetch protocol errors before launching fetch scri
   }
 });
 
-test("bin/x delegates kline fetch and aggregate while retry-queue and daily remain separate", async () => {
+test("bin/x delegates kline fetch, aggregate, and retry-queue while daily remains separate", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineFetchCommand/);
   assert.match(source, /const commandKlineFetch = createKlineFetchCommand\(\{ root: ROOT \}\);/);
@@ -41,6 +41,9 @@ test("bin/x delegates kline fetch and aggregate while retry-queue and daily rema
   assert.match(source, /await commandKlineAggregateYearly\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineAggregateYearly\(/);
 
-  assert.match(source, /async function commandKlineRetryQueue\(/);
+  assert.match(source, /createKlineRetryQueueCommand/);
+  assert.match(source, /const commandKlineRetryQueue = createKlineRetryQueueCommand\(\{ root: ROOT \}\);/);
+  assert.match(source, /await commandKlineRetryQueue\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandDaily\(/);
 });

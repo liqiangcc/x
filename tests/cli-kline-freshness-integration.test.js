@@ -46,7 +46,7 @@ test("real CLI preserves kline freshness protocol errors before file access", ()
   }
 });
 
-test("bin/x delegates kline freshness while retry-queue and daily remain separate", async () => {
+test("bin/x delegates kline freshness and retry-queue while daily remains separate", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineFreshnessCommand/);
   assert.match(
@@ -56,6 +56,8 @@ test("bin/x delegates kline freshness while retry-queue and daily remain separat
   assert.match(source, /await commandKlineFreshness\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineFreshness\(/);
   assert.doesNotMatch(source, /require\("\.\/\.\.\/src\/kline\/freshness"\)/);
-  assert.match(source, /async function commandKlineRetryQueue\(/);
+  assert.match(source, /createKlineRetryQueueCommand/);
+  assert.match(source, /await commandKlineRetryQueue\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandDaily\(/);
 });

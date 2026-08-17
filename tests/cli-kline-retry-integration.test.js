@@ -25,7 +25,7 @@ test("real CLI preserves kline retry protocol errors before artifact access", ()
   }
 });
 
-test("bin/x delegates kline retry while retry-queue and daily keep separate orchestration", async () => {
+test("bin/x delegates kline retry and retry-queue while daily keeps separate orchestration", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineRetryCommand/);
   assert.match(source, /const commandKlineRetry = createKlineRetryCommand\(\{ root: ROOT \}\);/);
@@ -33,7 +33,10 @@ test("bin/x delegates kline retry while retry-queue and daily keep separate orch
   assert.doesNotMatch(source, /async function commandKlineRetry\(/);
   assert.doesNotMatch(source, /function extractRetryCodes\(/);
   assert.doesNotMatch(source, /function inferKlineOutputDirFromSummary\(/);
-  assert.match(source, /async function commandKlineRetryQueue\(/);
-  assert.match(source, /await commandKlineSync\(args\);/);
+  assert.match(source, /createKlineRetryQueueCommand/);
+  assert.match(source, /const commandKlineRetryQueue = createKlineRetryQueueCommand\(\{ root: ROOT \}\);/);
+  assert.match(source, /await commandKlineRetryQueue\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineRetryQueue\(/);
+  assert.doesNotMatch(source, /await commandKlineSync\(args\);/);
   assert.match(source, /async function commandDaily\(/);
 });

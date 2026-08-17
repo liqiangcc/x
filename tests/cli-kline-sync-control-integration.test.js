@@ -26,7 +26,7 @@ test("real CLI preserves sync control protocol errors before lock access", () =>
   }
 });
 
-test("bin/x delegates sync-status, unlock, and freshness while retry-queue and daily remain separate", async () => {
+test("bin/x delegates sync-status, unlock, freshness, and retry-queue while daily remains separate", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineSyncControlCommand/);
   assert.match(source, /const commandKlineSyncControl = createKlineSyncControlCommand\(\);/);
@@ -36,6 +36,8 @@ test("bin/x delegates sync-status, unlock, and freshness while retry-queue and d
   assert.match(source, /createKlineFreshnessCommand/);
   assert.match(source, /await commandKlineFreshness\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineFreshness\(/);
-  assert.match(source, /async function commandKlineRetryQueue\(/);
+  assert.match(source, /createKlineRetryQueueCommand/);
+  assert.match(source, /await commandKlineRetryQueue\(rest\);/);
+  assert.doesNotMatch(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandDaily\(/);
 });
