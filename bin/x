@@ -24,6 +24,7 @@ const { createStatsCommand } = require("../src/adapters/cli/commands/stats");
 const { createSimulatorCommand } = require("../src/adapters/cli/commands/simulator");
 const { createGitDataCli } = require("../src/adapters/cli/commands/git");
 const { createBenchmarkCommand } = require("../src/adapters/cli/commands/benchmark");
+const { createAwsCommand } = require("../src/adapters/cli/commands/aws");
 const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aws_probe_router");
 const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aws_maintenance");
 const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
@@ -82,6 +83,11 @@ const commandBenchmark = createBenchmarkCommand({ root: ROOT, runsDir: DEFAULT_R
 const commandAwsProbeRouter = createAwsProbeRouterCommand();
 const commandAwsMaintenance = createAwsMaintenanceCommand({ root: ROOT });
 const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });
+const commandAws = createAwsCommand({
+  probeRouterCommand: commandAwsProbeRouter,
+  maintenanceCommand: commandAwsMaintenance,
+  latencyCommand: commandAwsLatency,
+});
 const commandProxyClash = createProxyClashCommand();
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
@@ -436,24 +442,6 @@ async function resolveRouterRegionForDaily(options) {
 
 
 
-
-async function commandAws(argv) {
-  const subcommand = argv[0];
-  if (subcommand === "probe-router") {
-    await commandAwsProbeRouter(argv.slice(1));
-    return;
-  }
-  if (["status", "sync-github-secrets"].includes(subcommand)) {
-    await commandAwsMaintenance(argv);
-    return;
-  }
-  if (subcommand === "latency") {
-    await commandAwsLatency(argv.slice(1));
-    return;
-  }
-  parseOptions(argv.slice(1));
-  throw new Error(`Unknown aws command: ${subcommand ?? ""}`);
-}
 
 function extractKlineFailures(summary, period) {
   const files = summary?.files && typeof summary.files === "object" ? summary.files : {};

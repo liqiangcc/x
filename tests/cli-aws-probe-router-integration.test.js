@@ -32,7 +32,9 @@ test("real aws probe-router entry preserves missing secid protocol without netwo
 test("bin/x delegates probe-router instead of owning Router HTTP logic", async () => {
   const source = await fs.readFile(path.join(ROOT, "bin/x"), "utf8");
   assert.match(source, /createAwsProbeRouterCommand/);
-  assert.match(source, /await commandAwsProbeRouter\(argv\.slice\(1\)\)/);
+  assert.match(source, /createAwsCommand/);
+  assert.match(source, /probeRouterCommand: commandAwsProbeRouter/);
+  assert.doesNotMatch(source, /async function commandAws\(/);
   assert.doesNotMatch(source, /async function commandAwsProbeRouter\(/);
   assert.doesNotMatch(source, /async function postRouterJson\(/);
 });

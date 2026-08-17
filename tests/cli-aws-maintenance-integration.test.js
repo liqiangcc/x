@@ -27,14 +27,16 @@ test("bin/x delegates AWS maintenance commands without absorbing latency or prob
   const source = fs.readFileSync(BIN, "utf8");
   assert.equal(source.includes("createAwsMaintenanceCommand"), true);
   assert.equal(source.includes("const commandAwsMaintenance = createAwsMaintenanceCommand({ root: ROOT });"), true);
-  assert.equal(source.includes("await commandAwsMaintenance(argv);"), true);
+  assert.equal(source.includes("createAwsCommand"), true);
+  assert.equal(source.includes("maintenanceCommand: commandAwsMaintenance"), true);
   assert.equal(source.includes("async function commandAwsStatus("), false);
   assert.equal(source.includes("async function commandAwsSyncGithubSecrets("), false);
   assert.equal(source.includes("createAwsLatencyCommand"), true);
   assert.equal(source.includes("const commandAwsLatency = createAwsLatencyCommand({ root: ROOT });"), true);
   assert.equal(source.includes("async function commandAwsLatency("), false);
-  assert.equal(source.includes("await commandAwsLatency(argv.slice(1));"), true);
-  assert.equal(source.includes("await commandAwsProbeRouter(argv.slice(1));"), true);
+  assert.equal(source.includes("latencyCommand: commandAwsLatency"), true);
+  assert.equal(source.includes("probeRouterCommand: commandAwsProbeRouter"), true);
+  assert.equal(source.includes("async function commandAws("), false);
 });
 
 test("real aws status entry keeps missing-tool diagnostic JSON and exit code", () => {

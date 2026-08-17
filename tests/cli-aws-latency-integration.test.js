@@ -49,7 +49,9 @@ test("bin/x preserves legacy option validation for unknown aws subcommands", asy
 test("bin/x keeps latency command orchestration out of the entry file", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createAwsLatencyCommand/);
-  assert.match(source, /await commandAwsLatency\(argv\.slice\(1\)\);/);
+  assert.match(source, /createAwsCommand/);
+  assert.match(source, /latencyCommand: commandAwsLatency/);
+  assert.doesNotMatch(source, /async function commandAws\(/);
   assert.doesNotMatch(source, /async function commandAwsLatency\(/);
   assert.match(
     source,
