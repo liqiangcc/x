@@ -1,0 +1,97 @@
+name: Patch Kline Freshness Entry
+
+on:
+  push:
+    branches:
+      - refactor/cli-kline-freshness-boundary
+    paths:
+      - .github/workflows/patch-kline-freshness-entry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply scoped freshness entry migration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("bin/x")
+          source = path.read_text()
+
+          import_anchor = 'const { createKlineAggregateYearlyCommand } = require("../src/adapters/cli/commands/kline_aggregate_yearly");\n'
+          assert source.count(import_anchor) == 1
+          assert 'createKlineFreshnessCommand' not in source
+          source = source.replace(
+              import_anchor,
+              import_anchor + 'const { createKlineFreshnessCommand } = require("../src/adapters/cli/commands/kline_freshness");\n',
+              1,
+          )
+
+          composition_anchor = 'const commandKlineAggregateYearly = createKlineAggregateYearlyCommand({ root: ROOT, klineRoot: DEFAULT_KLINE_DIR });\n'
+          assert source.count(composition_anchor) == 1
+          source = source.replace(
+              composition_anchor,
+              composition_anchor + 'const commandKlineFreshness = createKlineFreshnessCommand({ root: ROOT });\n',
+              1,
+          )
+
+          start_marker = 'async function commandKlineFreshness(argv) {'
+          end_marker = 'function extractKlineFailures(summary, period) {'
+          assert source.count(start_marker) == 1
+          start = source.index(start_marker)
+          end = source.index(end_marker, start)
+          old_block = source[start:end]
+          assert 'require("./../src/kline/freshness")' in old_block
+          assert 'inspectFreshness' in old_block
+          assert 'writeRepairCodes' in old_block
+          source = source[:start] + source[end:]
+
+          assert 'async function commandKlineFreshness(' not in source
+          assert 'require("./../src/kline/freshness")' not in source
+          assert source.count('await commandKlineFreshness(rest);') == 1
+          assert source.count('async function commandKlineRetryQueue(argv) {') == 1
+          assert source.count('async function commandDaily(argv) {') == 1
+          assert 'const { aggregateYearlyFromDaily } = require("../src/kline/aggregate_yearly");' in source
+
+          path.write_text(source)
+          PY
+
+      - name: Validate scoped migration
+        run: |
+          node --check bin/x
+          node --test \
+            tests/cli-kline-freshness-command.test.js \
+            tests/cli-kline-freshness-integration.test.js \
+            tests/cli-kline-aggregate-yearly-integration.test.js \
+            tests/cli-kline-validate-integration.test.js \
+            tests/cli-kline-sync-control-integration.test.js \
+            tests/cli-kline-retry-integration.test.js \
+            tests/kline-freshness.test.js
+
+      - name: Commit scoped entry migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          if ! git diff --cached --quiet; then
+            git commit -m "refactor: delegate kline freshness CLI"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
