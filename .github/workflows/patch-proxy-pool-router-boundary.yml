@@ -1,0 +1,59 @@
+name: Patch Proxy Pool router boundary
+
+on:
+  push:
+    branches:
+      - refactor/cli-proxy-pool-router-boundary
+    paths:
+      - .github/workflows/patch-proxy-pool-router-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/cli-proxy-pool-router-boundary
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch Proxy Pool entry boundary
+        run: node .github/patch-proxy-pool-router-boundary.cjs
+
+      - name: Validate targeted Proxy Pool boundary
+        run: |
+          node --check bin/x
+          node --check src/adapters/cli/commands/proxy_pool.js
+          node --test \
+            tests/cli-proxy-pool-command.test.js \
+            tests/cli-proxy-integration.test.js \
+            tests/cli-proxy-clash-command.test.js \
+            tests/cli-proxy-clash-integration.test.js \
+            tests/cli-proxy-pool-verify-integration.test.js \
+            tests/cli-proxy-pool-select-integration.test.js \
+            tests/cli-proxy-pool-status-integration.test.js \
+            tests/cli-proxy-pool-refresh-github-integration.test.js \
+            tests/cli-proxy-pool-lifecycle-integration.test.js \
+            tests/cli-proxy-pool-diagnose-integration.test.js \
+            tests/cli-proxy-pool-probe-integration.test.js \
+            tests/cli-proxy-pool-benchmark-integration.test.js \
+            tests/cli-proxy-pool-warmup-integration.test.js \
+            tests/cli-bin-x-boundary-audit.test.js
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/x
+          git commit -m "refactor: separate proxy pool router from CLI entry"
+          git push origin HEAD:refactor/cli-proxy-pool-router-boundary
