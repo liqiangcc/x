@@ -36,15 +36,29 @@ test("real proxy parent router preserves clash unknown-command protocol", async 
   assert.equal(malformed.stderr, "Missing value for --value\n");
 });
 
-test("bin/x delegates the proxy family through one parent CLI adapter", async () => {
+test("real proxy parent router preserves pool unknown-command protocol", async () => {
+  const unknown = await runCli(["proxy", "pool", "unknown"]);
+  assert.equal(unknown.exitCode, 1);
+  assert.equal(unknown.stdout, "");
+  assert.equal(unknown.stderr, "Unknown proxy pool command: unknown\n");
+
+  const missing = await runCli(["proxy", "pool"]);
+  assert.equal(missing.exitCode, 1);
+  assert.equal(missing.stdout, "");
+  assert.equal(missing.stderr, "Unknown proxy pool command: \n");
+});
+
+test("bin/x delegates the proxy family through parent and pool CLI adapters", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyCommand/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /const commandProxyPool = createProxyPoolCommand\(\{/);
   assert.match(source, /const commandProxy = createProxyCommand\(\{/);
   assert.match(source, /clashCommand: commandProxyClash/);
   assert.match(source, /poolCommand: commandProxyPool/);
   assert.match(source, /await commandProxy\(\[subcommand, \.\.\.rest\]\);/);
   assert.doesNotMatch(source, /async function commandProxy\(argv\)/);
-  assert.match(source, /async function commandProxyPool\(argv\)/);
+  assert.doesNotMatch(source, /async function commandProxyPool\(argv\)/);
   assert.doesNotMatch(source, /await commandProxyClash\(argv\)/);
   assert.doesNotMatch(source, /await commandProxyPool\(argv\.slice\(1\)\)/);
 });

@@ -49,7 +49,9 @@ test("bin/x proxy pool verify validates protocol before proxy infrastructure", a
 test("bin/x keeps proxy verification orchestration out of the entry file", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolVerifyCommand/);
-  assert.match(source, /await commandProxyPoolVerify\(argv\.slice\(1\)\);/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /verifyCommand: commandProxyPoolVerify/);
+  assert.doesNotMatch(source, /await commandProxyPoolVerify\(/);
   assert.doesNotMatch(source, /async function writeProxyVerificationReport\(/);
   assert.doesNotMatch(source, /validateAllProxies/);
 });

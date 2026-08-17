@@ -42,13 +42,13 @@ test("bin/x proxy pool refresh-github validates protocol before provider infrast
 test("bin/x delegates refresh-github without owning provider orchestration", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolRefreshGithubCommand/);
-  assert.match(source, /await commandProxyPoolRefreshGithub\(argv\.slice\(1\)\);/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /refreshGithubCommand: commandProxyPoolRefreshGithub/);
+  assert.match(source, /lifecycleCommand: commandProxyPoolLifecycle/);
+  assert.match(source, /diagnoseCommand: commandProxyPoolDiagnose/);
+  assert.doesNotMatch(source, /await commandProxyPoolRefreshGithub\(/);
   assert.doesNotMatch(source, /GithubProxyRepositoryProvider/);
   assert.doesNotMatch(source, /provider\.listCandidates\(\)/);
-  assert.match(source, /createProxyPoolLifecycleCommand/);
-  assert.match(source, /await commandProxyPoolLifecycle\(argv\);/);
   assert.doesNotMatch(source, /if \(action === "up"\)/);
   assert.doesNotMatch(source, /if \(action === "down"\)/);
-  assert.match(source, /createProxyPoolDiagnoseCommand/);
-  assert.match(source, /if \(action === "diagnose"\)[\s\S]*?await commandProxyPoolDiagnose\(argv\.slice\(1\)\);/);
 });

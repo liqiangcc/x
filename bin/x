@@ -29,6 +29,7 @@ const { createAwsProbeRouterCommand } = require("../src/adapters/cli/commands/aw
 const { createAwsMaintenanceCommand } = require("../src/adapters/cli/commands/aws_maintenance");
 const { createAwsLatencyCommand } = require("../src/adapters/cli/commands/aws_latency");
 const { createProxyCommand } = require("../src/adapters/cli/commands/proxy");
+const { createProxyPoolCommand } = require("../src/adapters/cli/commands/proxy_pool");
 const { createProxyClashCommand } = require("../src/adapters/cli/commands/proxy_clash");
 const { createProxyPoolVerifyCommand } = require("../src/adapters/cli/commands/proxy_pool_verify");
 const { createProxyPoolSelectCommand } = require("../src/adapters/cli/commands/proxy_pool_select");
@@ -90,10 +91,6 @@ const commandAws = createAwsCommand({
   latencyCommand: commandAwsLatency,
 });
 const commandProxyClash = createProxyClashCommand();
-const commandProxy = createProxyCommand({
-  clashCommand: commandProxyClash,
-  poolCommand: commandProxyPool,
-});
 const commandProxyPoolVerify = createProxyPoolVerifyCommand({ root: ROOT, runsDir: DEFAULT_RUNS_DIR });
 const commandProxyPoolSelect = createProxyPoolSelectCommand({ root: ROOT });
 const commandProxyPoolStatus = createProxyPoolStatusCommand({ root: ROOT });
@@ -118,6 +115,21 @@ const commandProxyPoolWarmup = createProxyPoolWarmupCommand({
   root: ROOT,
   runsDir: DEFAULT_RUNS_DIR,
   reportWriter: proxyBenchmarkReportWriter,
+});
+const commandProxyPool = createProxyPoolCommand({
+  verifyCommand: commandProxyPoolVerify,
+  selectCommand: commandProxyPoolSelect,
+  statusCommand: commandProxyPoolStatus,
+  refreshGithubCommand: commandProxyPoolRefreshGithub,
+  lifecycleCommand: commandProxyPoolLifecycle,
+  diagnoseCommand: commandProxyPoolDiagnose,
+  probeCommand: commandProxyPoolProbe,
+  benchmarkCommand: commandProxyPoolBenchmark,
+  warmupCommand: commandProxyPoolWarmup,
+});
+const commandProxy = createProxyCommand({
+  clashCommand: commandProxyClash,
+  poolCommand: commandProxyPool,
 });
 const commandDb = createDbCommand();
 const commandStats = createStatsCommand();
@@ -1483,48 +1495,6 @@ async function readExistingJson(filePath) {
 
 function printJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-}
-
-
-async function commandProxyPool(argv) {
-  const action = argv[0];
-  if (action === "verify") {
-    await commandProxyPoolVerify(argv.slice(1));
-    return;
-  }
-  if (action === "select") {
-    await commandProxyPoolSelect(argv.slice(1));
-    return;
-  }
-  if (action === "status") {
-    await commandProxyPoolStatus(argv.slice(1));
-    return;
-  }
-  if (action === "refresh-github") {
-    await commandProxyPoolRefreshGithub(argv.slice(1));
-    return;
-  }
-  if (["up", "down"].includes(action)) {
-    await commandProxyPoolLifecycle(argv);
-    return;
-  }
-  if (action === "diagnose") {
-    await commandProxyPoolDiagnose(argv.slice(1));
-    return;
-  }
-  if (action === "probe") {
-    await commandProxyPoolProbe(argv.slice(1));
-    return;
-  }
-  if (action === "benchmark") {
-    await commandProxyPoolBenchmark(argv.slice(1));
-    return;
-  }
-  if (action === "warmup") {
-    await commandProxyPoolWarmup(argv.slice(1));
-    return;
-  }
-  throw new Error(`Unknown proxy pool command: ${action ?? ""}`);
 }
 
 

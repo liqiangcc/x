@@ -42,9 +42,11 @@ test("bin/x proxy pool select validates protocol before filesystem access", asyn
 test("bin/x keeps proxy pool selection orchestration out of the entry file", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createProxyPoolSelectCommand/);
-  assert.match(source, /await commandProxyPoolSelect\(argv\.slice\(1\)\);/);
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /selectCommand: commandProxyPoolSelect/);
+  assert.match(source, /statusCommand: commandProxyPoolStatus/);
+  assert.match(source, /refreshGithubCommand: commandProxyPoolRefreshGithub/);
+  assert.match(source, /benchmarkCommand: commandProxyPoolBenchmark/);
+  assert.doesNotMatch(source, /await commandProxyPoolSelect\(/);
   assert.doesNotMatch(source, /writeSelectedProxies/);
-  assert.match(source, /if \(action === "status"\)/);
-  assert.match(source, /if \(action === "refresh-github"\)/);
-  assert.match(source, /if \(action === "benchmark"\)/);
 });

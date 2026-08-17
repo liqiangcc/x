@@ -7,6 +7,7 @@ const test = require("node:test");
 
 const ROOT = path.resolve(__dirname, "..");
 const BIN = path.join(ROOT, "bin", "x");
+const PROXY_POOL_ROUTER = path.join(ROOT, "src", "adapters", "cli", "commands", "proxy_pool.js");
 
 async function readEntry() {
   return fs.readFile(BIN, "utf8");
@@ -23,15 +24,9 @@ test("bin/x does not retain retired proxy-pool parsing helpers", async () => {
   assert.match(source, /function parseNonNegativeIntegerOption\(/);
 });
 
-test("bin/x proxy-pool family stays a delegation-only router", async () => {
+test("proxy-pool family stays a delegation-only CLI router", async () => {
   const source = await readEntry();
-  const start = source.indexOf("async function commandProxyPool(argv) {");
-  const end = source.indexOf("function printDailyRunSummary", start);
-
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-
-  const router = source.slice(start, end);
+  const router = await fs.readFile(PROXY_POOL_ROUTER, "utf8");
   const delegatedCommands = [
     "commandProxyPoolVerify",
     "commandProxyPoolSelect",
@@ -44,8 +39,12 @@ test("bin/x proxy-pool family stays a delegation-only router", async () => {
     "commandProxyPoolWarmup",
   ];
 
+  assert.match(source, /createProxyPoolCommand/);
+  assert.match(source, /const commandProxyPool = createProxyPoolCommand\(\{/);
+  assert.doesNotMatch(source, /async function commandProxyPool\(argv\)/);
+
   for (const command of delegatedCommands) {
-    assert.match(router, new RegExp(command));
+    assert.match(source, new RegExp(command));
   }
 
   assert.doesNotMatch(router, /parseOptions\(/);
