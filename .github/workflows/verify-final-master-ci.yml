@@ -1,0 +1,81 @@
+name: Verify final architecture post-merge master CI
+
+on:
+  push:
+    branches:
+      - verify/final-architecture-master-ci
+    paths:
+      - .github/workflows/verify-final-master-ci.yml
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: "98"
+    steps:
+      - name: Checkout verification branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify merge is present on master
+        id: merge
+        run: |
+          set -euo pipefail
+          merged=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merged')
+          test "$merged" = "true"
+          merge_sha=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merge_commit_sha')
+          master_sha=$(gh api "repos/${REPOSITORY}/git/ref/heads/master" --jq '.object.sha')
+          git fetch origin master
+          git merge-base --is-ancestor "$merge_sha" origin/master
+          gh api "repos/${REPOSITORY}/contents/src/application/daily/run_daily_pipeline.js?ref=master" >/dev/null
+          gh api "repos/${REPOSITORY}/contents/src/adapters/daily/daily_runtime.js?ref=master" >/dev/null
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "master_sha=$master_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CI on exact master SHA
+        id: ci
+        env:
+          MASTER_SHA: ${{ steps.merge.outputs.master_sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            run=$(gh api "repos/${REPOSITORY}/actions/workflows/ci.yml/runs?branch=master&per_page=30" \
+              --jq ".workflow_runs | map(select(.head_sha == \"${MASTER_SHA}\")) | first // empty")
+            if [ -z "$run" ]; then
+              sleep 15
+              continue
+            fi
+            status=$(jq -r '.status' <<<"$run")
+            conclusion=$(jq -r '.conclusion // ""' <<<"$run")
+            run_url=$(jq -r '.html_url' <<<"$run")
+            run_id=$(jq -r '.id' <<<"$run")
+            if [ "$status" != "completed" ]; then
+              sleep 15
+              continue
+            fi
+            test "$conclusion" = "success"
+            echo "run_url=$run_url" >> "$GITHUB_OUTPUT"
+            echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+            exit 0
+          done
+          echo "Timed out waiting for CI on master SHA ${MASTER_SHA}" >&2
+          exit 1
+
+      - name: Record durable post-merge verification
+        env:
+          MASTER_SHA: ${{ steps.merge.outputs.master_sha }}
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+          RUN_URL: ${{ steps.ci.outputs.run_url }}
+          RUN_ID: ${{ steps.ci.outputs.run_id }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPOSITORY" --body "Post-merge verification: PASS. PR merge commit \`${MERGE_SHA}\` is present on master SHA \`${MASTER_SHA}\`, required architecture files are present, and master CI run [#${RUN_ID}](${RUN_URL}) completed successfully."
