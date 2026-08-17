@@ -39,7 +39,7 @@ test("real CLI preserves kline aggregate-yearly protocol errors before input acc
   }
 });
 
-test("bin/x delegates aggregate-yearly while daily keeps its own directory codes loader", async () => {
+test("bin/x delegates aggregate-yearly while daily keeps its own aggregate and codes dependencies", async () => {
   const source = await fs.readFile(BIN, "utf8");
   assert.match(source, /createKlineAggregateYearlyCommand/);
   assert.match(
@@ -49,7 +49,8 @@ test("bin/x delegates aggregate-yearly while daily keeps its own directory codes
   assert.match(source, /await commandKlineAggregateYearly\(rest\);/);
   assert.doesNotMatch(source, /async function commandKlineAggregateYearly\(/);
   assert.doesNotMatch(source, /async function loadCodesInput\(/);
-  assert.doesNotMatch(source, /require\("\.\.\/src\/kline\/aggregate_yearly"\)/);
+  assert.match(source, /const \{ aggregateYearlyFromDaily \} = require\("\.\.\/src\/kline\/aggregate_yearly"\);/);
+  assert.match(source, /await aggregateYearlyFromDaily\(\{/);
   assert.match(source, /async function loadCodesJson\(/);
   assert.match(source, /async function commandKlineRetryQueue\(/);
   assert.match(source, /async function commandKlineFreshness\(/);
