@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-08-17T04:59:56.870746+00:00",
+  "checks": {
+    "recovery_branch_local_pass": false,
+    "master_final_local_pass": false,
+    "master_source_downloaded": false
+  },
+  "overall_local_verification": false,
+  "targeted_test_tail": [
+    "<missing: /mnt/data/master-final-targeted.log>"
+  ],
+  "full_test_tail": [
+    "<missing: /mnt/data/master-final-full.log>"
+  ]
+}
