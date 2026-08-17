@@ -13,6 +13,7 @@ const { createStocksCommand } = require("../src/adapters/cli/commands/stocks");
 const { createCodesBuildCommand } = require("../src/adapters/cli/commands/codes_build");
 const { createKlineFetchCommand } = require("../src/adapters/cli/commands/kline_fetch");
 const { createKlineValidateCommand } = require("../src/adapters/cli/commands/kline_validate");
+const { createKlineSyncControlCommand } = require("../src/adapters/cli/commands/kline_sync_control");
 const { appendKlineSyncOptions, createKlineSyncCommand } = require("../src/adapters/cli/commands/kline_sync");
 const { createKlineRetryCommand } = require("../src/adapters/cli/commands/kline_retry");
 const { createDbCommand } = require("../src/adapters/cli/commands/db");
@@ -111,6 +112,7 @@ const commandStocks = createStocksCommand({ root: ROOT, outputDir: rel(DEFAULT_U
 const commandCodesBuild = createCodesBuildCommand({ root: ROOT });
 const commandKlineFetch = createKlineFetchCommand({ root: ROOT });
 const commandKlineValidate = createKlineValidateCommand({ root: ROOT });
+const commandKlineSyncControl = createKlineSyncControlCommand();
 const commandKlineSync = createKlineSyncCommand({ root: ROOT });
 const commandKlineRetry = createKlineRetryCommand({ root: ROOT });
 const commandSimulator = createSimulatorCommand({
@@ -488,18 +490,6 @@ async function commandKlineRetryQueue(argv) {
     args.push("--expected-latest-date", due.expectedLatestDate.replaceAll("-", ""), "--freshness-codes", dueFile);
   }
   await commandKlineSync(args);
-}
-
-async function commandKlineSyncControl(action, argv) {
-  const options = parseOptions(argv);
-  const { readLock, unlockSync } = require("./../src/kline/sync_lock");
-  if (action === "sync-status") {
-    const periods = options.period ? [options.period] : ["daily", "yearly"];
-    printJson({ locks: await Promise.all(periods.map((period) => readLock(period))) });
-    return;
-  }
-  if (!["daily", "yearly"].includes(options.period)) throw new Error("kline unlock requires --period daily|yearly.");
-  printJson(await unlockSync(options.period, { force: Boolean(options.force) }));
 }
 
 async function commandKlineFreshness(argv) {
