@@ -1,0 +1,366 @@
+{
+  "run_id": "20260818T124809Z_daily",
+  "failed": 45,
+  "items": [
+    {
+      "target": "0.301089",
+      "code": "301089",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600606",
+      "code": "600606",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600746",
+      "code": "600746",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600754",
+      "code": "600754",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600771",
+      "code": "600771",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600818",
+      "code": "600818",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600821",
+      "code": "600821",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600872",
+      "code": "600872",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600935",
+      "code": "600935",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600956",
+      "code": "600956",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.600992",
+      "code": "600992",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601366",
+      "code": "601366",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601568",
+      "code": "601568",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601828",
+      "code": "601828",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601952",
+      "code": "601952",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601966",
+      "code": "601966",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.601992",
+      "code": "601992",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603060",
+      "code": "603060",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603070",
+      "code": "603070",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603128",
+      "code": "603128",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603138",
+      "code": "603138",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603170",
+      "code": "603170",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603180",
+      "code": "603180",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603208",
+      "code": "603208",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603237",
+      "code": "603237",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603255",
+      "code": "603255",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603279",
+      "code": "603279",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603318",
+      "code": "603318",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603348",
+      "code": "603348",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603369",
+      "code": "603369",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603517",
+      "code": "603517",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603567",
+      "code": "603567",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603589",
+      "code": "603589",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603595",
+      "code": "603595",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603599",
+      "code": "603599",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603605",
+      "code": "603605",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603658",
+      "code": "603658",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603669",
+      "code": "603669",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603707",
+      "code": "603707",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603719",
+      "code": "603719",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603801",
+      "code": "603801",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603806",
+      "code": "603806",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603819",
+      "code": "603819",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.603866",
+      "code": "603866",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    },
+    {
+      "target": "1.605300",
+      "code": "605300",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 504: Eastmoney request timeout.",
+      "retry_count": 0
+    }
+  ]
+}
