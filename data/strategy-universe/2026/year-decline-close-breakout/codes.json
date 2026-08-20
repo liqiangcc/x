@@ -14,14 +14,14 @@
     "targetYear": 2026
   },
   "strategy_id": "year-decline-close-breakout",
-  "as_of_date": "2026-08-19",
-  "generated_at": "2026-08-19T00:00:00.000Z",
-  "source_hash": "6352ae8478d579bacaefa95743da629568ed32ccbbcb33a89c4cb988dc668e89",
-  "source_code_count": 5551,
+  "as_of_date": "2026-08-20",
+  "generated_at": "2026-08-20T00:00:00.000Z",
+  "source_hash": "00fb879a90faf920ad48ef357dd8d8de3c9cacdebcd728c0fab7e44d0108e475",
+  "source_code_count": 5552,
   "total_codes": 399,
   "excluded_counts": {
     "strategy_prefilter_not_matched": 5095,
-    "missing_yearly": 57
+    "missing_yearly": 58
   },
   "codes": [
     "000002",
@@ -5545,6 +5545,7 @@
       "301682",
       "301683",
       "301688",
+      "301689",
       "301696",
       "301697",
       "301699",
