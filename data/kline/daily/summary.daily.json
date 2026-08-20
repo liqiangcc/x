@@ -1,9 +1,9 @@
 {
   "aws_regions": null,
   "aws_region_strategy": "router_auto",
-  "available_codes": 164,
+  "available_codes": 159,
   "batch_size": null,
-  "candidate_codes": 6,
+  "candidate_codes": 1,
   "concurrency": 4,
   "checkpoint_every": 50,
   "engine": "aws-router",
@@ -11,7 +11,7 @@
   "expected_latest_date": "2026-08-20",
   "force": false,
   "freshness_codes": 241,
-  "freshness_codes_path": "/home/runner/work/x/x/runs/20260820T132155Z_daily/freshness.codes.json",
+  "freshness_codes_path": "/home/runner/work/x/x/runs/20260820T132437Z_daily/freshness.codes.json",
   "huaweicloud_regions": null,
   "huaweicloud_region_strategy": "none",
   "input_path": "/home/runner/work/x/x/data/jobs/20260820/daily/20260820-daily-market-hs-a/current.codes.json",
@@ -29,11 +29,11 @@
   "proxy_success": 0,
   "proxy_fallback": 0,
   "proxy_error_counts": {},
-  "router_region": "us-west-2,ap-southeast-2,eu-west-2,us-east-2,eu-west-1,us-east-1,ca-central-1,ap-northeast-1,us-west-1,sa-east-1",
-  "router_region_strategy": "ordered_fallback",
+  "router_region": "auto",
+  "router_region_strategy": "router_auto",
   "selection_mode": "stale_or_missing",
-  "total_codes": 6,
-  "success": 5,
+  "total_codes": 1,
+  "success": 0,
   "migrated_existing": 0,
   "skipped_existing": 0,
   "failed": 1,
@@ -41,37 +41,22 @@
   "retried": 1,
   "retry_success": 0,
   "retry_failed": 1,
-  "success_rate": 0.8333333333333334,
+  "success_rate": 0,
   "attempts_by_code": {
-    "603517": 1,
-    "603806": 1,
-    "603866": 4,
-    "603883": 1,
-    "603896": 1,
-    "605108": 1
+    "603866": 4
   },
-  "engine_counts": {
-    "aws-router": 5
-  },
-  "incremental_fetches": 5,
+  "engine_counts": {},
+  "incremental_fetches": 0,
   "full_fetches": 0,
-  "fetched_points": 100,
-  "duration_ms_by_code": {
-    "603517": 2815,
-    "603806": 2033,
-    "603883": 1421,
-    "603896": 1885,
-    "605108": 457
-  },
-  "avg_duration_ms": 1722.2,
-  "p50_duration_ms": 1885,
-  "p95_duration_ms": 2815,
+  "fetched_points": 0,
+  "duration_ms_by_code": {},
+  "avg_duration_ms": null,
+  "p50_duration_ms": null,
+  "p95_duration_ms": null,
   "failure_reason_counts": {
     "transient_network": 1
   },
-  "region_counts": {
-    "us-west-2": 5
-  },
+  "region_counts": {},
   "retriable_failure_counts": {
     "transient_network": 4
   },
@@ -81,56 +66,6 @@
   ],
   "status": "failed_success_rate",
   "files": {
-    "603517": {
-      "engine": "aws-router",
-      "policy": "engine:aws-router",
-      "region": "us-west-2",
-      "router_duration_ms": 1562,
-      "target_duration_ms": 1253,
-      "eastmoney_duration_ms": 1253,
-      "total_duration_ms": 2815,
-      "fallback_count": 0,
-      "fallback_from": null,
-      "proxy_attempts": null,
-      "proxy_id": null,
-      "proxy_error_counts": null,
-      "attempted_regions": [
-        "us-west-2"
-      ],
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/603/603517.json",
-      "secid": "1.603517",
-      "points": 2290,
-      "fetched_points": 20,
-      "requested_kline_limit": 20,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "603806": {
-      "engine": "aws-router",
-      "policy": "engine:aws-router",
-      "region": "us-west-2",
-      "router_duration_ms": 1174,
-      "target_duration_ms": 859,
-      "eastmoney_duration_ms": 859,
-      "total_duration_ms": 2033,
-      "fallback_count": 0,
-      "fallback_from": null,
-      "proxy_attempts": null,
-      "proxy_id": null,
-      "proxy_error_counts": null,
-      "attempted_regions": [
-        "us-west-2"
-      ],
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/603/603806.json",
-      "secid": "1.603806",
-      "points": 2886,
-      "fetched_points": 20,
-      "requested_kline_limit": 20,
-      "attempts": 1,
-      "last_attempt": 0
-    },
     "603866": {
       "status": "failed",
       "secid": "1.603866",
@@ -142,81 +77,6 @@
       "fallback_error_class": "transient_network",
       "attempts": 4,
       "last_attempt": 3
-    },
-    "603883": {
-      "engine": "aws-router",
-      "policy": "engine:aws-router",
-      "region": "us-west-2",
-      "router_duration_ms": 517,
-      "target_duration_ms": 904,
-      "eastmoney_duration_ms": 903,
-      "total_duration_ms": 1421,
-      "fallback_count": 0,
-      "fallback_from": null,
-      "proxy_attempts": null,
-      "proxy_id": null,
-      "proxy_error_counts": null,
-      "attempted_regions": [
-        "us-west-2"
-      ],
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/603/603883.json",
-      "secid": "1.603883",
-      "points": 2662,
-      "fetched_points": 20,
-      "requested_kline_limit": 20,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "603896": {
-      "engine": "aws-router",
-      "policy": "engine:aws-router",
-      "region": "us-west-2",
-      "router_duration_ms": 590,
-      "target_duration_ms": 1295,
-      "eastmoney_duration_ms": 1295,
-      "total_duration_ms": 1885,
-      "fallback_count": 0,
-      "fallback_from": null,
-      "proxy_attempts": null,
-      "proxy_id": null,
-      "proxy_error_counts": null,
-      "attempted_regions": [
-        "us-west-2"
-      ],
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/603/603896.json",
-      "secid": "1.603896",
-      "points": 2256,
-      "fetched_points": 20,
-      "requested_kline_limit": 20,
-      "attempts": 1,
-      "last_attempt": 0
-    },
-    "605108": {
-      "engine": "aws-router",
-      "policy": "engine:aws-router",
-      "region": "us-west-2",
-      "router_duration_ms": 125,
-      "target_duration_ms": 332,
-      "eastmoney_duration_ms": 332,
-      "total_duration_ms": 457,
-      "fallback_count": 0,
-      "fallback_from": null,
-      "proxy_attempts": null,
-      "proxy_id": null,
-      "proxy_error_counts": null,
-      "attempted_regions": [
-        "us-west-2"
-      ],
-      "status": "success",
-      "file": "/home/runner/work/x/x/data/kline/daily/605/605108.json",
-      "secid": "1.605108",
-      "points": 1480,
-      "fetched_points": 20,
-      "requested_kline_limit": 20,
-      "attempts": 1,
-      "last_attempt": 0
     }
   },
   "proxy_preflight": null,
