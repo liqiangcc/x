@@ -8,7 +8,7 @@
   "status": "running",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 5,
+  "chain_depth": 6,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -600,6 +600,7 @@
     "603128",
     "603138",
     "603170",
+    "603180",
     "603208",
     "603209",
     "603237",
@@ -619,6 +620,7 @@
     "603658",
     "603669",
     "603707",
+    "603719",
     "603801",
     "603806",
     "603819",
@@ -809,9 +811,7 @@
     "601268",
     "601558",
     "603056",
-    "603180",
     "603603",
-    "603719",
     "603963",
     "688086"
   ],
@@ -972,7 +972,6 @@
     "601268",
     "601558",
     "603056",
-    "603060",
     "603180",
     "603603",
     "603719",
@@ -981,31 +980,29 @@
   ],
   "last_batch_source": "failed",
   "last_summary": {
-    "status": "failed_success_rate",
-    "total_codes": 3,
-    "success": 1,
+    "status": "completed",
+    "total_codes": 2,
+    "success": 2,
     "migrated_existing": 0,
     "skipped_existing": 0,
-    "failed": 2,
-    "success_rate": 0.3333333333333333,
-    "failure_reasons": [
-      "failed_items",
-      "success_rate_below_minimum"
-    ],
+    "failed": 0,
+    "success_rate": 1,
+    "failure_reasons": [],
     "engine_counts": {
-      "aws-router": 1
+      "aws-router": 1,
+      "local": 1
     },
     "region_counts": {
-      "ap-northeast-2": 1
+      "ap-northeast-3": 1
     }
   },
   "created_at": "2026-08-21T08:46:00Z",
-  "updated_at": "2026-08-21T16:03:39Z",
+  "updated_at": "2026-08-21T16:05:36Z",
   "counts": {
     "pending": 0,
-    "completed": 239,
-    "failed": 160,
+    "completed": 241,
+    "failed": 158,
     "blocked": 0,
-    "remaining": 160
+    "remaining": 158
   }
 }
