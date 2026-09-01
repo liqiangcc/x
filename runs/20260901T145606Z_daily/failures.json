@@ -1,0 +1,46 @@
+{
+  "run_id": "20260901T145606Z_daily",
+  "failed": 5,
+  "items": [
+    {
+      "target": "1.688298",
+      "code": "688298",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688337",
+      "code": "688337",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688391",
+      "code": "688391",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688533",
+      "code": "688533",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    },
+    {
+      "target": "1.688599",
+      "code": "688599",
+      "type": "kline",
+      "period": "daily",
+      "reason": "Kline policy engine:aws-router failed: aws-router: aws-router returned statusCode 502: socket hang up",
+      "retry_count": 0
+    }
+  ]
+}
