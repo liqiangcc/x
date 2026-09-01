@@ -8,7 +8,7 @@
   "status": "running",
   "total_codes": 399,
   "batch_size": 300,
-  "chain_depth": 5,
+  "chain_depth": 6,
   "max_chain_depth": 10,
   "all_codes": [
     "000002",
@@ -646,8 +646,12 @@
     "688247",
     "688271",
     "688276",
+    "688298",
     "688320",
     "688363",
+    "688391",
+    "688533",
+    "688599",
     "688793"
   ],
   "failed_codes": [
@@ -809,11 +813,7 @@
     "603603",
     "603963",
     "688086",
-    "688298",
-    "688337",
-    "688391",
-    "688533",
-    "688599"
+    "688337"
   ],
   "blocked_codes": [],
   "last_batch_codes": [
@@ -970,34 +970,13 @@
     "600899",
     "600978",
     "601268",
-    "601366",
     "601558",
     "603056",
-    "603318",
-    "603517",
-    "603589",
-    "603595",
-    "603599",
     "603603",
-    "603669",
-    "603707",
-    "603819",
     "603963",
-    "603970",
-    "605108",
-    "605266",
-    "605300",
-    "688050",
     "688086",
-    "688107",
-    "688139",
-    "688198",
-    "688232",
-    "688247",
     "688298",
-    "688320",
     "688337",
-    "688363",
     "688391",
     "688533",
     "688599"
@@ -1005,34 +984,30 @@
   "last_batch_source": "failed",
   "last_summary": {
     "status": "failed_success_rate",
-    "total_codes": 26,
-    "success": 21,
+    "total_codes": 5,
+    "success": 4,
     "migrated_existing": 0,
     "skipped_existing": 0,
-    "failed": 5,
-    "success_rate": 0.8076923076923077,
+    "failed": 1,
+    "success_rate": 0.8,
     "failure_reasons": [
       "failed_items",
       "success_rate_below_minimum"
     ],
     "engine_counts": {
-      "local": 3,
-      "aws-router": 18
+      "aws-router": 4
     },
     "region_counts": {
-      "us-west-1": 13,
-      "us-west-2": 3,
-      "us-east-2": 1,
-      "ap-south-1": 1
+      "ap-northeast-3": 4
     }
   },
   "created_at": "2026-09-01T08:41:43Z",
-  "updated_at": "2026-09-01T15:01:17Z",
+  "updated_at": "2026-09-01T15:03:49Z",
   "counts": {
     "pending": 0,
-    "completed": 236,
-    "failed": 163,
+    "completed": 240,
+    "failed": 159,
     "blocked": 0,
-    "remaining": 163
+    "remaining": 159
   }
 }
