@@ -14,14 +14,14 @@
     "targetYear": 2026
   },
   "strategy_id": "year-decline-close-breakout",
-  "as_of_date": "2026-08-19",
-  "generated_at": "2026-08-19T00:00:00.000Z",
-  "source_hash": "6352ae8478d579bacaefa95743da629568ed32ccbbcb33a89c4cb988dc668e89",
-  "source_code_count": 5551,
+  "as_of_date": "2026-09-01",
+  "generated_at": "2026-09-01T00:00:00.000Z",
+  "source_hash": "6f91391d538f0554b7bcbe9aba82c591024f8c6f557bc7e95a12212b8e873b7d",
+  "source_code_count": 5555,
   "total_codes": 399,
   "excluded_counts": {
     "strategy_prefilter_not_matched": 5095,
-    "missing_yearly": 57
+    "missing_yearly": 61
   },
   "codes": [
     "000002",
@@ -5545,11 +5545,13 @@
       "301682",
       "301683",
       "301688",
+      "301689",
       "301696",
       "301697",
       "301699",
       "301707",
       "301717",
+      "601091",
       "601112",
       "601123",
       "603284",
@@ -5568,6 +5570,7 @@
       "688781",
       "688785",
       "688797",
+      "688801",
       "688806",
       "688808",
       "688811",
@@ -5579,7 +5582,8 @@
       "688826",
       "688828",
       "688835",
-      "688836"
+      "688836",
+      "688837"
     ]
   }
 }
