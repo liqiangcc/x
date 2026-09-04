@@ -1,0 +1,14 @@
+{
+  "targetDate": "2026-09-04",
+  "total": 1,
+  "updated": 1,
+  "skipped": 0,
+  "failed": 0,
+  "items": [
+    {
+      "code": "601366",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/601/601366.json",
+      "status": "updated"
+    }
+  ]
+}
