@@ -1,0 +1,24 @@
+{
+  "targetDate": "2026-09-08",
+  "total": 3,
+  "updated": 3,
+  "skipped": 0,
+  "failed": 0,
+  "items": [
+    {
+      "code": "600313",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/600/600313.json",
+      "status": "updated"
+    },
+    {
+      "code": "603170",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/603/603170.json",
+      "status": "updated"
+    },
+    {
+      "code": "688391",
+      "outputPath": "/home/runner/work/x/x/data/kline/yearly/688/688391.json",
+      "status": "updated"
+    }
+  ]
+}
