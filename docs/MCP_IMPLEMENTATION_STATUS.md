@@ -95,6 +95,23 @@ analytics_get_bollinger
 - Security 查询支持 point-in-time `asOf`；
 - 仅提供 code 且出现多市场歧义时 fail closed，不猜 market。
 
+### x-data-mcp 远端行情 Adapter — 已实现 bounded slice
+
+`X_DATA_MCP_SOCKET` / `X_DATA_MCP_SOCKET_PATH` 可把只读行情读取从仓库
+ledger 切换到 owner-only `x-data-mcp` unix socket。当前实现为：
+
+- `src/adapters/xdata/x_data_mcp_client.js`：newline JSON-RPC client；
+- `src/adapters/xdata/x_data_mcp_kline_reader.js`：实现既有 `readRange` port，
+  支持 `market.daily` / `market.yearly`；
+- 每实体先经 `list_data_versions` 固定 published version，后续查询使用
+  `explicit_version_map`；无 published version 时返回缺失结果，不补数据；
+- `version_manifest.metadata.adjustment` 必须为 `confirmed/qfq`，否则拒绝；
+- 输出仍标记 `legacy_approximate`：当前远端 QFQ 是发布 generation 的固定版本，
+  不是点时复权或 raw 执行价；`volume`/`amount` 保留未复权值。
+
+本 slice 只替换 KlineReader；Security Master、历史 universe、交易日历、
+pool/情绪和 historical_accurate 数据源仍不在该适配器范围内。
+
 ### Phase 2：策略 MCP — 完成
 
 当前 Tool：
