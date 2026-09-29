@@ -1,15 +1,28 @@
 "use strict";
 
 const { serveStdio } = require("@modelcontextprotocol/server/stdio");
+const { XDataMcpKlineReader } = require("../xdata/x_data_mcp_kline_reader");
 const { createMcpCompositionRoot } = require("./composition_root");
 const { createMcpSdkServer } = require("./sdk_server");
 
 function compositionFromEnvironment(composition = {}, env = process.env) {
-  if (composition.signalReader || composition.signalDatabasePath) return composition;
-  const databasePath = String(env.X_MCP_SIGNAL_DATABASE_PATH ?? "").trim();
-  return databasePath
-    ? { ...composition, signalDatabasePath: databasePath }
-    : composition;
+  const resolved = { ...composition };
+  if (!resolved.signalReader && !resolved.signalDatabasePath) {
+    const databasePath = String(env.X_MCP_SIGNAL_DATABASE_PATH ?? "").trim();
+    if (databasePath) resolved.signalDatabasePath = databasePath;
+  }
+  if (!resolved.klineReader) {
+    const socketPath = String(env.X_DATA_MCP_SOCKET ?? env.X_DATA_MCP_SOCKET_PATH ?? "").trim();
+    if (socketPath) {
+      resolved.klineReader = new XDataMcpKlineReader({
+        socketPath,
+        timeoutMs: env.X_DATA_MCP_TIMEOUT_MS === undefined
+          ? undefined
+          : Number(env.X_DATA_MCP_TIMEOUT_MS),
+      });
+    }
+  }
+  return resolved;
 }
 
 function buildMcpServer({
