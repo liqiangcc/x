@@ -6,6 +6,7 @@ const { XDataMcpClient } = require("./x_data_mcp_client");
 
 const DEFAULT_START_DATE = "1900-01-01";
 const CONTRACT_VERSION = "v1";
+const STALE_VERSION_CODE = "stale_version";
 const DATASETS = Object.freeze({
   daily: "market.daily",
   yearly: "market.yearly",
@@ -88,31 +89,35 @@ function assertConfirmedQfq(record, versionRef) {
   }
 }
 
+// Yearly stale / absent-reason fields are specified by generic-data-v6 §6 as
+// "to be finalised" (TODO S3): their names and position are not fixed yet. Read
+// them tolerantly from the manifest entry (top level or `metadata`) and pass
+// them through untouched; never swallow them. Update once the contract is final.
+function pick(item, key) {
+  const value = item?.[key] ?? item?.metadata?.[key];
+  return value === undefined || value === null || value === "" ? null : value;
+}
+
+function passthroughStale(manifestItem) {
+  return {
+    stale: pick(manifestItem, "stale"),
+    asOfDay: pick(manifestItem, "as_of_day"),
+  };
+}
+
+function passthroughReason(manifestItem) {
+  const reason = pick(manifestItem, "reason");
+  return reason === null ? null : String(reason);
+}
+
 class XDataMcpKlineReader {
   constructor({ client = null, socketPath = null, timeoutMs = undefined } = {}) {
     this.client = client ?? new XDataMcpClient({ socketPath, timeoutMs });
-    this.pinnedVersions = new Map();
     assertKlineReader(this);
   }
 
   async close() {
     await this.client.close?.();
-  }
-
-  async #resolveVersion({ dataset, entity }) {
-    const key = `${dataset}:${entity.exchange}.${entity.code}`;
-    if (this.pinnedVersions.has(key)) return this.pinnedVersions.get(key);
-    const payload = await this.client.callTool("list_data_versions", {
-      dataset,
-      contract_version: CONTRACT_VERSION,
-      selection: { kind: "single", entity },
-      page_size: 1000,
-    });
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    const item = items.find(({ version_ref: ref }) => sameEntity(ref?.entity, entity));
-    const versionRef = item?.version_ref ?? null;
-    this.pinnedVersions.set(key, versionRef);
-    return versionRef;
   }
 
   #filter({ period, startDate, endDate }) {
@@ -130,33 +135,40 @@ class XDataMcpKlineReader {
     };
   }
 
-  async #queryRecords({ dataset, entity, filter, versionRef }) {
+  // Reads the current series of one entity. The version is never pinned on the
+  // client: `latest_per_entity` resolves it inside one server-side snapshot, and
+  // the cursor keeps later pages on that snapshot. Under the single-version model
+  // (generic-data-v6) an old version_id is rejected with `stale_version`, so a
+  // client-side pin cache would only ever go stale.
+  async #queryLatest({ dataset, entity, filter }) {
     const base = {
       dataset,
       contract_version: CONTRACT_VERSION,
       selection: { kind: "single", entity },
       filter,
-      version: {
-        kind: "explicit_version_map",
-        versions: [{ entity, version_id: versionRef.version_id }],
-      },
+      version: { kind: "latest_per_entity" },
       page_size: 1000,
     };
     const records = [];
     let cursor = null;
     let manifestItem = null;
+    let versionRef = null;
     let sourceMeta = null;
     for (let page = 0; page < 1000; page += 1) {
       const payload = await this.client.callTool("query_data", cursor ? { ...base, cursor } : base);
       if (page === 0) {
         manifestItem = (payload?.version_manifest ?? [])
           .find((item) => sameEntity(item?.entity, entity)) ?? null;
-        assertConfirmedQfq(manifestItem, versionRef);
         sourceMeta = {
           snapshot_id: payload?.snapshot_id ?? null,
           query_time: payload?.query_time ?? null,
           limitations: Array.isArray(payload?.limitations) ? payload.limitations : [],
         };
+        if (!manifestItem || manifestItem.status === "absent") {
+          return { absent: true, manifestItem, records, sourceMeta, versionRef: null };
+        }
+        versionRef = manifestItem.version_ref ?? null;
+        assertConfirmedQfq(manifestItem, versionRef);
       }
       for (const record of payload?.records ?? []) {
         if (!sameEntity(record?.entity, entity)) {
@@ -165,7 +177,7 @@ class XDataMcpKlineReader {
           throw error;
         }
         if (record?.version_ref?.version_id !== versionRef.version_id) {
-          const error = new TypeError("x-data-mcp returned a record outside the pinned version.");
+          const error = new TypeError("x-data-mcp returned a record outside the resolved version.");
           error.code = "x_data_mcp_version_mismatch";
           throw error;
         }
@@ -176,7 +188,20 @@ class XDataMcpKlineReader {
       if (payload?.page_complete === true && !cursor) break;
     }
     records.sort((left, right) => left.date.localeCompare(right.date));
-    return { records, sourceMeta };
+    return { absent: false, manifestItem, records, sourceMeta, versionRef };
+  }
+
+  // `stale_version` means the server replaced the content between two calls (it
+  // is only returned for explicit version ids, so on the latest path it is a
+  // defensive case). Re-run the whole read once; a second failure is thrown.
+  // `version_not_found` and every other error are never retried.
+  async #queryLatestWithRetry(args) {
+    try {
+      return await this.#queryLatest(args);
+    } catch (error) {
+      if (error?.code !== STALE_VERSION_CODE) throw error;
+      return this.#queryLatest(args);
+    }
   }
 
   async readRange({ code, market, startDate = null, endDate, period = "daily", limit = null } = {}) {
@@ -198,8 +223,13 @@ class XDataMcpKlineReader {
 
     const dataset = DATASETS[normalizedPeriod];
     const entity = { exchange, code: normalizedCode };
-    const versionRef = await this.#resolveVersion({ dataset, entity });
-    if (!versionRef) {
+    const { absent, manifestItem, records, sourceMeta, versionRef } = await this.#queryLatestWithRetry({
+      dataset,
+      entity,
+      filter: this.#filter({ period: normalizedPeriod, startDate: normalizedStart, endDate: normalizedEnd }),
+    });
+    if (absent) {
+      const reason = passthroughReason(manifestItem);
       return {
         security: { code: normalizedCode, market: normalizedMarket },
         period: normalizedPeriod,
@@ -208,7 +238,10 @@ class XDataMcpKlineReader {
         bars: [],
         dataMode: DataMode.LEGACY_APPROXIMATE,
         priceView: PriceView.LEGACY_FORWARD_ADJUSTED,
-        qualityIssues: [`missing_${normalizedPeriod}_kline`],
+        qualityIssues: [
+          `missing_${normalizedPeriod}_kline`,
+          ...(reason ? [`x_data_mcp_absent_reason:${reason}`] : []),
+        ],
         source: {
           kind: "x_data_mcp",
           dataset,
@@ -218,13 +251,7 @@ class XDataMcpKlineReader {
         sourcePath: null,
       };
     }
-
-    const { records, sourceMeta } = await this.#queryRecords({
-      dataset,
-      entity,
-      filter: this.#filter({ period: normalizedPeriod, startDate: normalizedStart, endDate: normalizedEnd }),
-      versionRef,
-    });
+    const stale = passthroughStale(manifestItem);
 
     return {
       security: {
@@ -241,6 +268,7 @@ class XDataMcpKlineReader {
         "legacy_approximate",
         "current_generation_qfq_not_point_in_time",
         "raw_execution_price_unavailable",
+        ...(stale.stale ? [`x_data_mcp_stale:${stale.stale}`] : []),
       ],
       source: {
         kind: "x_data_mcp",
@@ -250,6 +278,8 @@ class XDataMcpKlineReader {
         snapshotId: sourceMeta?.snapshot_id ?? null,
         queryTime: sourceMeta?.query_time ?? null,
         limitations: sourceMeta?.limitations ?? [],
+        ...(stale.stale ? { stale: stale.stale } : {}),
+        ...(stale.asOfDay ? { asOfDay: stale.asOfDay } : {}),
       },
       contentHash: versionRef.integrity_sha256 ?? null,
       sourcePath: null,
@@ -260,6 +290,7 @@ class XDataMcpKlineReader {
 module.exports = {
   CONTRACT_VERSION,
   DATASETS,
+  STALE_VERSION_CODE,
   DEFAULT_START_DATE,
   XDataMcpKlineReader,
   exchangeToMarket,
