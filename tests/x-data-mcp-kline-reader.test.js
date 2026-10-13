@@ -203,6 +203,16 @@ test("XDataMcpKlineReader throws when stale_version persists after the single re
   assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 2);
 });
 
+test("XDataMcpKlineReader never retries stale_version on yearly (invalid derived series)", async () => {
+  const client = fakeClient({ queryErrors: ["stale_version", "stale_version"] });
+  const reader = new XDataMcpKlineReader({ client });
+  await assert.rejects(
+    () => reader.readRange({ code: "600000", market: 1, endDate: "2026-12-31", period: "yearly" }),
+    (error) => error.code === "stale_version"
+  );
+  assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 1);
+});
+
 test("XDataMcpKlineReader never retries version_not_found or other errors", async () => {
   for (const code of ["version_not_found", "integrity_error", "storage_error"]) {
     const client = fakeClient({ queryErrors: [code, null] });
@@ -228,6 +238,50 @@ test("XDataMcpKlineReader passes yearly stale / as_of_day through to the caller"
   assert.equal(result.source.stale, "behind");
   assert.equal(result.source.asOfDay, "2026-09-25");
   assert.ok(result.qualityIssues.includes("x_data_mcp_stale:behind"));
+});
+
+test("XDataMcpKlineReader reads stale fields only from the manifest entry top level", async () => {
+  // generic-data-v6 §6 puts stale/as_of_day/reason on the entry top level;
+  // identically named metadata fields are not contract and must be ignored.
+  const client = fakeClient({
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+    manifestExtra: {
+      metadata: {
+        adjustment: { status: "confirmed", value: "qfq" },
+        stale: "behind",
+        as_of_day: "2026-09-25",
+        reason: "daily_replaced_since_derivation",
+      },
+    },
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 1);
+  assert.equal(result.source.stale, undefined);
+  assert.equal(result.source.asOfDay, undefined);
+  assert.ok(!result.qualityIssues.some((issue) => issue.startsWith("x_data_mcp_stale:")));
+});
+
+test("XDataMcpKlineReader treats a v5-shape manifest entry (no stale fields) as fresh", async () => {
+  // generic-data-v5 emits no stale/as_of_day/reason keys; the entry reads
+  // as fresh and no stale passthrough reaches the caller.
+  const client = fakeClient({
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 1);
+  assert.equal(result.source.stale, undefined);
+  assert.equal(result.source.asOfDay, undefined);
+  assert.deepEqual(result.qualityIssues, [
+    "legacy_approximate",
+    "current_generation_qfq_not_point_in_time",
+    "raw_execution_price_unavailable",
+  ]);
 });
 
 test("XDataMcpKlineReader reports an absent reason instead of hiding it", async () => {

@@ -89,12 +89,13 @@ function assertConfirmedQfq(record, versionRef) {
   }
 }
 
-// Yearly stale / absent-reason fields are specified by generic-data-v6 §6 as
-// "to be finalised" (TODO S3): their names and position are not fixed yet. Read
-// them tolerantly from the manifest entry (top level or `metadata`) and pass
-// them through untouched; never swallow them. Update once the contract is final.
+// Yearly stale / absent-reason fields are final in generic-data-v6 §6: they
+// live on the manifest entry top level — `stale:"behind"` + `as_of_day` for
+// present entries, `reason:<AbsentReason>` for absent ones. Read them exactly
+// there and pass them through untouched; never swallow them. generic-data-v5
+// emits none of these fields, so they read null and the entry counts as fresh.
 function pick(item, key) {
-  const value = item?.[key] ?? item?.metadata?.[key];
+  const value = item?.[key];
   return value === undefined || value === null || value === "" ? null : value;
 }
 
@@ -193,13 +194,18 @@ class XDataMcpKlineReader {
 
   // `stale_version` means the server replaced the content between two calls (it
   // is only returned for explicit version ids, so on the latest path it is a
-  // defensive case). Re-run the whole read once; a second failure is thrown.
-  // `version_not_found` and every other error are never retried.
+  // defensive case). Re-run the whole read once for market.daily; a second
+  // failure is thrown. A market.yearly single-entity `stale_version` instead
+  // means the derived series is invalid (generic-data-v6 §6) and re-querying
+  // fails identically, so it is never retried. `version_not_found` and every
+  // other error are never retried.
   async #queryLatestWithRetry(args) {
     try {
       return await this.#queryLatest(args);
     } catch (error) {
-      if (error?.code !== STALE_VERSION_CODE) throw error;
+      if (error?.code !== STALE_VERSION_CODE || args.dataset !== DATASETS.daily) {
+        throw error;
+      }
       return this.#queryLatest(args);
     }
   }
