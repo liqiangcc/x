@@ -17,31 +17,48 @@ function versionRef({ dataset, exchange, code }) {
   };
 }
 
-function fakeClient({ versions = true, records = [], manifestAdjustment = "qfq" } = {}) {
+function toolError(code, message = code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+// Single-version fake: `latest_per_entity` is the only version selector it
+// serves, and list_data_versions must never be called.
+function fakeClient({
+  absent = false,
+  records = [],
+  manifestAdjustment = "qfq",
+  manifestExtra = {},
+  queryErrors = [],
+  versionIdOf = null,
+} = {}) {
   const calls = [];
+  const errors = [...queryErrors];
   return {
     calls,
     async callTool(name, args) {
       calls.push({ name, args });
-      if (name === "list_data_versions") {
-        return {
-          items: versions ? [{ version_ref: versionRef({
-            dataset: args.dataset,
-            exchange: args.selection.entity.exchange,
-            code: args.selection.entity.code,
-          }) }] : [],
-        };
-      }
       if (name === "query_data") {
-        const ref = versionRef({
+        if (errors.length > 0) {
+          const next = errors.shift();
+          if (next) throw toolError(next);
+        }
+        assert.equal(args.version.kind, "latest_per_entity");
+        const entity = args.selection.entity;
+        const ref = {
+          contract_version: "v1",
           dataset: args.dataset,
-          exchange: args.selection.entity.exchange,
-          code: args.selection.entity.code,
-        });
+          entity,
+          integrity_sha256: `integrity-${args.dataset}-${entity.exchange}-${entity.code}`,
+          version_id: versionIdOf
+            ? versionIdOf(calls.filter(({ name: n }) => n === "query_data").length)
+            : `${args.dataset}-${entity.exchange}-${entity.code}-v1`,
+        };
         return {
-          records: records.map((record) => ({ entity: args.selection.entity, version_ref: ref, ...record })),
-          version_manifest: [{
-            entity: args.selection.entity,
+          records: absent ? [] : records.map((record) => ({ entity, version_ref: ref, ...record })),
+          version_manifest: [absent ? { entity, status: "absent", version_ref: null, metadata: null, ...manifestExtra } : {
+            entity,
             status: "present",
             metadata: {
               adjustment: manifestAdjustment === null ? null : {
@@ -50,6 +67,7 @@ function fakeClient({ versions = true, records = [], manifestAdjustment = "qfq" 
               },
             },
             version_ref: ref,
+            ...manifestExtra,
           }],
           snapshot_id: "snapshot-1",
           query_time: "2026-09-29T00:00:00Z",
@@ -115,29 +133,26 @@ test("XDataMcpKlineReader maps daily QFQ records onto the existing kline reader 
   assert.equal(result.source.dataset, "market.daily");
   assert.equal(result.contentHash, "integrity-market.daily-sh-600000");
 
-  assert.equal(client.calls[0].name, "list_data_versions");
-  assert.equal(client.calls[1].name, "query_data");
-  assert.equal(client.calls[1].args.version.kind, "explicit_version_map");
-  assert.equal(
-    client.calls[1].args.version.versions[0].version_id,
-    "market.daily-sh-600000-v1"
-  );
-  assert.deepEqual(client.calls[1].args.filter, {
+  assert.equal(result.source.versionId, "market.daily-sh-600000-v1");
+  assert.deepEqual(client.calls.map(({ name }) => name), ["query_data"]);
+  assert.deepEqual(client.calls[0].args.version, { kind: "latest_per_entity" });
+  assert.deepEqual(client.calls[0].args.filter, {
     kind: "daily",
     start_date: "2026-09-25",
     end_date: "2026-09-28",
   });
 });
 
-test("XDataMcpKlineReader pins the resolved version and maps yearly filters", async () => {
+test("XDataMcpKlineReader keeps no client-side pin and maps yearly filters", async () => {
   const client = fakeClient();
   const reader = new XDataMcpKlineReader({ client });
   await reader.readRange({ code: "000001", market: 0, endDate: "2026-12-31", period: "yearly" });
   await reader.readRange({ code: "000001", market: 0, endDate: "2026-12-31", period: "yearly" });
 
-  assert.equal(client.calls.filter(({ name }) => name === "list_data_versions").length, 1);
+  assert.equal(client.calls.filter(({ name }) => name === "list_data_versions").length, 0);
   assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 2);
-  assert.deepEqual(client.calls[1].args.filter, {
+  assert.ok(client.calls.every(({ args }) => args.version.kind === "latest_per_entity"));
+  assert.deepEqual(client.calls[0].args.filter, {
     kind: "yearly",
     start_year: 1900,
     end_year: 2026,
@@ -145,7 +160,7 @@ test("XDataMcpKlineReader pins the resolved version and maps yearly filters", as
 });
 
 test("XDataMcpKlineReader returns a missing-kline result when no published version exists", async () => {
-  const client = fakeClient({ versions: false });
+  const client = fakeClient({ absent: true });
   const reader = new XDataMcpKlineReader({ client });
   const result = await reader.readRange({
     code: "301718",
@@ -164,6 +179,145 @@ test("XDataMcpKlineReader rejects a version without confirmed QFQ evidence", asy
   await assert.rejects(
     () => reader.readRange({ code: "600000", market: 1, endDate: "2026-09-28" }),
     (error) => error.code === "x_data_mcp_adjustment_not_confirmed"
+  );
+});
+
+test("XDataMcpKlineReader retries once on stale_version and then succeeds", async () => {
+  const client = fakeClient({
+    queryErrors: ["stale_version"],
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({ code: "600000", market: 1, endDate: "2026-09-28" });
+  assert.equal(result.bars.length, 1);
+  assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 2);
+});
+
+test("XDataMcpKlineReader throws when stale_version persists after the single retry", async () => {
+  const client = fakeClient({ queryErrors: ["stale_version", "stale_version", "stale_version"] });
+  const reader = new XDataMcpKlineReader({ client });
+  await assert.rejects(
+    () => reader.readRange({ code: "600000", market: 1, endDate: "2026-09-28" }),
+    (error) => error.code === "stale_version"
+  );
+  assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 2);
+});
+
+test("XDataMcpKlineReader never retries stale_version on yearly (invalid derived series)", async () => {
+  const client = fakeClient({ queryErrors: ["stale_version", "stale_version"] });
+  const reader = new XDataMcpKlineReader({ client });
+  await assert.rejects(
+    () => reader.readRange({ code: "600000", market: 1, endDate: "2026-12-31", period: "yearly" }),
+    (error) => error.code === "stale_version"
+  );
+  assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 1);
+});
+
+test("XDataMcpKlineReader never retries version_not_found or other errors", async () => {
+  for (const code of ["version_not_found", "integrity_error", "storage_error"]) {
+    const client = fakeClient({ queryErrors: [code, null] });
+    const reader = new XDataMcpKlineReader({ client });
+    await assert.rejects(
+      () => reader.readRange({ code: "600000", market: 1, endDate: "2026-09-28" }),
+      (error) => error.code === code
+    );
+    assert.equal(client.calls.filter(({ name }) => name === "query_data").length, 1, code);
+  }
+});
+
+test("XDataMcpKlineReader passes yearly stale / as_of_day through to the caller", async () => {
+  const client = fakeClient({
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+    manifestExtra: { stale: "behind", as_of_day: "2026-09-25" },
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 1);
+  assert.equal(result.source.stale, "behind");
+  assert.equal(result.source.asOfDay, "2026-09-25");
+  assert.ok(result.qualityIssues.includes("x_data_mcp_stale:behind"));
+});
+
+test("XDataMcpKlineReader reads stale fields only from the manifest entry top level", async () => {
+  // generic-data-v6 §6 puts stale/as_of_day/reason on the entry top level;
+  // identically named metadata fields are not contract and must be ignored.
+  const client = fakeClient({
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+    manifestExtra: {
+      metadata: {
+        adjustment: { status: "confirmed", value: "qfq" },
+        stale: "behind",
+        as_of_day: "2026-09-25",
+        reason: "daily_replaced_since_derivation",
+      },
+    },
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 1);
+  assert.equal(result.source.stale, undefined);
+  assert.equal(result.source.asOfDay, undefined);
+  assert.ok(!result.qualityIssues.some((issue) => issue.startsWith("x_data_mcp_stale:")));
+});
+
+test("XDataMcpKlineReader treats a v5-shape manifest entry (no stale fields) as fresh", async () => {
+  // generic-data-v5 emits no stale/as_of_day/reason keys; the entry reads
+  // as fresh and no stale passthrough reaches the caller.
+  const client = fakeClient({
+    records: [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }],
+  });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 1);
+  assert.equal(result.source.stale, undefined);
+  assert.equal(result.source.asOfDay, undefined);
+  assert.deepEqual(result.qualityIssues, [
+    "legacy_approximate",
+    "current_generation_qfq_not_point_in_time",
+    "raw_execution_price_unavailable",
+  ]);
+});
+
+test("XDataMcpKlineReader reports an absent reason instead of hiding it", async () => {
+  const client = fakeClient({ absent: true, manifestExtra: { reason: "daily_replaced_since_derivation" } });
+  const reader = new XDataMcpKlineReader({ client });
+  const result = await reader.readRange({
+    code: "600000", market: 1, endDate: "2026-12-31", period: "yearly",
+  });
+  assert.equal(result.bars.length, 0);
+  assert.deepEqual(result.qualityIssues, [
+    "missing_yearly_kline",
+    "x_data_mcp_absent_reason:daily_replaced_since_derivation",
+  ]);
+});
+
+test("XDataMcpKlineReader rejects records that switch version between pages", async () => {
+  const records = [{ date: "2026-09-28", open: "1", high: "2", low: "1", close: "2", volume: "1", amount: "1" }];
+  const base = fakeClient({ records });
+  let page = 0;
+  const client = {
+    calls: base.calls,
+    async callTool(name, args) {
+      const payload = await base.callTool(name, args);
+      page += 1;
+      if (page === 1) return { ...payload, next_cursor: "c1", page_complete: false };
+      return {
+        ...payload,
+        records: payload.records.map((r) => ({ ...r, version_ref: { ...r.version_ref, version_id: "other" } })),
+        version_manifest: [],
+      };
+    },
+  };
+  const reader = new XDataMcpKlineReader({ client });
+  await assert.rejects(
+    () => reader.readRange({ code: "600000", market: 1, endDate: "2026-09-28" }),
+    (error) => error.code === "x_data_mcp_version_mismatch"
   );
 });
 

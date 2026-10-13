@@ -103,8 +103,14 @@ ledger 切换到 owner-only `x-data-mcp` unix socket。当前实现为：
 - `src/adapters/xdata/x_data_mcp_client.js`：newline JSON-RPC client；
 - `src/adapters/xdata/x_data_mcp_kline_reader.js`：实现既有 `readRange` port，
   支持 `market.daily` / `market.yearly`；
-- 每实体先经 `list_data_versions` 固定 published version，后续查询使用
-  `explicit_version_map`；无 published version 时返回缺失结果，不补数据；
+- 查询使用 `version: {kind: "latest_per_entity"}`，不在客户端固定（pin）版本，也不再调用
+  `list_data_versions`；版本由 `version_manifest[].version_ref` 带回，后续分页留在同一服务端
+  快照内。manifest 为 `absent`（无 published version）时返回缺失结果，不补数据；
+- `stale_version`（旧 version_id 已被取代）日线最多整体重读一次，仍失败则抛出；
+  年线单实体 `stale_version` 是派生序列 invalid（generic-data-v6 §6），重试同样失败，
+  不重试；`version_not_found` 及其他错误不重试；年线 manifest 条目顶层的
+  `stale` / `as_of_day` 与 absent `reason`（v6 已定稿）原样透传到
+  `source` / `qualityIssues`，不吞；v5 响应无这些字段，按 fresh 处理；
 - `version_manifest.metadata.adjustment` 必须为 `confirmed/qfq`，否则拒绝；
 - 输出仍标记 `legacy_approximate`：当前远端 QFQ 是发布 generation 的固定版本，
   不是点时复权或 raw 执行价；`volume`/`amount` 保留未复权值。
